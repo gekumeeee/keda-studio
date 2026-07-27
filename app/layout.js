@@ -23,7 +23,10 @@ export default async function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <img src="/keda-white.png" alt="" aria-hidden="true" className="site-watermark" />
+        {children}
+      </body>
     </html>
   );
 }

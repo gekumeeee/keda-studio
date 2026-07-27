@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
+import PortfolioVideo from '@/components/PortfolioVideo';
 
 const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
 const TAB_TITLES = {
@@ -57,7 +58,7 @@ export default function AdminPage() {
 
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState(null);
-  const [projectForm, setProjectForm] = useState({ title: '', category: 'Branding', client: '', work: '', image: '', status: 'live' });
+  const [projectForm, setProjectForm] = useState({ title: '', category: 'Branding', client: '', work: '', image: '', video: '', status: 'live' });
 
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState(null);
@@ -170,11 +171,12 @@ export default function AdminPage() {
         client: project.client,
         work: project.work,
         image: project.image || '',
+        video: project.video || '',
         status: project.status,
       });
     } else {
       setEditingProjectId(null);
-      setProjectForm({ title: '', category: 'Branding', client: '', work: '', image: '', status: 'live' });
+      setProjectForm({ title: '', category: 'Branding', client: '', work: '', image: '', video: '', status: 'live' });
     }
     setProjectModalOpen(true);
   }
@@ -206,6 +208,21 @@ export default function AdminPage() {
     if (!confirm('Delete this project? This cannot be undone.')) return;
     await fetch(`/api/projects/${id}`, { method: 'DELETE' });
     setProjects((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  // Move a project up or down in the list. The array order is what decides the
+  // order on the /portfolio page, so this sets which project shows first.
+  function moveProject(index, dir) {
+    const target = index + dir;
+    if (target < 0 || target >= projects.length) return;
+    const next = [...projects];
+    [next[index], next[target]] = [next[target], next[index]];
+    setProjects(next);
+    fetch('/api/projects/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: next.map((p) => p.id) }),
+    });
   }
 
   function openClientModal(client) {
@@ -387,14 +404,21 @@ export default function AdminPage() {
                   <h3>Projects</h3>
                   <button type="button" className="add-btn" onClick={() => openProjectModal(null)}>+ Add Project</button>
                 </div>
+                <p className="field-hint" style={{ marginBottom: 14 }}>Use the ↑ / ↓ arrows to set the order — the topmost project shows first on the portfolio page.</p>
                 <table>
-                  <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                  <thead><tr><th>Order</th><th>Title</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
                   <tbody>
                     {projects.length === 0 ? (
-                      <tr><td colSpan={5}><div className="empty">No projects yet — add your first case study to show it here and on the homepage.</div></td></tr>
+                      <tr><td colSpan={6}><div className="empty">No projects yet — add your first case study to show it here and on the homepage.</div></td></tr>
                     ) : (
-                      projects.map((p) => (
+                      projects.map((p, idx) => (
                         <tr key={p.id}>
+                          <td>
+                            <div className="order-controls">
+                              <button type="button" className="order-btn" onClick={() => moveProject(idx, -1)} disabled={idx === 0} aria-label="Move up">↑</button>
+                              <button type="button" className="order-btn" onClick={() => moveProject(idx, 1)} disabled={idx === projects.length - 1} aria-label="Move down">↓</button>
+                            </div>
+                          </td>
                           <td>{p.title}</td>
                           <td>{p.category}</td>
                           <td><span className={`status ${p.status}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span></td>
@@ -687,8 +711,16 @@ export default function AdminPage() {
                 <input value={projectForm.work} onChange={(e) => setProjectForm((f) => ({ ...f, work: e.target.value }))} placeholder="e.g. Logo, Guidelines, Naming" />
               </Field>
               <Field label="Thumbnail image URL (optional)">
-                <input value={projectForm.image} onChange={(e) => setProjectForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://…  (shows in the hero gallery)" />
+                <input value={projectForm.image} onChange={(e) => setProjectForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://…  (shows in the hero gallery, used as video poster)" />
               </Field>
+              <Field label="Video URL (optional)" hint="portrait or landscape — sized automatically">
+                <input value={projectForm.video} onChange={(e) => setProjectForm((f) => ({ ...f, video: e.target.value }))} placeholder="https://…mp4  (shown instead of the image on the portfolio page)" />
+              </Field>
+              {projectForm.video ? (
+                <div className="admin-video-preview">
+                  <PortfolioVideo src={projectForm.video} poster={projectForm.image} />
+                </div>
+              ) : null}
               <Field label="Status">
                 <select value={projectForm.status} onChange={(e) => setProjectForm((f) => ({ ...f, status: e.target.value }))}>
                   <option value="live">Live — visible on homepage</option>

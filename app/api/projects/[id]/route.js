@@ -16,6 +16,7 @@ export async function PUT(request, { params }) {
     client: body.client?.trim() || projects[idx].client,
     work: body.work?.trim() || projects[idx].work,
     image: body.image !== undefined ? body.image.trim() : projects[idx].image,
+    video: body.video !== undefined ? body.video.trim() : projects[idx].video,
     status: body.status === 'draft' ? 'draft' : 'live',
     updated: new Date().toISOString(),
   };

@@ -19,6 +19,7 @@ export async function POST(request) {
     client: (body.client || '').trim() || 'Placeholder',
     work: (body.work || '').trim() || 'Details coming soon',
     image: (body.image || '').trim(),
+    video: (body.video || '').trim(),
     status: body.status === 'draft' ? 'draft' : 'live',
     updated: new Date().toISOString(),
   };
