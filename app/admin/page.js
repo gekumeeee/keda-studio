@@ -1,0 +1,731 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
+
+const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
+const TAB_TITLES = {
+  overview: 'Overview',
+  projects: 'Projects',
+  clients: 'Clients',
+  messages: 'Messages',
+  settings: 'Site Content',
+};
+const TAB_SUB = {
+  overview: 'A quick look at your site at a glance.',
+  projects: 'Case studies shown in the hero gallery and portfolio.',
+  clients: 'Client names shown in the “Selected Clients” bar.',
+  messages: 'Messages sent from your contact form.',
+  settings: 'Edit every piece of text on your homepage, in both languages.',
+};
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', settings: '✎' };
+const TAB_GROUPS = [
+  { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
+  { label: 'Configure', tabs: ['settings'] },
+];
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Stable field wrapper (module-level so inputs never lose focus on re-render).
+function Field({ label, hint, children }) {
+  return (
+    <div className="field">
+      <label>{label}{hint ? <span className="field-hint-inline">{hint}</span> : null}</label>
+      {children}
+    </div>
+  );
+}
+
+export default function AdminPage() {
+  const [checkedSession, setCheckedSession] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [loginError, setLoginError] = useState(false);
+
+  const [tab, setTab] = useState('overview');
+  const [projects, setProjects] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [settingsForm, setSettingsForm] = useState(() => mergeSettings({}));
+  const [settingsSaved, setSettingsSaved] = useState(false);
+  const [editLang, setEditLang] = useState('en');
+
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState(null);
+  const [projectForm, setProjectForm] = useState({ title: '', category: 'Branding', client: '', work: '', image: '', status: 'live' });
+
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [editingClientId, setEditingClientId] = useState(null);
+  const [clientForm, setClientForm] = useState({ name: '', logo: '' });
+
+  useEffect(() => {
+    if (sessionStorage.getItem('studioAdminSession') === '1') setLoggedIn(true);
+    setCheckedSession(true);
+  }, []);
+
+  useEffect(() => {
+    if (loggedIn) loadAll();
+  }, [loggedIn]);
+
+  async function loadAll() {
+    const [p, c, m, s] = await Promise.all([
+      fetch('/api/projects').then((r) => r.json()),
+      fetch('/api/clients').then((r) => r.json()),
+      fetch('/api/messages').then((r) => r.json()),
+      fetch('/api/settings').then((r) => r.json()),
+    ]);
+    setProjects(p);
+    setClients(c);
+    setMessages(m);
+    setSettingsForm(mergeSettings(s));
+  }
+
+  // ---- settings field setters ----
+  const locVal = (key) => settingsForm[key]?.[editLang] ?? '';
+  function setNeutral(key) {
+    return (e) => setSettingsForm((f) => ({ ...f, [key]: e.target.value }));
+  }
+  function setLoc(key) {
+    return (e) => setSettingsForm((f) => ({ ...f, [key]: { ...f[key], [editLang]: e.target.value } }));
+  }
+  function updateWordText(idx, value) {
+    setSettingsForm((f) => ({
+      ...f,
+      heroWords: f.heroWords.map((w, i) => (i === idx ? { ...w, text: { ...w.text, [editLang]: value } } : w)),
+    }));
+  }
+  function updateWordColor(idx, value) {
+    setSettingsForm((f) => ({ ...f, heroWords: f.heroWords.map((w, i) => (i === idx ? { ...w, color: value } : w)) }));
+  }
+  function addWord() {
+    setSettingsForm((f) => ({ ...f, heroWords: [...f.heroWords, { text: { en: '', ar: '' }, color: 'var(--orange-soft)' }] }));
+  }
+  function removeWord(idx) {
+    setSettingsForm((f) => ({ ...f, heroWords: f.heroWords.filter((_, i) => i !== idx) }));
+  }
+  function updateService(idx, field, value) {
+    setSettingsForm((f) => ({
+      ...f,
+      services: f.services.map((s, i) => (i === idx ? { ...s, [field]: { ...s[field], [editLang]: value } } : s)),
+    }));
+  }
+  function updateServiceNeutral(idx, field, value) {
+    setSettingsForm((f) => ({
+      ...f,
+      services: f.services.map((s, i) => (i === idx ? { ...s, [field]: value } : s)),
+    }));
+  }
+  function addService() {
+    setSettingsForm((f) => ({ ...f, services: [...f.services, { title: { en: '', ar: '' }, desc: { en: '', ar: '' }, stat: '', image: '' }] }));
+  }
+  function removeService(idx) {
+    setSettingsForm((f) => ({ ...f, services: f.services.filter((_, i) => i !== idx) }));
+  }
+  function updateImpact(idx, field, value) {
+    setSettingsForm((f) => ({
+      ...f,
+      impact: f.impact.map((it, i) => (i === idx ? { ...it, [field]: { ...it[field], [editLang]: value } } : it)),
+    }));
+  }
+  function updateImpactNeutral(idx, field, value) {
+    setSettingsForm((f) => ({
+      ...f,
+      impact: f.impact.map((it, i) => (i === idx ? { ...it, [field]: value } : it)),
+    }));
+  }
+  function addImpact() {
+    setSettingsForm((f) => ({ ...f, impact: [...f.impact, { value: '', color: 'var(--green)', label: { en: '', ar: '' }, sub: { en: '', ar: '' } }] }));
+  }
+  function removeImpact(idx) {
+    setSettingsForm((f) => ({ ...f, impact: f.impact.filter((_, i) => i !== idx) }));
+  }
+
+  function tryLogin(e) {
+    e.preventDefault();
+    if (!email.trim() || !pass.trim()) {
+      setLoginError(true);
+      return;
+    }
+    sessionStorage.setItem('studioAdminSession', '1');
+    setLoggedIn(true);
+  }
+  function logout() {
+    sessionStorage.removeItem('studioAdminSession');
+    setLoggedIn(false);
+    setEmail('');
+    setPass('');
+  }
+
+  function openProjectModal(project) {
+    if (project) {
+      setEditingProjectId(project.id);
+      setProjectForm({
+        title: project.title,
+        category: project.category,
+        client: project.client,
+        work: project.work,
+        image: project.image || '',
+        status: project.status,
+      });
+    } else {
+      setEditingProjectId(null);
+      setProjectForm({ title: '', category: 'Branding', client: '', work: '', image: '', status: 'live' });
+    }
+    setProjectModalOpen(true);
+  }
+
+  async function saveProject(e) {
+    e.preventDefault();
+    if (!projectForm.title.trim()) return;
+    if (editingProjectId) {
+      const res = await fetch(`/api/projects/${editingProjectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectForm),
+      });
+      const updated = await res.json();
+      setProjects((prev) => prev.map((p) => (p.id === editingProjectId ? updated : p)));
+    } else {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectForm),
+      });
+      const created = await res.json();
+      setProjects((prev) => [created, ...prev]);
+    }
+    setProjectModalOpen(false);
+  }
+
+  async function deleteProject(id) {
+    if (!confirm('Delete this project? This cannot be undone.')) return;
+    await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  function openClientModal(client) {
+    if (client) {
+      setEditingClientId(client.id);
+      setClientForm({ name: client.name, logo: client.logo || '' });
+    } else {
+      setEditingClientId(null);
+      setClientForm({ name: '', logo: '' });
+    }
+    setClientModalOpen(true);
+  }
+
+  async function saveClient(e) {
+    e.preventDefault();
+    if (!clientForm.name.trim()) return;
+    if (editingClientId) {
+      const res = await fetch(`/api/clients/${editingClientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientForm),
+      });
+      const updated = await res.json();
+      setClients((prev) => prev.map((c) => (c.id === editingClientId ? updated : c)));
+    } else {
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientForm),
+      });
+      const created = await res.json();
+      setClients((prev) => [created, ...prev]);
+    }
+    setClientModalOpen(false);
+  }
+
+  async function deleteClient(id) {
+    if (!confirm('Remove this client?')) return;
+    await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+    setClients((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  async function deleteMessage(id) {
+    if (!confirm('Delete this message?')) return;
+    await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  }
+
+  async function saveSettings(e) {
+    e.preventDefault();
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settingsForm),
+    });
+    const updated = await res.json();
+    setSettingsForm(mergeSettings(updated));
+    setSettingsSaved(true);
+    setTimeout(() => setSettingsSaved(false), 3500);
+  }
+
+  if (!checkedSession) return null;
+
+  if (!loggedIn) {
+    return (
+      <div id="loginGate" dir="ltr">
+        <div className="login-box">
+          <div className="login-brand"><img src="/keda-white.png" alt="KEDA" /></div>
+          <div className="logo">Admin</div>
+          <div className="sub">Sign in to manage your site content.</div>
+          <form onSubmit={tryLogin}>
+            <Field label="Email">
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@keda.studio" />
+            </Field>
+            <Field label="Password">
+              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••••••" />
+            </Field>
+            <button className="login-btn" type="submit">Sign in</button>
+          </form>
+          <div className={`error ${loginError ? 'show' : ''}`}>
+            Enter any email and password to preview — this demo has no real accounts yet.
+          </div>
+          <div className="login-note">
+            This is a front-end preview only. Real login (with saved accounts and permissions) can be added when
+            you&apos;re ready. Everything below is fully functional and saved on the server.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const liveCount = projects.filter((p) => p.status === 'live').length;
+  const isAr = editLang === 'ar';
+
+  return (
+    <div id="dashboard" dir="ltr">
+      <div className="shell">
+        <aside className="sidebar">
+          <div className="side-brand"><img src="/keda-white.png" alt="KEDA" /><span>Admin</span></div>
+          <nav className="side-links">
+            {TAB_GROUPS.map((group) => (
+              <div className="side-group" key={group.label}>
+                <div className="side-group-label">{group.label}</div>
+                {group.tabs.map((key) => (
+                  <a key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+                    <span className="side-icon">{TAB_ICONS[key]}</span>
+                    {TAB_TITLES[key]}
+                    {key === 'messages' && messages.length > 0 && <span className="side-badge">{messages.length}</span>}
+                  </a>
+                ))}
+              </div>
+            ))}
+          </nav>
+          <div className="logout" onClick={logout}>↩ Log out</div>
+        </aside>
+
+        <main className="main">
+          <div className="topbar">
+            <div>
+              <h1>{TAB_TITLES[tab]}</h1>
+              <div className="topbar-sub">{TAB_SUB[tab]}</div>
+            </div>
+            <a className="view-site" href="/" target="_blank" rel="noreferrer">View site ↗</a>
+          </div>
+
+          {tab === 'overview' && (
+            <section className="tab-panel active">
+              <div className="stat-grid">
+                <div className="stat-card">
+                  <div className="label">Projects Published</div>
+                  <div className="value">{liveCount}</div>
+                  <div className="delta">{liveCount ? `${projects.length} total (incl. drafts)` : 'Add your first case study'}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="label">Clients Listed</div>
+                  <div className="value">{clients.length}</div>
+                  <div className="delta">{clients.length ? 'Showing on homepage' : 'Add your first client'}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="label">New Messages</div>
+                  <div className="value">{messages.length}</div>
+                  <div className="delta">{messages.length ? 'From your contact form' : 'Nothing yet'}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="label">Site Status</div>
+                  <div className="value" style={{ fontSize: 20 }}>{liveCount > 0 ? 'Live' : 'Draft'}</div>
+                  <div className="delta" style={{ color: liveCount > 0 ? 'var(--green)' : 'var(--gold)' }}>
+                    {liveCount > 0 ? 'Showing on homepage' : 'Not live'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="panel">
+                <div className="panel-head"><h3>Recent Messages</h3></div>
+                <table>
+                  <thead><tr><th>From</th><th>Message</th><th>Received</th></tr></thead>
+                  <tbody>
+                    {messages.length === 0 ? (
+                      <tr><td colSpan={3}><div className="empty">Nothing yet.</div></td></tr>
+                    ) : (
+                      messages.slice(0, 3).map((m) => (
+                        <tr key={m.id}>
+                          <td>{m.name}</td>
+                          <td className="msg-cell">{m.message}</td>
+                          <td>{fmtDate(m.received)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {tab === 'projects' && (
+            <section className="tab-panel active">
+              <div className="panel">
+                <div className="panel-head">
+                  <h3>Projects</h3>
+                  <button type="button" className="add-btn" onClick={() => openProjectModal(null)}>+ Add Project</button>
+                </div>
+                <table>
+                  <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                  <tbody>
+                    {projects.length === 0 ? (
+                      <tr><td colSpan={5}><div className="empty">No projects yet — add your first case study to show it here and on the homepage.</div></td></tr>
+                    ) : (
+                      projects.map((p) => (
+                        <tr key={p.id}>
+                          <td>{p.title}</td>
+                          <td>{p.category}</td>
+                          <td><span className={`status ${p.status}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span></td>
+                          <td>{fmtDate(p.updated)}</td>
+                          <td>
+                            <div className="row-actions">
+                              <span onClick={() => openProjectModal(p)}>Edit</span>
+                              <span className="danger" onClick={() => deleteProject(p.id)}>Delete</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {tab === 'clients' && (
+            <section className="tab-panel active">
+              <div className="panel">
+                <div className="panel-head">
+                  <h3>Client Logos</h3>
+                  <button type="button" className="add-btn" onClick={() => openClientModal(null)}>+ Add Client</button>
+                </div>
+                <table>
+                  <thead><tr><th>Logo</th><th>Name</th><th>Added</th><th></th></tr></thead>
+                  <tbody>
+                    {clients.length === 0 ? (
+                      <tr><td colSpan={4}><div className="empty">No clients added yet.</div></td></tr>
+                    ) : (
+                      clients.map((c) => (
+                        <tr key={c.id}>
+                          <td>{c.logo ? <img src={c.logo} alt={c.name} className="client-logo-thumb" /> : <span className="no-logo">—</span>}</td>
+                          <td>{c.name}</td>
+                          <td>{fmtDate(c.added)}</td>
+                          <td>
+                            <div className="row-actions">
+                              <span onClick={() => openClientModal(c)}>Edit</span>
+                              <span className="danger" onClick={() => deleteClient(c.id)}>Delete</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {tab === 'messages' && (
+            <section className="tab-panel active">
+              <div className="panel">
+                <div className="panel-head"><h3>Contact Messages</h3></div>
+                <table>
+                  <thead><tr><th>From</th><th>Message</th><th>Received</th><th></th></tr></thead>
+                  <tbody>
+                    {messages.length === 0 ? (
+                      <tr><td colSpan={4}><div className="empty">Messages sent from the site&apos;s contact form will appear here.</div></td></tr>
+                    ) : (
+                      messages.map((m) => (
+                        <tr key={m.id}>
+                          <td>{m.name}<br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{m.email}</span></td>
+                          <td className="msg-cell">{m.message}</td>
+                          <td>{fmtDate(m.received)}</td>
+                          <td><div className="row-actions"><span className="danger" onClick={() => deleteMessage(m.id)}>Delete</span></div></td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {tab === 'settings' && (
+            <section className="tab-panel active">
+              <form onSubmit={saveSettings}>
+                <div className="lang-edit-bar">
+                  <div className="lang-edit-info">
+                    <span className="lang-edit-title">Editing content in</span>
+                    <div className="lang-seg">
+                      <button type="button" className={editLang === 'en' ? 'active' : ''} onClick={() => setEditLang('en')}>English</button>
+                      <button type="button" className={editLang === 'ar' ? 'active' : ''} onClick={() => setEditLang('ar')}>العربية</button>
+                    </div>
+                  </div>
+                  <div className="lang-edit-actions">
+                    <span className={`saved-note ${settingsSaved ? 'show' : ''}`}>Saved ✓</span>
+                    <button className="save-btn" type="submit">Save all changes</button>
+                  </div>
+                </div>
+
+                <div className={`content-editor ${isAr ? 'rtl-preview' : ''}`}>
+                  <div className="panel">
+                    <div className="panel-head"><h3>Brand</h3><span className="panel-tag">Both languages</span></div>
+                    <Field label="Site name (used in page titles)">
+                      <input className="neutral-input" value={settingsForm.siteName} onChange={setNeutral('siteName')} placeholder="e.g. KEDA" />
+                    </Field>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Hero section</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <Field label="Eyebrow (small label above the headline)">
+                      <input value={locVal('heroEyebrow')} onChange={setLoc('heroEyebrow')} />
+                    </Field>
+
+                    <div className="sub-block">
+                      <div className="sub-block-title">Animated headline</div>
+                      <div className="field-row">
+                        <Field label="First line"><input value={locVal('heroLine1')} onChange={setLoc('heroLine1')} /></Field>
+                        <Field label="Last line"><input value={locVal('heroLine3')} onChange={setLoc('heroLine3')} /></Field>
+                      </div>
+                      <label className="repeat-label">Rotating words (the middle line cycles through these)</label>
+                      {settingsForm.heroWords.map((w, i) => (
+                        <div className="repeat-item" key={i}>
+                          <input value={w.text?.[editLang] ?? ''} onChange={(e) => updateWordText(i, e.target.value)} placeholder={isAr ? 'كلمة' : 'word'} />
+                          <select value={w.color} onChange={(e) => updateWordColor(i, e.target.value)}>
+                            {WORD_COLORS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                          </select>
+                          <button type="button" className="repeat-remove" onClick={() => removeWord(i)} disabled={settingsForm.heroWords.length <= 1}>✕</button>
+                        </div>
+                      ))}
+                      <button type="button" className="repeat-add" onClick={addWord}>+ Add word</button>
+                    </div>
+
+                    <Field label="Optional fixed headline (overrides the animation when filled)">
+                      <input value={locVal('heroHeading')} onChange={setLoc('heroHeading')} placeholder="Leave empty to keep the rotating headline" />
+                    </Field>
+                    <Field label="Paragraph"><textarea value={locVal('heroPara')} onChange={setLoc('heroPara')} /></Field>
+                    <Field label="Button label"><input value={locVal('heroCtaLabel')} onChange={setLoc('heroCtaLabel')} /></Field>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Services — “What We Do”</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <div className="field-row">
+                      <Field label="Eyebrow"><input value={locVal('servicesEyebrow')} onChange={setLoc('servicesEyebrow')} /></Field>
+                      <Field label="Heading (Enter → bold second line)"><textarea value={locVal('servicesHeading')} onChange={setLoc('servicesHeading')} /></Field>
+                    </div>
+                    <label className="repeat-label">Service cards</label>
+                    {settingsForm.services.map((s, i) => (
+                      <div className="repeat-card" key={i}>
+                        <div className="repeat-card-head">
+                          <span className="repeat-num">{String(i + 1).padStart(2, '0')}</span>
+                          <input value={s.title?.[editLang] ?? ''} onChange={(e) => updateService(i, 'title', e.target.value)} placeholder={isAr ? 'اسم الخدمة' : 'Service title'} />
+                          <button type="button" className="repeat-remove" onClick={() => removeService(i)} disabled={settingsForm.services.length <= 1}>✕</button>
+                        </div>
+                        <textarea value={s.desc?.[editLang] ?? ''} onChange={(e) => updateService(i, 'desc', e.target.value)} placeholder={isAr ? 'وصف قصير' : 'Short description'} />
+                        <div className="repeat-subrow">
+                          <input className="neutral-input" value={s.stat ?? ''} onChange={(e) => updateServiceNeutral(i, 'stat', e.target.value)} placeholder="Big number, e.g. 50+" />
+                          <input className="neutral-input" value={s.image ?? ''} onChange={(e) => updateServiceNeutral(i, 'image', e.target.value)} placeholder="Background image URL (optional)" />
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" className="repeat-add" onClick={addService}>+ Add service</button>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Sections headings</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <div className="field-row">
+                      <Field label="Clients — eyebrow"><input value={locVal('clientsEyebrow')} onChange={setLoc('clientsEyebrow')} /></Field>
+                      <Field label="Clients — heading"><textarea value={locVal('clientsHeading')} onChange={setLoc('clientsHeading')} /></Field>
+                    </div>
+                    <div className="field-row">
+                      <Field label="Selected work — eyebrow"><input value={locVal('workEyebrow')} onChange={setLoc('workEyebrow')} /></Field>
+                      <Field label="Selected work — heading"><textarea value={locVal('workHeading')} onChange={setLoc('workHeading')} /></Field>
+                    </div>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Portfolio page</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <p className="field-hint" style={{ marginBottom: 14 }}>The full <b>/portfolio</b> page — projects come from the Projects tab.</p>
+                    <div className="field-row">
+                      <Field label="Eyebrow"><input value={locVal('portfolioEyebrow')} onChange={setLoc('portfolioEyebrow')} /></Field>
+                      <Field label="Heading (Enter → gold second line)"><textarea value={locVal('portfolioHeading')} onChange={setLoc('portfolioHeading')} /></Field>
+                    </div>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Our Impact</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <div className="field-row">
+                      <Field label="Eyebrow"><input value={locVal('impactEyebrow')} onChange={setLoc('impactEyebrow')} /></Field>
+                      <Field label="Heading (Enter → bold second line)"><textarea value={locVal('impactHeading')} onChange={setLoc('impactHeading')} /></Field>
+                    </div>
+                    <label className="repeat-label">Impact numbers</label>
+                    {settingsForm.impact.map((it, i) => (
+                      <div className="repeat-card" key={i}>
+                        <div className="repeat-card-head">
+                          <input className="neutral-input impact-value-input" value={it.value ?? ''} onChange={(e) => updateImpactNeutral(i, 'value', e.target.value)} placeholder="700M+" />
+                          <input value={it.label?.[editLang] ?? ''} onChange={(e) => updateImpact(i, 'label', e.target.value)} placeholder={isAr ? 'العنوان' : 'Label'} />
+                          <select className="neutral-input" value={it.color} onChange={(e) => updateImpactNeutral(i, 'color', e.target.value)}>
+                            {WORD_COLORS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                          </select>
+                          <button type="button" className="repeat-remove" onClick={() => removeImpact(i)} disabled={settingsForm.impact.length <= 1}>✕</button>
+                        </div>
+                        <textarea value={it.sub?.[editLang] ?? ''} onChange={(e) => updateImpact(i, 'sub', e.target.value)} placeholder={isAr ? 'وصف قصير' : 'Short description'} />
+                      </div>
+                    ))}
+                    <button type="button" className="repeat-add" onClick={addImpact}>+ Add number</button>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>About section</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <div className="field-row">
+                      <Field label="Eyebrow"><input value={locVal('aboutEyebrow')} onChange={setLoc('aboutEyebrow')} /></Field>
+                      <Field label="Heading (Enter → bold second line)"><textarea value={locVal('aboutHeading')} onChange={setLoc('aboutHeading')} /></Field>
+                    </div>
+                    <Field label="Body text"><textarea value={locVal('aboutBody')} onChange={setLoc('aboutBody')} /></Field>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>About page</h3><span className="panel-tag">Mixed</span></div>
+                    <p className="field-hint" style={{ marginBottom: 14 }}>The full <b>/about</b> page — reuses the "About section" eyebrow, heading and body above for its top heading and panel text.</p>
+                    <Field label={`Panel heading (${isAr ? 'عربي' : 'English'})`}>
+                      <input value={locVal('aboutPanelHeading')} onChange={setLoc('aboutPanelHeading')} placeholder="Who are we?" />
+                    </Field>
+                    <div className="field-row">
+                      <Field label="Panel image URL (optional)">
+                        <input className="neutral-input" value={settingsForm.aboutImage} onChange={setNeutral('aboutImage')} placeholder="https://…  (leave empty for a placeholder)" />
+                      </Field>
+                      <Field label={`Vertical side label (${isAr ? 'عربي' : 'English'})`}>
+                        <input value={locVal('aboutSideLabel')} onChange={setLoc('aboutSideLabel')} placeholder="KEDA" />
+                      </Field>
+                    </div>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Contact page</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <p className="field-hint" style={{ marginBottom: 14 }}>The big heading at the top of <b>/contact</b>. Contact email &amp; social links are set below in &quot;Contact &amp; social&quot;.</p>
+                    <div className="field-row">
+                      <Field label="Heading — line 1 (white)"><input value={locVal('contactHeadingLine1')} onChange={setLoc('contactHeadingLine1')} /></Field>
+                      <Field label="Heading — line 2 (orange)"><input value={locVal('contactHeadingLine2')} onChange={setLoc('contactHeadingLine2')} /></Field>
+                    </div>
+                    <Field label="Email block label"><input value={locVal('contactDropLabel')} onChange={setLoc('contactDropLabel')} placeholder="Drop a line" /></Field>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Call to action</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <div className="field-row">
+                      <Field label="Line 1 (orange)"><input value={locVal('ctaLine1')} onChange={setLoc('ctaLine1')} /></Field>
+                      <Field label="Line 2 (white)"><input value={locVal('ctaLine2')} onChange={setLoc('ctaLine2')} /></Field>
+                    </div>
+                    <Field label="Button label"><input value={locVal('ctaButton')} onChange={setLoc('ctaButton')} /></Field>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Footer</h3><span className="panel-tag">{isAr ? 'عربي' : 'English'}</span></div>
+                    <Field label="Footer note (bottom line)"><input value={locVal('footerNote')} onChange={setLoc('footerNote')} /></Field>
+                  </div>
+
+                  <div className="panel">
+                    <div className="panel-head"><h3>Contact &amp; social</h3><span className="panel-tag">Both languages</span></div>
+                    <Field label="Contact email (shown on the contact page)">
+                      <input type="email" value={settingsForm.contactEmail} onChange={setNeutral('contactEmail')} placeholder="hello@keda.studio" />
+                    </Field>
+                    <div className="field-row">
+                      <Field label="Facebook URL"><input className="neutral-input" value={settingsForm.facebookUrl} onChange={setNeutral('facebookUrl')} placeholder="https://facebook.com/…" /></Field>
+                      <Field label="Instagram URL"><input className="neutral-input" value={settingsForm.instagramUrl} onChange={setNeutral('instagramUrl')} placeholder="https://instagram.com/…" /></Field>
+                    </div>
+                    <div className="field-row">
+                      <Field label="Behance URL"><input className="neutral-input" value={settingsForm.behanceUrl} onChange={setNeutral('behanceUrl')} placeholder="https://behance.net/…" /></Field>
+                      <Field label="X (Twitter) URL"><input className="neutral-input" value={settingsForm.xUrl} onChange={setNeutral('xUrl')} placeholder="https://x.com/…" /></Field>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </section>
+          )}
+        </main>
+      </div>
+
+      {projectModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-box">
+            <h3>{editingProjectId ? 'Edit Project' : 'Add Project'}</h3>
+            <form onSubmit={saveProject}>
+              <Field label="Title">
+                <input value={projectForm.title} onChange={(e) => setProjectForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Sunset Coffee — Brand Identity" />
+              </Field>
+              <Field label="Category">
+                <select value={projectForm.category} onChange={(e) => setProjectForm((f) => ({ ...f, category: e.target.value }))}>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label="Client">
+                <input value={projectForm.client} onChange={(e) => setProjectForm((f) => ({ ...f, client: e.target.value }))} placeholder="e.g. Sunset Coffee Co." />
+              </Field>
+              <Field label="Work included">
+                <input value={projectForm.work} onChange={(e) => setProjectForm((f) => ({ ...f, work: e.target.value }))} placeholder="e.g. Logo, Guidelines, Naming" />
+              </Field>
+              <Field label="Thumbnail image URL (optional)">
+                <input value={projectForm.image} onChange={(e) => setProjectForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://…  (shows in the hero gallery)" />
+              </Field>
+              <Field label="Status">
+                <select value={projectForm.status} onChange={(e) => setProjectForm((f) => ({ ...f, status: e.target.value }))}>
+                  <option value="live">Live — visible on homepage</option>
+                  <option value="draft">Draft — hidden from homepage</option>
+                </select>
+              </Field>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setProjectModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save project</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {clientModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-box">
+            <h3>{editingClientId ? 'Edit Client' : 'Add Client'}</h3>
+            <form onSubmit={saveClient}>
+              <Field label="Client name">
+                <input value={clientForm.name} onChange={(e) => setClientForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Sunset Coffee Co." />
+              </Field>
+              <Field label="Logo image URL (optional — shows in the scrolling bar)">
+                <input value={clientForm.logo} onChange={(e) => setClientForm((f) => ({ ...f, logo: e.target.value }))} placeholder="https://…  (leave empty to show the name)" />
+              </Field>
+              {clientForm.logo ? (
+                <div className="logo-preview"><img src={clientForm.logo} alt="logo preview" /></div>
+              ) : null}
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setClientModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save client</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
