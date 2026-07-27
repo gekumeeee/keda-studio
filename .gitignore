@@ -36,11 +36,8 @@ yarn-error.log*
 # vercel
 .vercel
 
-# local dev-only data store (production uses Netlify Blobs instead)
+# local dev-only data store (production uses Vercel Blob instead)
 /data/*.json
-
-# netlify
-.netlify
 
 # typescript
 *.tsbuildinfo
