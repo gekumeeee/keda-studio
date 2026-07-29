@@ -5,7 +5,7 @@ import { UI } from '@/lib/i18n';
 
 export default function ContactForm({ contactEmail, lang = 'en' }) {
   const t = UI[lang].contact;
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', contactMethod: 'whatsapp', message: '' });
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
 
   function update(field) {
@@ -23,7 +23,7 @@ export default function ContactForm({ contactEmail, lang = 'en' }) {
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error('failed');
-      setForm({ name: '', email: '', message: '' });
+      setForm({ name: '', email: '', phone: '', contactMethod: 'whatsapp', message: '' });
       setStatus('sent');
       setTimeout(() => setStatus('idle'), 5000);
     } catch {
@@ -41,6 +41,20 @@ export default function ContactForm({ contactEmail, lang = 'en' }) {
         <div className="field">
           <label htmlFor="cfEmail">{t.email}</label>
           <input id="cfEmail" type="email" value={form.email} onChange={update('email')} required />
+        </div>
+      </div>
+      <div className="contact-grid">
+        <div className="field">
+          <label htmlFor="cfMethod">{t.contactMethodLabel}</label>
+          <select id="cfMethod" value={form.contactMethod} onChange={update('contactMethod')}>
+            <option value="whatsapp">{t.methodWhatsapp}</option>
+            <option value="email">{t.methodEmail}</option>
+            <option value="call">{t.methodCall}</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="cfPhone">{t.phone}</label>
+          <input id="cfPhone" type="tel" value={form.phone} onChange={update('phone')} />
         </div>
       </div>
       <div className="field">

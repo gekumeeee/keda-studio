@@ -5,6 +5,7 @@ import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
 import PortfolioVideo from '@/components/PortfolioVideo';
 
 const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
+const METHOD_LABELS = { whatsapp: 'WhatsApp', email: 'Email', call: 'Phone call' };
 const TAB_TITLES = {
   overview: 'Overview',
   projects: 'Projects',
@@ -476,15 +477,19 @@ export default function AdminPage() {
               <div className="panel">
                 <div className="panel-head"><h3>Contact Messages</h3></div>
                 <table>
-                  <thead><tr><th>From</th><th>Message</th><th>Received</th><th></th></tr></thead>
+                  <thead><tr><th>From</th><th>Message</th><th>Prefers</th><th>Received</th><th></th></tr></thead>
                   <tbody>
                     {messages.length === 0 ? (
-                      <tr><td colSpan={4}><div className="empty">Messages sent from the site&apos;s contact form will appear here.</div></td></tr>
+                      <tr><td colSpan={5}><div className="empty">Messages sent from the site&apos;s contact form will appear here.</div></td></tr>
                     ) : (
                       messages.map((m) => (
                         <tr key={m.id}>
                           <td>{m.name}<br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{m.email}</span></td>
                           <td className="msg-cell">{m.message}</td>
+                          <td>
+                            {METHOD_LABELS[m.contactMethod] || 'WhatsApp'}
+                            {m.phone && <><br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{m.phone}</span></>}
+                          </td>
                           <td>{fmtDate(m.received)}</td>
                           <td><div className="row-actions"><span className="danger" onClick={() => deleteMessage(m.id)}>Delete</span></div></td>
                         </tr>

@@ -156,7 +156,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
             </div>
           </Reveal>
           <Reveal className="clients-bar">
-            <div className="add">{t.clientsAdd}</div>
+            <a href="/contact" className="add">{t.clientsAdd}</a>
             <div className="clients-marquee">
               <div className="clients-track">
                 {clientMarquee.map((c, i) => (

@@ -15,6 +15,8 @@ export async function POST(request) {
     id: uid(),
     name: body.name.trim(),
     email: body.email.trim(),
+    phone: (body.phone || '').trim(),
+    contactMethod: ['whatsapp', 'email', 'call'].includes(body.contactMethod) ? body.contactMethod : 'whatsapp',
     message: body.message.trim(),
     received: new Date().toISOString(),
   };
