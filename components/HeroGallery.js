@@ -11,7 +11,7 @@ const TILE_COLORS = [
   { bg: 'var(--green)', fg: '#0A0A0A' },
   { bg: '#3a2a20', fg: 'var(--text)' },
   { bg: 'var(--gold)', fg: '#0A0A0A' },
-  { bg: 'var(--orange)', fg: '#fff' },
+  { bg: 'var(--orange)', fg: 'var(--on-accent)' },
 ];
 
 function Tile({ project, colorIndex }) {

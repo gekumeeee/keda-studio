@@ -1,16 +1,24 @@
 :root{
-  --bg:#0D0D0D;
-  --bg-soft:#141414;
-  --card:#1A1A1A;
-  --line: rgba(250,250,250,0.10);
+  /* dark theme, same as before — only the hues shift: identity color is now
+     blue-gray (the requested palette), not orange. --orange/--orange-soft/
+     --gold keep their old names (touching every className would be a much
+     bigger diff) but now hold pale blue-gray tones used directly as accents.
+     Since those tones are pale, anywhere they're a solid button/badge
+     background needs dark text instead of white — that's what --on-accent
+     is for. --green/--red/--blue are semantic/decorative and unchanged. */
+  --bg:#0F1113;
+  --bg-soft:#15181B;
+  --card:#1B1F23;
+  --line: rgba(220,224,228,0.10);
   --text:#FAFAFA;
-  --text-dim:#8A8A8A;
-  --orange:#E8590C;
-  --orange-soft:#F76707;
+  --text-dim:#8E96A0;
+  --orange:#B7BEC6;
+  --orange-soft:#C1C5CA;
   --blue:#1E6FEB;
   --green:#4CAF7D;
-  --gold:#F5B301;
+  --gold:#CACBCF;
   --red:#E0654A;
+  --on-accent:#14171A;
   --display:'Bricolage Grotesque', sans-serif;
   --sans:'Inter', sans-serif;
   --mono:'IBM Plex Mono', monospace;
@@ -47,7 +55,7 @@ button{font-family:inherit;}
 /* ================= decorative marquee / floaters ================= */
 .glyph-strip{
   display:flex; align-items:center;
-  background:rgba(200,84,42,0.42);
+  background:rgba(183,190,198,0.42);
   backdrop-filter:blur(6px);
   -webkit-backdrop-filter:blur(6px);
   height:44px;
@@ -121,7 +129,7 @@ header nav{
 .nav-social a:hover{color:var(--text); border-color:var(--text-dim); background:rgba(250,250,250,0.06);}
 .nav-social a.social-be{width:auto; min-width:38px; padding:0 10px;}
 .nav-cta{
-  background:var(--orange); color:#fff;
+  background:var(--orange); color:var(--on-accent);
   font-size:14px; font-weight:600; line-height:1;
   padding:15px 26px; border-radius:999px;
   white-space:nowrap; flex:none;
@@ -152,7 +160,7 @@ header nav{
 }
 .hero-cta{
   margin-top:34px; display:inline-flex; align-items:center; gap:10px;
-  background:var(--orange); color:#fff; font-weight:700; font-size:14px;
+  background:var(--orange); color:var(--on-accent); font-weight:700; font-size:14px;
   padding:16px 30px; border-radius:999px; letter-spacing:.02em;
   transition:transform .15s ease;
 }
@@ -322,7 +330,7 @@ header nav{
   padding:12px 22px; border-radius:999px; border:1px solid var(--line);
   color:var(--text-dim); cursor:pointer; transition:all .25s ease; background:transparent;
 }
-.filter-pill.active{background:var(--orange); color:#fff; border-color:var(--orange);}
+.filter-pill.active{background:var(--orange); color:var(--on-accent); border-color:var(--orange);}
 .filter-pill:hover{color:var(--text); border-color:var(--text-dim);}
 
 .showcase{
@@ -442,10 +450,13 @@ header nav{
 .about-stats .stat .label{font-size:12px; color:var(--text-dim); margin-top:6px;}
 @media (max-width:760px){ .about-box{grid-template-columns:1fr;} }
 
-/* about page — colored panel with a vertical side label, like a section marker */
+/* about page — colored panel with a vertical side label, like a section marker.
+   The panel itself is pale (the new accent), so its direct text is dark
+   (--on-accent); the side-label strip and media fallback keep white text
+   because their own dark overlay is darkened enough to carry it. */
 .about-panel{
   position:relative;
-  background:linear-gradient(160deg, var(--orange) 0%, #b8420a 100%);
+  background:linear-gradient(160deg, var(--orange) 0%, #8A97A1 100%);
   border-radius:28px; padding:52px 56px 52px 92px;
   display:grid; grid-template-columns:1.1fr 1fr; gap:48px; align-items:center;
   overflow:hidden;
@@ -453,19 +464,19 @@ header nav{
 .about-panel-side{
   position:absolute; inset-inline-start:0; top:0; bottom:0; width:56px;
   display:flex; align-items:center; justify-content:center;
-  background:rgba(0,0,0,0.14);
+  background:rgba(0,0,0,0.55);
   font-family:var(--display); font-weight:800; font-size:14px; letter-spacing:.3em;
-  color:rgba(255,255,255,0.75); text-transform:uppercase;
+  color:rgba(255,255,255,0.85); text-transform:uppercase;
   writing-mode:vertical-rl; text-orientation:mixed;
 }
 html[dir="rtl"] .about-panel-side{ transform:rotate(180deg); }
-.about-panel-text h3{font-family:var(--display); font-weight:700; font-size:30px; color:#fff; margin-bottom:18px;}
-.about-panel-text p{color:rgba(255,255,255,0.88); font-size:15px; line-height:1.75;}
+.about-panel-text h3{font-family:var(--display); font-weight:700; font-size:30px; color:var(--on-accent); margin-bottom:18px;}
+.about-panel-text p{color:rgba(20,23,26,0.78); font-size:15px; line-height:1.75;}
 .about-panel-media{border-radius:18px; overflow:hidden; aspect-ratio:4/3;}
 .about-panel-media img{width:100%; height:100%; object-fit:cover;}
 .about-panel-media-fallback{
   width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-  background:rgba(0,0,0,0.18); border:1px dashed rgba(255,255,255,0.35); border-radius:18px;
+  background:rgba(0,0,0,0.45); border:1px dashed rgba(255,255,255,0.4); border-radius:18px;
 }
 .about-panel-media-fallback span{font-family:var(--display); font-weight:800; font-size:32px; color:rgba(255,255,255,0.5); letter-spacing:.05em;}
 .about-stats-standalone{margin-top:24px; grid-template-columns:1fr 1fr; max-width:460px;}
@@ -483,7 +494,7 @@ html[dir="rtl"] .about-panel-side{ transform:rotate(180deg); }
 .big-cta h2 .line1{color:var(--orange-soft); display:block;}
 .big-cta h2 .line2{color:var(--text); display:block;}
 .big-cta .cta-btn{
-  margin-top:44px; display:inline-flex; background:var(--orange); color:#fff;
+  margin-top:44px; display:inline-flex; background:var(--orange); color:var(--on-accent);
   font-weight:700; font-size:15px; padding:18px 38px; border-radius:999px;
 }
 
@@ -539,7 +550,7 @@ html[dir="rtl"] .about-panel-side{ transform:rotate(180deg); }
 .contact-form .field textarea{min-height:110px;}
 .contact-form .send-btn{
   display:flex; width:100%; align-items:center; justify-content:center;
-  background:var(--orange); color:#fff; font-weight:700; font-size:15px;
+  background:var(--orange); color:var(--on-accent); font-weight:700; font-size:15px;
   padding:17px 28px; border-radius:999px; border:none; cursor:pointer; margin-top:6px;
 }
 .contact-form .send-btn:hover{opacity:.9;}
@@ -590,12 +601,12 @@ footer{padding:70px 0 50px;}
 .login-box .logo{font-family:var(--display); font-weight:700; font-size:22px; margin-bottom:6px;}
 .login-box .sub{font-size:13px; color:var(--text-dim); margin-bottom:28px;}
 .login-btn{
-  width:100%; background:var(--orange); color:#fff; font-weight:700; font-size:14px;
+  width:100%; background:var(--orange); color:var(--on-accent); font-weight:700; font-size:14px;
   padding:14px; border-radius:10px; border:none; cursor:pointer; margin-top:6px;
 }
 .login-note{
   margin-top:18px; font-size:12px; color:var(--text-dim); line-height:1.6;
-  background:rgba(200,84,42,0.10); border:1px solid rgba(200,84,42,0.3); border-radius:10px; padding:12px 14px;
+  background:rgba(183,190,198,0.10); border:1px solid rgba(183,190,198,0.3); border-radius:10px; padding:12px 14px;
 }
 .error{color:var(--red); font-size:12px; margin-top:10px; display:none;}
 .error.show{display:block;}
@@ -620,9 +631,9 @@ footer{padding:70px 0 50px;}
   display:flex; align-items:center; justify-content:center; font-size:14px;
   background:rgba(245,241,232,0.05); color:var(--text-dim);
 }
-.side-links a.active .side-icon{background:var(--orange); color:#fff;}
+.side-links a.active .side-icon{background:var(--orange); color:var(--on-accent);}
 .side-badge{
-  margin-left:auto; background:var(--orange); color:#fff; font-size:11px; font-weight:700;
+  margin-left:auto; background:var(--orange); color:var(--on-accent); font-size:11px; font-weight:700;
   min-width:20px; height:20px; padding:0 6px; border-radius:999px; display:flex; align-items:center; justify-content:center;
 }
 .logout{font-size:13px; color:var(--text-dim); padding:11px 12px; cursor:pointer; border-top:1px solid var(--line); margin-top:12px; padding-top:20px;}
@@ -674,8 +685,8 @@ footer{padding:70px 0 50px;}
 .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:32px;}
 .topbar h1{font-family:var(--display); font-weight:700; font-size:26px;}
 .topbar .env-tag{
-  font-family:var(--mono); font-size:11px; color:var(--orange); border:1px solid rgba(200,84,42,0.4);
-  padding:6px 12px; border-radius:999px; background:rgba(200,84,42,0.08);
+  font-family:var(--mono); font-size:11px; color:var(--orange); border:1px solid rgba(183,190,198,0.4);
+  padding:6px 12px; border-radius:999px; background:rgba(183,190,198,0.08);
 }
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
@@ -689,7 +700,7 @@ footer{padding:70px 0 50px;}
 .panel{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:26px; margin-bottom:24px;}
 .panel-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;}
 .panel-head h3{font-family:var(--display); font-weight:600; font-size:17px;}
-.add-btn{background:var(--orange); color:#fff; font-size:13px; font-weight:600; padding:9px 16px; border-radius:999px; border:none; cursor:pointer;}
+.add-btn{background:var(--orange); color:var(--on-accent); font-size:13px; font-weight:600; padding:9px 16px; border-radius:999px; border:none; cursor:pointer;}
 .add-btn:hover{opacity:.9;}
 
 table{width:100%; border-collapse:collapse;}
@@ -698,7 +709,7 @@ td{padding:14px 12px; font-size:14px; border-bottom:1px solid var(--line);}
 tr:last-child td{border-bottom:none;}
 .status{font-size:11px; padding:5px 10px; border-radius:999px; font-weight:600;}
 .status.live{background:rgba(76,175,125,0.15); color:var(--green);}
-.status.draft{background:rgba(201,162,39,0.15); color:var(--gold);}
+.status.draft{background:rgba(202,203,207,0.15); color:var(--gold);}
 .row-actions{display:flex; gap:10px;}
 .row-actions span{font-size:12px; color:var(--text-dim); cursor:pointer;}
 .row-actions span:hover{color:var(--text);}
@@ -709,13 +720,13 @@ tr:last-child td{border-bottom:none;}
   color:var(--text-dim); font-size:13px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:color .15s ease, border-color .15s ease, background .15s ease;
 }
-.order-btn:hover:not(:disabled){color:var(--text); border-color:var(--orange); background:rgba(232,89,12,0.1);}
+.order-btn:hover:not(:disabled){color:var(--text); border-color:var(--orange); background:rgba(183,190,198,0.1);}
 .order-btn:disabled{opacity:.3; cursor:default;}
 td.msg-cell{max-width:340px; color:var(--text-dim);}
 .empty{text-align:center; padding:40px 20px; color:var(--text-dim); font-size:14px;}
 
 .settings-actions{display:flex; align-items:center; gap:14px; margin-top:6px;}
-.save-btn{background:var(--orange); color:#fff; font-weight:700; font-size:14px; padding:13px 26px; border-radius:10px; border:none; cursor:pointer;}
+.save-btn{background:var(--orange); color:var(--on-accent); font-weight:700; font-size:14px; padding:13px 26px; border-radius:10px; border:none; cursor:pointer;}
 .save-btn:hover{opacity:.9;}
 .saved-note{font-size:13px; color:var(--green); display:none;}
 .saved-note.show{display:inline;}
@@ -730,7 +741,7 @@ td.msg-cell{max-width:340px; color:var(--text-dim);}
 .modal-actions{display:flex; gap:10px; margin-top:24px;}
 .btn-secondary{flex:1; background:transparent; border:1px solid var(--line); color:var(--text); padding:12px; border-radius:10px; cursor:pointer; font-weight:600; font-size:13px;}
 .btn-secondary:hover{border-color:var(--text-dim);}
-.btn-primary{flex:1; background:var(--orange); border:none; color:#fff; padding:12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px;}
+.btn-primary{flex:1; background:var(--orange); border:none; color:var(--on-accent); padding:12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px;}
 .btn-primary:hover{opacity:.9;}
 
 /* client logo preview + table thumbnail */
@@ -845,7 +856,7 @@ html[dir="rtl"] .hero p{margin-left:0; margin-right:0;}
   border:none; background:transparent; color:var(--text-dim); cursor:pointer;
   padding:7px 16px; border-radius:8px; font-size:13px; font-weight:600; font-family:var(--sans);
 }
-.lang-seg button.active{background:var(--orange); color:#fff;}
+.lang-seg button.active{background:var(--orange); color:var(--on-accent);}
 .lang-edit-actions{display:flex; align-items:center; gap:14px;}
 
 /* localized fields flip direction when editing Arabic */
