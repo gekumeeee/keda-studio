@@ -748,11 +748,20 @@ td.msg-cell{max-width:340px; color:var(--text-dim);}
   align-items:center; justify-content:center; z-index:200; padding:20px;
 }
 .modal-overlay.open{display:flex;}
-.modal-box{width:100%; max-width:440px; background:var(--bg-soft); border:1px solid var(--line); border-radius:20px; padding:32px;}
+.modal-box{width:100%; max-width:440px; background:var(--bg-soft); border:1px solid var(--line); border-radius:20px; padding:32px; max-height:88vh; overflow-y:auto;}
+.modal-box-wide{max-width:640px;}
+.invoice-totals-preview{
+  display:flex; flex-wrap:wrap; gap:20px; margin-top:18px; padding:16px 18px;
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+  font-size:13px; color:var(--text-dim);
+}
+.invoice-totals-preview b{color:var(--text); font-size:15px; margin-inline-start:6px;}
 .modal-box h3{font-family:var(--display); font-weight:700; font-size:19px; margin-bottom:22px;}
 .modal-actions{display:flex; gap:10px; margin-top:24px;}
 .btn-secondary{flex:1; background:transparent; border:1px solid var(--line); color:var(--text); padding:12px; border-radius:10px; cursor:pointer; font-weight:600; font-size:13px;}
 .btn-secondary:hover{border-color:var(--text-dim);}
+.btn-secondary:disabled{opacity:.6; cursor:default;}
+.lang-edit-actions .btn-secondary{flex:none; padding:10px 18px;}
 .btn-primary{flex:1; background:var(--orange); border:none; color:var(--on-accent); padding:12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px;}
 .btn-primary:hover{opacity:.9;}
 

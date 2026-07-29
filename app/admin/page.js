@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
 import PortfolioVideo from '@/components/PortfolioVideo';
+import { formatAmount, invoiceTotals } from '@/lib/invoiceMath';
 
 const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
 const METHOD_LABELS = { whatsapp: 'WhatsApp', email: 'Email', call: 'Phone call' };
@@ -11,6 +12,8 @@ const TAB_TITLES = {
   projects: 'Projects',
   clients: 'Clients',
   messages: 'Messages',
+  invoices: 'Invoices',
+  pricing: 'Pricing',
   settings: 'Site Content',
 };
 const TAB_SUB = {
@@ -18,13 +21,18 @@ const TAB_SUB = {
   projects: 'Case studies shown in the hero gallery and portfolio.',
   clients: 'Client names shown in the “Selected Clients” bar.',
   messages: 'Messages sent from your contact form.',
+  invoices: 'Branded invoices you can send to clients as a PDF.',
+  pricing: 'Your services & pricing rate card — sendable to clients as a PDF.',
   settings: 'Edit every piece of text on your homepage, in both languages.',
 };
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', settings: '✎' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', pricing: '¤', settings: '✎' };
 const TAB_GROUPS = [
   { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
+  { label: 'Documents', tabs: ['invoices', 'pricing'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
+const EMPTY_INVOICE = { clientName: '', projectName: '', currency: 'LE', discount: '', sections: [{ title: '', price: '', items: [''] }] };
+const EMPTY_PRICING = { heading: 'Our Services & Pricing', intro: '', currency: 'LE', services: [{ name: '', price: '', note: '' }] };
 
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -65,6 +73,16 @@ export default function AdminPage() {
   const [editingClientId, setEditingClientId] = useState(null);
   const [clientForm, setClientForm] = useState({ name: '', logo: '' });
 
+  const [invoices, setInvoices] = useState([]);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
+  const [invoiceForm, setInvoiceForm] = useState(EMPTY_INVOICE);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState(null);
+
+  const [pricingForm, setPricingForm] = useState(EMPTY_PRICING);
+  const [pricingSaved, setPricingSaved] = useState(false);
+  const [downloadingPricing, setDownloadingPricing] = useState(false);
+
   useEffect(() => {
     if (sessionStorage.getItem('studioAdminSession') === '1') setLoggedIn(true);
     setCheckedSession(true);
@@ -75,16 +93,20 @@ export default function AdminPage() {
   }, [loggedIn]);
 
   async function loadAll() {
-    const [p, c, m, s] = await Promise.all([
+    const [p, c, m, s, inv, pr] = await Promise.all([
       fetch('/api/projects').then((r) => r.json()),
       fetch('/api/clients').then((r) => r.json()),
       fetch('/api/messages').then((r) => r.json()),
       fetch('/api/settings').then((r) => r.json()),
+      fetch('/api/invoices').then((r) => r.json()),
+      fetch('/api/pricing').then((r) => r.json()),
     ]);
     setProjects(p);
     setClients(c);
     setMessages(m);
     setSettingsForm(mergeSettings(s));
+    setInvoices(inv);
+    setPricingForm(pr && pr.services?.length ? { ...EMPTY_PRICING, ...pr } : EMPTY_PRICING);
   }
 
   // ---- settings field setters ----
@@ -283,6 +305,105 @@ export default function AdminPage() {
     setSettingsForm(mergeSettings(updated));
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 3500);
+  }
+
+  // ---- invoices ----
+  function openInvoiceModal(invoice) {
+    if (invoice) {
+      setEditingInvoiceId(invoice.id);
+      setInvoiceForm({
+        clientName: invoice.clientName || '',
+        projectName: invoice.projectName || '',
+        currency: invoice.currency || 'LE',
+        discount: invoice.discount || '',
+        sections: invoice.sections?.length ? invoice.sections : [{ title: '', price: '', items: [''] }],
+      });
+    } else {
+      setEditingInvoiceId(null);
+      setInvoiceForm(EMPTY_INVOICE);
+    }
+    setInvoiceModalOpen(true);
+  }
+  function updateInvoiceSection(idx, field, value) {
+    setInvoiceForm((f) => ({ ...f, sections: f.sections.map((s, i) => (i === idx ? { ...s, [field]: value } : s)) }));
+  }
+  function updateInvoiceSectionItems(idx, text) {
+    setInvoiceForm((f) => ({ ...f, sections: f.sections.map((s, i) => (i === idx ? { ...s, items: text.split('\n') } : s)) }));
+  }
+  function addInvoiceSection() {
+    setInvoiceForm((f) => ({ ...f, sections: [...f.sections, { title: '', price: '', items: [''] }] }));
+  }
+  function removeInvoiceSection(idx) {
+    setInvoiceForm((f) => ({ ...f, sections: f.sections.filter((_, i) => i !== idx) }));
+  }
+  async function saveInvoice(e) {
+    e.preventDefault();
+    if (!invoiceForm.projectName.trim()) return;
+    const payload = { ...invoiceForm, sections: invoiceForm.sections.map((s) => ({ ...s, items: s.items.filter((i) => i.trim()) })) };
+    if (editingInvoiceId) {
+      const res = await fetch(`/api/invoices/${editingInvoiceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const updated = await res.json();
+      setInvoices((prev) => prev.map((i) => (i.id === editingInvoiceId ? updated : i)));
+    } else {
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const created = await res.json();
+      setInvoices((prev) => [created, ...prev]);
+    }
+    setInvoiceModalOpen(false);
+  }
+  async function deleteInvoice(id) {
+    if (!confirm('Delete this invoice? This cannot be undone.')) return;
+    await fetch(`/api/invoices/${id}`, { method: 'DELETE' });
+    setInvoices((prev) => prev.filter((i) => i.id !== id));
+  }
+  async function downloadInvoice(invoice) {
+    setDownloadingInvoiceId(invoice.id);
+    try {
+      const { downloadInvoicePdf } = await import('@/lib/pdfTemplates');
+      await downloadInvoicePdf(invoice);
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  }
+
+  // ---- pricing sheet ----
+  function updatePricingService(idx, field, value) {
+    setPricingForm((f) => ({ ...f, services: f.services.map((s, i) => (i === idx ? { ...s, [field]: value } : s)) }));
+  }
+  function addPricingService() {
+    setPricingForm((f) => ({ ...f, services: [...f.services, { name: '', price: '', note: '' }] }));
+  }
+  function removePricingService(idx) {
+    setPricingForm((f) => ({ ...f, services: f.services.filter((_, i) => i !== idx) }));
+  }
+  async function savePricing(e) {
+    e.preventDefault();
+    const res = await fetch('/api/pricing', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pricingForm),
+    });
+    const updated = await res.json();
+    setPricingForm(updated);
+    setPricingSaved(true);
+    setTimeout(() => setPricingSaved(false), 3500);
+  }
+  async function downloadPricing() {
+    setDownloadingPricing(true);
+    try {
+      const { downloadPricingPdf } = await import('@/lib/pdfTemplates');
+      await downloadPricingPdf(pricingForm);
+    } finally {
+      setDownloadingPricing(false);
+    }
   }
 
   if (!checkedSession) return null;
@@ -498,6 +619,94 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+            </section>
+          )}
+
+          {tab === 'invoices' && (
+            <section className="tab-panel active">
+              <div className="panel">
+                <div className="panel-head">
+                  <h3>Invoices</h3>
+                  <button type="button" className="add-btn" onClick={() => openInvoiceModal(null)}>+ New Invoice</button>
+                </div>
+                <table>
+                  <thead><tr><th>Project</th><th>Client</th><th>Total</th><th>Updated</th><th></th></tr></thead>
+                  <tbody>
+                    {invoices.length === 0 ? (
+                      <tr><td colSpan={5}><div className="empty">No invoices yet — create one to send a client a branded PDF breakdown.</div></td></tr>
+                    ) : (
+                      invoices.map((inv) => {
+                        const { total } = invoiceTotals(inv);
+                        return (
+                          <tr key={inv.id}>
+                            <td>{inv.projectName}</td>
+                            <td>{inv.clientName || '—'}</td>
+                            <td>{formatAmount(total)} {inv.currency}</td>
+                            <td>{fmtDate(inv.updated)}</td>
+                            <td>
+                              <div className="row-actions">
+                                <span onClick={() => downloadInvoice(inv)}>{downloadingInvoiceId === inv.id ? 'Preparing…' : 'Download PDF'}</span>
+                                <span onClick={() => openInvoiceModal(inv)}>Edit</span>
+                                <span className="danger" onClick={() => deleteInvoice(inv.id)}>Delete</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {tab === 'pricing' && (
+            <section className="tab-panel active">
+              <form onSubmit={savePricing}>
+                <div className="lang-edit-bar">
+                  <div className="lang-edit-info">
+                    <span className="lang-edit-title">This is a single reusable rate card you can edit any time and send to clients.</span>
+                  </div>
+                  <div className="lang-edit-actions">
+                    <span className={`saved-note ${pricingSaved ? 'show' : ''}`}>Saved ✓</span>
+                    <button type="button" className="btn-secondary" onClick={downloadPricing} disabled={downloadingPricing}>
+                      {downloadingPricing ? 'Preparing…' : 'Download PDF'}
+                    </button>
+                    <button className="save-btn" type="submit">Save changes</button>
+                  </div>
+                </div>
+
+                <div className="panel">
+                  <div className="panel-head"><h3>Header</h3></div>
+                  <Field label="Heading">
+                    <input className="neutral-input" value={pricingForm.heading} onChange={(e) => setPricingForm((f) => ({ ...f, heading: e.target.value }))} placeholder="Our Services & Pricing" />
+                  </Field>
+                  <Field label="Intro (optional)">
+                    <textarea value={pricingForm.intro} onChange={(e) => setPricingForm((f) => ({ ...f, intro: e.target.value }))} placeholder="A short line introducing your plans/services." />
+                  </Field>
+                  <Field label="Currency">
+                    <input className="neutral-input" value={pricingForm.currency} onChange={(e) => setPricingForm((f) => ({ ...f, currency: e.target.value }))} placeholder="LE" style={{ maxWidth: 120 }} />
+                  </Field>
+                </div>
+
+                <div className="panel">
+                  <div className="panel-head"><h3>Services</h3></div>
+                  {pricingForm.services.map((s, i) => (
+                    <div className="repeat-card" key={i}>
+                      <div className="repeat-card-head">
+                        <span className="repeat-num">{String(i + 1).padStart(2, '0')}</span>
+                        <input value={s.name} onChange={(e) => updatePricingService(i, 'name', e.target.value)} placeholder="Service name" />
+                        <button type="button" className="repeat-remove" onClick={() => removePricingService(i)} disabled={pricingForm.services.length <= 1}>✕</button>
+                      </div>
+                      <textarea value={s.note} onChange={(e) => updatePricingService(i, 'note', e.target.value)} placeholder="Short description (optional)" />
+                      <div className="repeat-subrow">
+                        <input className="neutral-input" value={s.price} onChange={(e) => updatePricingService(i, 'price', e.target.value)} placeholder={`Price, e.g. 5,000 ${pricingForm.currency}`} />
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" className="repeat-add" onClick={addPricingService}>+ Add service</button>
+                </div>
+              </form>
             </section>
           )}
 
@@ -758,6 +967,67 @@ export default function AdminPage() {
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setClientModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save client</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {invoiceModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-box modal-box-wide">
+            <h3>{editingInvoiceId ? 'Edit Invoice' : 'New Invoice'}</h3>
+            <form onSubmit={saveInvoice}>
+              <div className="field-row">
+                <Field label="Project name">
+                  <input value={invoiceForm.projectName} onChange={(e) => setInvoiceForm((f) => ({ ...f, projectName: e.target.value }))} placeholder="e.g. Hassan Maher Brand Identity" />
+                </Field>
+                <Field label="Client name (optional)">
+                  <input value={invoiceForm.clientName} onChange={(e) => setInvoiceForm((f) => ({ ...f, clientName: e.target.value }))} placeholder="e.g. Hassan Maher" />
+                </Field>
+              </div>
+
+              <label className="repeat-label">Deliverables</label>
+              {invoiceForm.sections.map((s, i) => (
+                <div className="repeat-card" key={i}>
+                  <div className="repeat-card-head">
+                    <span className="repeat-num">{String(i + 1).padStart(2, '0')}</span>
+                    <input value={s.title} onChange={(e) => updateInvoiceSection(i, 'title', e.target.value)} placeholder="e.g. Brand Identity Package" />
+                    <input className="neutral-input" style={{ flex: 'none', width: 130 }} value={s.price} onChange={(e) => updateInvoiceSection(i, 'price', e.target.value)} placeholder="Price" />
+                    <button type="button" className="repeat-remove" onClick={() => removeInvoiceSection(i)} disabled={invoiceForm.sections.length <= 1}>✕</button>
+                  </div>
+                  <textarea
+                    value={s.items.join('\n')}
+                    onChange={(e) => updateInvoiceSectionItems(i, e.target.value)}
+                    placeholder={'One deliverable per line, e.g.\nMascot Logo Design\nBrand Color Palette'}
+                  />
+                </div>
+              ))}
+              <button type="button" className="repeat-add" onClick={addInvoiceSection}>+ Add deliverable group</button>
+
+              <div className="field-row" style={{ marginTop: 16 }}>
+                <Field label="Discount (optional)">
+                  <input className="neutral-input" value={invoiceForm.discount} onChange={(e) => setInvoiceForm((f) => ({ ...f, discount: e.target.value }))} placeholder="0" />
+                </Field>
+                <Field label="Currency">
+                  <input className="neutral-input" value={invoiceForm.currency} onChange={(e) => setInvoiceForm((f) => ({ ...f, currency: e.target.value }))} placeholder="LE" />
+                </Field>
+              </div>
+
+              {(() => {
+                const { subtotal, discount, total } = invoiceTotals(invoiceForm);
+                return (
+                  <div className="invoice-totals-preview">
+                    <span>Subtotal <b>{formatAmount(subtotal)} {invoiceForm.currency}</b></span>
+                    {discount > 0 && <span>Discount <b>−{formatAmount(discount)} {invoiceForm.currency}</b></span>}
+                    <span>Total <b>{formatAmount(total)} {invoiceForm.currency}</b></span>
+                  </div>
+                );
+              })()}
+
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setInvoiceModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save invoice</button>
               </div>
             </form>
           </div>
