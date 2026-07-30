@@ -756,6 +756,16 @@ td.msg-cell{max-width:340px; color:var(--text-dim);}
   font-size:13px; color:var(--text-dim);
 }
 .invoice-totals-preview b{color:var(--text); font-size:15px; margin-inline-start:6px;}
+/* items-textarea overrides the default 52px min-height so users can see many
+   lines at once while listing deliverables / included items */
+.items-textarea, textarea.items-textarea{min-height:150px !important; line-height:1.55;}
+.repeat-card textarea.items-textarea{min-height:150px;}
+.plans-empty{padding:34px 22px; text-align:center;}
+.plans-empty-title{font-family:var(--display); font-weight:700; font-size:18px; color:var(--text); margin-bottom:8px;}
+.plans-empty-sub{font-size:13px; color:var(--text-dim); line-height:1.5; max-width:52ch; margin:0 auto 22px;}
+.plans-empty-actions{display:flex; gap:12px; justify-content:center; flex-wrap:wrap;}
+.plans-empty-actions .btn-secondary{flex:none; padding:9px 18px;}
+.add-btn:disabled{opacity:.6; cursor:default;}
 .modal-box h3{font-family:var(--display); font-weight:700; font-size:19px; margin-bottom:22px;}
 .modal-actions{display:flex; gap:10px; margin-top:24px;}
 .btn-secondary{flex:1; background:transparent; border:1px solid var(--line); color:var(--text); padding:12px; border-radius:10px; cursor:pointer; font-weight:600; font-size:13px;}

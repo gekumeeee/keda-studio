@@ -13,7 +13,7 @@ const TAB_TITLES = {
   clients: 'Clients',
   messages: 'Messages',
   invoices: 'Invoices',
-  pricing: 'Pricing',
+  plans: 'Plans',
   settings: 'Site Content',
 };
 const TAB_SUB = {
@@ -22,17 +22,65 @@ const TAB_SUB = {
   clients: 'Client names shown in the “Selected Clients” bar.',
   messages: 'Messages sent from your contact form.',
   invoices: 'Branded invoices you can send to clients as a PDF.',
-  pricing: 'Your services & pricing rate card — sendable to clients as a PDF.',
+  plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
   settings: 'Edit every piece of text on your homepage, in both languages.',
 };
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', pricing: '¤', settings: '✎' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', settings: '✎' };
 const TAB_GROUPS = [
   { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
-  { label: 'Documents', tabs: ['invoices', 'pricing'] },
+  { label: 'Documents', tabs: ['invoices', 'plans'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
 const EMPTY_INVOICE = { clientName: '', projectName: '', currency: 'LE', discount: '', sections: [{ title: '', price: '', items: [''] }] };
-const EMPTY_PRICING = { heading: 'Our Services & Pricing', intro: '', currency: 'LE', services: [{ name: '', price: '', note: '' }] };
+const EMPTY_PLAN = { name: '', description: '', price: '', currency: 'LE', cycle: '', items: [''] };
+
+// Preloaded example plans shown in the empty state — one click adds them all
+// as real plans the user can then edit or delete. Not auto-inserted; the user
+// has to opt in from the empty-state prompt.
+const EXAMPLE_PLANS = [
+  {
+    name: 'Social Media Management',
+    description: 'Facebook · Instagram · YouTube',
+    price: '6,000',
+    currency: 'LE',
+    cycle: 'month',
+    items: [
+      'Full page management across Facebook, Instagram, and YouTube',
+      'Monthly content plan tailored to your brand',
+      'Post design and creative production',
+      'Copywriting, captions, and hashtags',
+      'Scheduling and community engagement',
+      'Monthly performance report',
+    ],
+  },
+  {
+    name: 'Brand Identity Package',
+    description: 'A complete brand system, ready to roll out.',
+    price: '12,000',
+    currency: 'LE',
+    cycle: '',
+    items: [
+      'Logo design and variations',
+      'Brand color palette',
+      'Typography system',
+      'Brand guidelines document',
+      'Source files (AI, SVG, PDF, PNG)',
+    ],
+  },
+  {
+    name: 'Logo Animation',
+    description: 'Motion version of your logo for video intros and reels.',
+    price: '1,500',
+    currency: 'LE',
+    cycle: '',
+    items: [
+      'Landscape version (16:9)',
+      'Portrait version (9:16)',
+      'MP4 exports',
+      'Transparent background',
+    ],
+  },
+];
 
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -79,9 +127,12 @@ export default function AdminPage() {
   const [invoiceForm, setInvoiceForm] = useState(EMPTY_INVOICE);
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState(null);
 
-  const [pricingForm, setPricingForm] = useState(EMPTY_PRICING);
-  const [pricingSaved, setPricingSaved] = useState(false);
-  const [downloadingPricing, setDownloadingPricing] = useState(false);
+  const [plans, setPlans] = useState([]);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState(null);
+  const [planForm, setPlanForm] = useState(EMPTY_PLAN);
+  const [downloadingPlanId, setDownloadingPlanId] = useState(null);
+  const [seedingPlans, setSeedingPlans] = useState(false);
 
   useEffect(() => {
     if (sessionStorage.getItem('studioAdminSession') === '1') setLoggedIn(true);
@@ -93,20 +144,20 @@ export default function AdminPage() {
   }, [loggedIn]);
 
   async function loadAll() {
-    const [p, c, m, s, inv, pr] = await Promise.all([
+    const [p, c, m, s, inv, pl] = await Promise.all([
       fetch('/api/projects').then((r) => r.json()),
       fetch('/api/clients').then((r) => r.json()),
       fetch('/api/messages').then((r) => r.json()),
       fetch('/api/settings').then((r) => r.json()),
       fetch('/api/invoices').then((r) => r.json()),
-      fetch('/api/pricing').then((r) => r.json()),
+      fetch('/api/plans').then((r) => r.json()),
     ]);
     setProjects(p);
     setClients(c);
     setMessages(m);
     setSettingsForm(mergeSettings(s));
     setInvoices(inv);
-    setPricingForm(pr && pr.services?.length ? { ...EMPTY_PRICING, ...pr } : EMPTY_PRICING);
+    setPlans(Array.isArray(pl) ? pl : []);
   }
 
   // ---- settings field setters ----
@@ -374,35 +425,94 @@ export default function AdminPage() {
     }
   }
 
-  // ---- pricing sheet ----
-  function updatePricingService(idx, field, value) {
-    setPricingForm((f) => ({ ...f, services: f.services.map((s, i) => (i === idx ? { ...s, [field]: value } : s)) }));
+  // ---- plans ----
+  function openPlanModal(plan) {
+    if (plan) {
+      setEditingPlanId(plan.id);
+      setPlanForm({
+        name: plan.name || '',
+        description: plan.description || '',
+        price: plan.price || '',
+        currency: plan.currency || 'LE',
+        cycle: plan.cycle || '',
+        items: plan.items?.length ? plan.items : [''],
+      });
+    } else {
+      setEditingPlanId(null);
+      setPlanForm(EMPTY_PLAN);
+    }
+    setPlanModalOpen(true);
   }
-  function addPricingService() {
-    setPricingForm((f) => ({ ...f, services: [...f.services, { name: '', price: '', note: '' }] }));
+  function updatePlanItems(text) {
+    setPlanForm((f) => ({ ...f, items: text.split('\n') }));
   }
-  function removePricingService(idx) {
-    setPricingForm((f) => ({ ...f, services: f.services.filter((_, i) => i !== idx) }));
-  }
-  async function savePricing(e) {
+  async function savePlan(e) {
     e.preventDefault();
-    const res = await fetch('/api/pricing', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pricingForm),
-    });
-    const updated = await res.json();
-    setPricingForm(updated);
-    setPricingSaved(true);
-    setTimeout(() => setPricingSaved(false), 3500);
+    if (!planForm.name.trim()) return;
+    const payload = { ...planForm, items: planForm.items.filter((i) => i.trim()) };
+    if (editingPlanId) {
+      const res = await fetch(`/api/plans/${editingPlanId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const updated = await res.json();
+      setPlans((prev) => prev.map((p) => (p.id === editingPlanId ? updated : p)));
+    } else {
+      const res = await fetch('/api/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const created = await res.json();
+      setPlans((prev) => [created, ...prev]);
+    }
+    setPlanModalOpen(false);
   }
-  async function downloadPricing() {
-    setDownloadingPricing(true);
+  async function deletePlan(id) {
+    if (!confirm('Delete this plan? This cannot be undone.')) return;
+    await fetch(`/api/plans/${id}`, { method: 'DELETE' });
+    setPlans((prev) => prev.filter((p) => p.id !== id));
+  }
+  async function duplicatePlan(plan) {
+    const { id: _drop, updated: _u, ...rest } = plan;
+    const payload = { ...rest, name: `${plan.name} (copy)` };
+    const res = await fetch('/api/plans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const created = await res.json();
+    setPlans((prev) => [created, ...prev]);
+  }
+  async function downloadPlan(plan) {
+    setDownloadingPlanId(plan.id);
     try {
-      const { downloadPricingPdf } = await import('@/lib/pdfTemplates');
-      await downloadPricingPdf(pricingForm);
+      const { downloadPlanPdf } = await import('@/lib/pdfTemplates');
+      await downloadPlanPdf(plan);
     } finally {
-      setDownloadingPricing(false);
+      setDownloadingPlanId(null);
+    }
+  }
+  // "Add example plans" button in the empty state — POSTs each example plan
+  // one after another so they appear as regular editable/deletable plans.
+  async function addExamplePlans() {
+    setSeedingPlans(true);
+    try {
+      const created = [];
+      for (const ex of EXAMPLE_PLANS) {
+        const res = await fetch('/api/plans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ex),
+        });
+        if (res.ok) created.push(await res.json());
+      }
+      // POST unshifts each one, so newest-first order flips the array — reverse to
+      // match the intended order (Social Media first).
+      setPlans((prev) => [...created.reverse(), ...prev]);
+    } finally {
+      setSeedingPlans(false);
     }
   }
 
@@ -660,53 +770,54 @@ export default function AdminPage() {
             </section>
           )}
 
-          {tab === 'pricing' && (
+          {tab === 'plans' && (
             <section className="tab-panel active">
-              <form onSubmit={savePricing}>
-                <div className="lang-edit-bar">
-                  <div className="lang-edit-info">
-                    <span className="lang-edit-title">This is a single reusable rate card you can edit any time and send to clients.</span>
-                  </div>
-                  <div className="lang-edit-actions">
-                    <span className={`saved-note ${pricingSaved ? 'show' : ''}`}>Saved ✓</span>
-                    <button type="button" className="btn-secondary" onClick={downloadPricing} disabled={downloadingPricing}>
-                      {downloadingPricing ? 'Preparing…' : 'Download PDF'}
-                    </button>
-                    <button className="save-btn" type="submit">Save changes</button>
-                  </div>
+              <div className="panel">
+                <div className="panel-head">
+                  <h3>Plans</h3>
+                  <button type="button" className="add-btn" onClick={() => openPlanModal(null)}>+ New Plan</button>
                 </div>
-
-                <div className="panel">
-                  <div className="panel-head"><h3>Header</h3></div>
-                  <Field label="Heading">
-                    <input className="neutral-input" value={pricingForm.heading} onChange={(e) => setPricingForm((f) => ({ ...f, heading: e.target.value }))} placeholder="Our Services & Pricing" />
-                  </Field>
-                  <Field label="Intro (optional)">
-                    <textarea value={pricingForm.intro} onChange={(e) => setPricingForm((f) => ({ ...f, intro: e.target.value }))} placeholder="A short line introducing your plans/services." />
-                  </Field>
-                  <Field label="Currency">
-                    <input className="neutral-input" value={pricingForm.currency} onChange={(e) => setPricingForm((f) => ({ ...f, currency: e.target.value }))} placeholder="LE" style={{ maxWidth: 120 }} />
-                  </Field>
-                </div>
-
-                <div className="panel">
-                  <div className="panel-head"><h3>Services</h3></div>
-                  {pricingForm.services.map((s, i) => (
-                    <div className="repeat-card" key={i}>
-                      <div className="repeat-card-head">
-                        <span className="repeat-num">{String(i + 1).padStart(2, '0')}</span>
-                        <input value={s.name} onChange={(e) => updatePricingService(i, 'name', e.target.value)} placeholder="Service name" />
-                        <button type="button" className="repeat-remove" onClick={() => removePricingService(i)} disabled={pricingForm.services.length <= 1}>✕</button>
-                      </div>
-                      <textarea value={s.note} onChange={(e) => updatePricingService(i, 'note', e.target.value)} placeholder="Short description (optional)" />
-                      <div className="repeat-subrow">
-                        <input className="neutral-input" value={s.price} onChange={(e) => updatePricingService(i, 'price', e.target.value)} placeholder={`Price, e.g. 5,000 ${pricingForm.currency}`} />
-                      </div>
+                {plans.length === 0 ? (
+                  <div className="plans-empty">
+                    <p className="plans-empty-title">You don&apos;t have any saved plans yet.</p>
+                    <p className="plans-empty-sub">Start with a set of example plans (Social Media, Brand Identity, Logo Animation) — you can freely edit or delete any of them afterwards.</p>
+                    <div className="plans-empty-actions">
+                      <button type="button" className="add-btn" onClick={addExamplePlans} disabled={seedingPlans}>
+                        {seedingPlans ? 'Adding…' : 'Add example plans'}
+                      </button>
+                      <button type="button" className="btn-secondary" onClick={() => openPlanModal(null)}>Or start blank</button>
                     </div>
-                  ))}
-                  <button type="button" className="repeat-add" onClick={addPricingService}>+ Add service</button>
-                </div>
-              </form>
+                  </div>
+                ) : (
+                  <table>
+                    <thead><tr><th>Name</th><th>Price</th><th>Includes</th><th>Updated</th><th></th></tr></thead>
+                    <tbody>
+                      {plans.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            {p.name}
+                            {p.description && <><br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{p.description}</span></>}
+                          </td>
+                          <td>
+                            {p.price ? `${p.price} ${p.currency}` : '—'}
+                            {p.cycle && <span style={{ color: 'var(--text-dim)', fontSize: 12 }}> / {p.cycle}</span>}
+                          </td>
+                          <td style={{ color: 'var(--text-dim)', fontSize: 12 }}>{p.items?.length || 0} item{(p.items?.length || 0) === 1 ? '' : 's'}</td>
+                          <td>{fmtDate(p.updated)}</td>
+                          <td>
+                            <div className="row-actions">
+                              <span onClick={() => downloadPlan(p)}>{downloadingPlanId === p.id ? 'Preparing…' : 'Download PDF'}</span>
+                              <span onClick={() => openPlanModal(p)}>Edit</span>
+                              <span onClick={() => duplicatePlan(p)}>Duplicate</span>
+                              <span className="danger" onClick={() => deletePlan(p.id)}>Delete</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </section>
           )}
 
@@ -980,10 +1091,10 @@ export default function AdminPage() {
             <form onSubmit={saveInvoice}>
               <div className="field-row">
                 <Field label="Project name">
-                  <input value={invoiceForm.projectName} onChange={(e) => setInvoiceForm((f) => ({ ...f, projectName: e.target.value }))} placeholder="e.g. Hassan Maher Brand Identity" />
+                  <input value={invoiceForm.projectName} onChange={(e) => setInvoiceForm((f) => ({ ...f, projectName: e.target.value }))} placeholder="Project name" />
                 </Field>
                 <Field label="Client name (optional)">
-                  <input value={invoiceForm.clientName} onChange={(e) => setInvoiceForm((f) => ({ ...f, clientName: e.target.value }))} placeholder="e.g. Hassan Maher" />
+                  <input value={invoiceForm.clientName} onChange={(e) => setInvoiceForm((f) => ({ ...f, clientName: e.target.value }))} placeholder="Client name" />
                 </Field>
               </div>
 
@@ -992,14 +1103,16 @@ export default function AdminPage() {
                 <div className="repeat-card" key={i}>
                   <div className="repeat-card-head">
                     <span className="repeat-num">{String(i + 1).padStart(2, '0')}</span>
-                    <input value={s.title} onChange={(e) => updateInvoiceSection(i, 'title', e.target.value)} placeholder="e.g. Brand Identity Package" />
+                    <input value={s.title} onChange={(e) => updateInvoiceSection(i, 'title', e.target.value)} placeholder="Deliverable group name" />
                     <input className="neutral-input" style={{ flex: 'none', width: 130 }} value={s.price} onChange={(e) => updateInvoiceSection(i, 'price', e.target.value)} placeholder="Price" />
                     <button type="button" className="repeat-remove" onClick={() => removeInvoiceSection(i)} disabled={invoiceForm.sections.length <= 1}>✕</button>
                   </div>
                   <textarea
+                    className="items-textarea"
+                    rows={6}
                     value={s.items.join('\n')}
                     onChange={(e) => updateInvoiceSectionItems(i, e.target.value)}
-                    placeholder={'One deliverable per line, e.g.\nMascot Logo Design\nBrand Color Palette'}
+                    placeholder={'One deliverable per line, e.g.\nMascot Logo Design\nBrand Color Palette\nTypography Selection'}
                   />
                 </div>
               ))}
@@ -1028,6 +1141,46 @@ export default function AdminPage() {
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setInvoiceModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save invoice</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {planModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-box modal-box-wide">
+            <h3>{editingPlanId ? 'Edit Plan' : 'New Plan'}</h3>
+            <form onSubmit={savePlan}>
+              <Field label="Plan name">
+                <input value={planForm.name} onChange={(e) => setPlanForm((f) => ({ ...f, name: e.target.value }))} placeholder="Plan name" />
+              </Field>
+              <Field label="Short description (optional)">
+                <input value={planForm.description} onChange={(e) => setPlanForm((f) => ({ ...f, description: e.target.value }))} placeholder="One line summary" />
+              </Field>
+              <div className="field-row">
+                <Field label="Price">
+                  <input className="neutral-input" value={planForm.price} onChange={(e) => setPlanForm((f) => ({ ...f, price: e.target.value }))} placeholder="6,000" />
+                </Field>
+                <Field label="Currency">
+                  <input className="neutral-input" value={planForm.currency} onChange={(e) => setPlanForm((f) => ({ ...f, currency: e.target.value }))} placeholder="LE" />
+                </Field>
+                <Field label="Cycle (optional)" hint="e.g. month, year">
+                  <input className="neutral-input" value={planForm.cycle} onChange={(e) => setPlanForm((f) => ({ ...f, cycle: e.target.value }))} placeholder="month" />
+                </Field>
+              </div>
+              <Field label="What's included" hint="one line per item">
+                <textarea
+                  className="items-textarea"
+                  rows={8}
+                  value={planForm.items.join('\n')}
+                  onChange={(e) => updatePlanItems(e.target.value)}
+                  placeholder={'e.g.\nPage management (Facebook, Instagram, YouTube)\nMonthly content plan\nPost design and creative production\nCopywriting and hashtags\nScheduling and community engagement'}
+                />
+              </Field>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setPlanModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save plan</button>
               </div>
             </form>
           </div>
