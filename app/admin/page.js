@@ -15,6 +15,8 @@ const TAB_TITLES = {
   invoices: 'Invoices',
   plans: 'Plans',
   settings: 'Site Content',
+  users: 'Users',
+  account: 'My Account',
 };
 const TAB_SUB = {
   overview: 'A quick look at your site at a glance.',
@@ -24,13 +26,22 @@ const TAB_SUB = {
   invoices: 'Branded invoices you can send to clients as a PDF.',
   plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
   settings: 'Edit every piece of text on your homepage, in both languages.',
+  users: 'Add people to the admin and control exactly what each of them can see and edit.',
+  account: 'Change your own username and password.',
 };
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', settings: '✎' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', settings: '✎', users: '☺', account: '⚿' };
+// Every tab except 'overview' is gated by a matching permission key. 'overview'
+// has no key here — it's always shown to any logged-in user. 'users' isn't
+// permission-based at all (owner-only, checked separately from `permissions`).
 const TAB_GROUPS = [
   { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
   { label: 'Documents', tabs: ['invoices', 'plans'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
+const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', settings: 'Site Content' };
+const PERMISSIONS = Object.keys(PERMISSION_LABELS);
+const EMPTY_PERMISSIONS = Object.fromEntries(PERMISSIONS.map((p) => [p, false]));
+const EMPTY_USER = { username: '', password: '', permissions: { ...EMPTY_PERMISSIONS } };
 const EMPTY_INVOICE = { clientName: '', projectName: '', currency: 'LE', discount: '', sections: [{ title: '', price: '', items: [''] }] };
 const EMPTY_PLAN = { name: '', description: '', price: '', currency: 'LE', cycle: '', items: [''] };
 
@@ -99,11 +110,26 @@ function Field({ label, hint, children }) {
 }
 
 export default function AdminPage() {
-  const [checkedSession, setCheckedSession] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [email, setEmail] = useState('');
-  const [pass, setPass] = useState('');
-  const [loginError, setLoginError] = useState(false);
+  // 'checking' | 'needsSetup' | 'loggedOut' | 'loggedIn'
+  const [authStatus, setAuthStatus] = useState('checking');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [permissions, setPermissions] = useState(EMPTY_PERMISSIONS);
+  const [authUsername, setAuthUsername] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authPasswordConfirm, setAuthPasswordConfirm] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+
+  const [users, setUsers] = useState([]);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [userForm, setUserForm] = useState(EMPTY_USER);
+  const [userFormError, setUserFormError] = useState('');
+
+  const [accountUsername, setAccountUsername] = useState('');
+  const [accountPassword, setAccountPassword] = useState('');
+  const [accountSaved, setAccountSaved] = useState(false);
+  const [accountError, setAccountError] = useState('');
 
   const [tab, setTab] = useState('overview');
   const [projects, setProjects] = useState([]);
@@ -135,22 +161,46 @@ export default function AdminPage() {
   const [seedingPlans, setSeedingPlans] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem('studioAdminSession') === '1') setLoggedIn(true);
-    setCheckedSession(true);
+    checkSession();
   }, []);
 
-  useEffect(() => {
-    if (loggedIn) loadAll();
-  }, [loggedIn]);
+  async function fetchJsonSafe(url, fallback) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return fallback;
+      return await res.json();
+    } catch {
+      return fallback;
+    }
+  }
 
-  async function loadAll() {
+  async function checkSession() {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (data.needsSetup) {
+      setAuthStatus('needsSetup');
+      return;
+    }
+    if (!data.user) {
+      setAuthStatus('loggedOut');
+      return;
+    }
+    setCurrentUser(data.user);
+    setPermissions(data.permissions);
+    setAccountUsername(data.user.username);
+    setAuthStatus('loggedIn');
+    await loadAll(data.permissions);
+    if (data.user.role === 'owner') await loadUsers();
+  }
+
+  async function loadAll(perms) {
     const [p, c, m, s, inv, pl] = await Promise.all([
-      fetch('/api/projects').then((r) => r.json()),
-      fetch('/api/clients').then((r) => r.json()),
-      fetch('/api/messages').then((r) => r.json()),
-      fetch('/api/settings').then((r) => r.json()),
-      fetch('/api/invoices').then((r) => r.json()),
-      fetch('/api/plans').then((r) => r.json()),
+      perms.projects ? fetchJsonSafe('/api/projects', []) : Promise.resolve([]),
+      perms.clients ? fetchJsonSafe('/api/clients', []) : Promise.resolve([]),
+      perms.messages ? fetchJsonSafe('/api/messages', []) : Promise.resolve([]),
+      perms.settings ? fetchJsonSafe('/api/settings', {}) : Promise.resolve({}),
+      perms.invoices ? fetchJsonSafe('/api/invoices', []) : Promise.resolve([]),
+      perms.plans ? fetchJsonSafe('/api/plans', []) : Promise.resolve([]),
     ]);
     setProjects(p);
     setClients(c);
@@ -158,6 +208,11 @@ export default function AdminPage() {
     setSettingsForm(mergeSettings(s));
     setInvoices(inv);
     setPlans(Array.isArray(pl) ? pl : []);
+  }
+
+  async function loadUsers() {
+    const list = await fetchJsonSafe('/api/users', []);
+    setUsers(Array.isArray(list) ? list : []);
   }
 
   // ---- settings field setters ----
@@ -220,20 +275,142 @@ export default function AdminPage() {
     setSettingsForm((f) => ({ ...f, impact: f.impact.filter((_, i) => i !== idx) }));
   }
 
-  function tryLogin(e) {
+  function resetAuthForm() {
+    setAuthUsername('');
+    setAuthPassword('');
+    setAuthPasswordConfirm('');
+    setAuthError('');
+  }
+
+  async function doSetup(e) {
     e.preventDefault();
-    if (!email.trim() || !pass.trim()) {
-      setLoginError(true);
+    setAuthError('');
+    if (authPassword !== authPasswordConfirm) {
+      setAuthError("Passwords don't match");
       return;
     }
-    sessionStorage.setItem('studioAdminSession', '1');
-    setLoggedIn(true);
+    setAuthBusy(true);
+    try {
+      const res = await fetch('/api/auth/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: authUsername, password: authPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAuthError(data.error || 'Something went wrong');
+        return;
+      }
+      resetAuthForm();
+      await checkSession();
+    } finally {
+      setAuthBusy(false);
+    }
   }
-  function logout() {
-    sessionStorage.removeItem('studioAdminSession');
-    setLoggedIn(false);
-    setEmail('');
-    setPass('');
+
+  async function doLogin(e) {
+    e.preventDefault();
+    setAuthError('');
+    setAuthBusy(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: authUsername, password: authPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAuthError(data.error || 'Something went wrong');
+        return;
+      }
+      resetAuthForm();
+      await checkSession();
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function doLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setAuthStatus('loggedOut');
+    setCurrentUser(null);
+    setPermissions(EMPTY_PERMISSIONS);
+    setTab('overview');
+    resetAuthForm();
+  }
+
+  // ---- users (owner managing other people's access) ----
+  function openUserModal(user) {
+    if (user) {
+      setEditingUserId(user.id);
+      setUserForm({ username: user.username, password: '', permissions: { ...EMPTY_PERMISSIONS, ...(user.permissions || {}) } });
+    } else {
+      setEditingUserId(null);
+      setUserForm(EMPTY_USER);
+    }
+    setUserFormError('');
+    setUserModalOpen(true);
+  }
+  function toggleUserPermission(key) {
+    setUserForm((f) => ({ ...f, permissions: { ...f.permissions, [key]: !f.permissions[key] } }));
+  }
+  async function saveUser(e) {
+    e.preventDefault();
+    setUserFormError('');
+    if (!editingUserId && userForm.password.length < 8) {
+      setUserFormError('Password must be at least 8 characters');
+      return;
+    }
+    const payload = { username: userForm.username, permissions: userForm.permissions };
+    if (userForm.password) payload.password = userForm.password;
+    const res = await fetch(editingUserId ? `/api/users/${editingUserId}` : '/api/users', {
+      method: editingUserId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setUserFormError(data.error || 'Something went wrong');
+      return;
+    }
+    if (editingUserId) {
+      setUsers((prev) => prev.map((u) => (u.id === editingUserId ? data : u)));
+    } else {
+      setUsers((prev) => [...prev, data]);
+    }
+    setUserModalOpen(false);
+  }
+  async function deleteUser(id) {
+    if (!confirm('Remove this person from the admin? They will lose access immediately.')) return;
+    await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+  }
+
+  // ---- my account (any logged-in user changing their own credentials) ----
+  async function saveAccount(e) {
+    e.preventDefault();
+    setAccountError('');
+    if (accountPassword && accountPassword.length < 8) {
+      setAccountError('Password must be at least 8 characters');
+      return;
+    }
+    const payload = { username: accountUsername };
+    if (accountPassword) payload.password = accountPassword;
+    const res = await fetch(`/api/users/${currentUser.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setAccountError(data.error || 'Something went wrong');
+      return;
+    }
+    setCurrentUser(data);
+    setAccountUsername(data.username);
+    setAccountPassword('');
+    setAccountSaved(true);
+    setTimeout(() => setAccountSaved(false), 3500);
   }
 
   function openProjectModal(project) {
@@ -516,31 +693,50 @@ export default function AdminPage() {
     }
   }
 
-  if (!checkedSession) return null;
+  if (authStatus === 'checking') return null;
 
-  if (!loggedIn) {
+  if (authStatus === 'needsSetup') {
+    return (
+      <div id="loginGate" dir="ltr">
+        <div className="login-box">
+          <div className="login-brand"><img src="/keda-white.png" alt="KEDA" /></div>
+          <div className="logo">Set up your admin account</div>
+          <div className="sub">You're the first person here — choose the username and password you'll sign in with. You can add more people (with their own permissions) once you're in.</div>
+          <form onSubmit={doSetup}>
+            <Field label="Username">
+              <input value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} placeholder="e.g. keda" autoComplete="username" />
+            </Field>
+            <Field label="Password" hint="at least 8 characters">
+              <input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+            </Field>
+            <Field label="Confirm password">
+              <input type="password" value={authPasswordConfirm} onChange={(e) => setAuthPasswordConfirm(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+            </Field>
+            <button className="login-btn" type="submit" disabled={authBusy}>{authBusy ? 'Creating…' : 'Create account'}</button>
+          </form>
+          <div className={`error ${authError ? 'show' : ''}`}>{authError}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (authStatus === 'loggedOut') {
     return (
       <div id="loginGate" dir="ltr">
         <div className="login-box">
           <div className="login-brand"><img src="/keda-white.png" alt="KEDA" /></div>
           <div className="logo">Admin</div>
           <div className="sub">Sign in to manage your site content.</div>
-          <form onSubmit={tryLogin}>
-            <Field label="Email">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@keda.studio" />
+          <form onSubmit={doLogin}>
+            <Field label="Username">
+              <input value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} placeholder="Username" autoComplete="username" />
             </Field>
             <Field label="Password">
-              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••••••" />
+              <input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" />
             </Field>
-            <button className="login-btn" type="submit">Sign in</button>
+            <button className="login-btn" type="submit" disabled={authBusy}>{authBusy ? 'Signing in…' : 'Sign in'}</button>
           </form>
-          <div className={`error ${loginError ? 'show' : ''}`}>
-            Enter any email and password to preview — this demo has no real accounts yet.
-          </div>
-          <div className="login-note">
-            This is a front-end preview only. Real login (with saved accounts and permissions) can be added when
-            you&apos;re ready. Everything below is fully functional and saved on the server.
-          </div>
+          <div className={`error ${authError ? 'show' : ''}`}>{authError}</div>
         </div>
       </div>
     );
@@ -548,6 +744,14 @@ export default function AdminPage() {
 
   const liveCount = projects.filter((p) => p.status === 'live').length;
   const isAr = editLang === 'ar';
+  const isOwner = currentUser?.role === 'owner';
+
+  // Filter every tab (except 'overview', always shown) down to what this user
+  // is actually allowed to see, then drop any group left with no tabs at all.
+  const visibleGroups = TAB_GROUPS
+    .map((group) => ({ ...group, tabs: group.tabs.filter((key) => key === 'overview' || permissions[key]) }))
+    .filter((group) => group.tabs.length > 0);
+  const configureExtras = ['account', ...(isOwner ? ['users'] : [])];
 
   return (
     <div id="dashboard" dir="ltr">
@@ -555,7 +759,7 @@ export default function AdminPage() {
         <aside className="sidebar">
           <div className="side-brand"><img src="/keda-white.png" alt="KEDA" /><span>Admin</span></div>
           <nav className="side-links">
-            {TAB_GROUPS.map((group) => (
+            {visibleGroups.map((group) => (
               <div className="side-group" key={group.label}>
                 <div className="side-group-label">{group.label}</div>
                 {group.tabs.map((key) => (
@@ -567,8 +771,21 @@ export default function AdminPage() {
                 ))}
               </div>
             ))}
+            <div className="side-group">
+              <div className="side-group-label">Account</div>
+              {configureExtras.map((key) => (
+                <a key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+                  <span className="side-icon">{TAB_ICONS[key]}</span>
+                  {TAB_TITLES[key]}
+                </a>
+              ))}
+            </div>
           </nav>
-          <div className="logout" onClick={logout}>↩ Log out</div>
+          <div className="side-account">
+            <div className="side-account-name">{currentUser?.username}</div>
+            <div className="side-account-role">{isOwner ? 'Owner' : 'Member'}</div>
+          </div>
+          <div className="logout" onClick={doLogout}>↩ Log out</div>
         </aside>
 
         <main className="main">
@@ -1013,6 +1230,62 @@ export default function AdminPage() {
               </form>
             </section>
           )}
+
+          {tab === 'users' && isOwner && (
+            <section className="tab-panel active">
+              <div className="panel">
+                <div className="panel-head">
+                  <h3>Users</h3>
+                  <button type="button" className="add-btn" onClick={() => openUserModal(null)}>+ Add User</button>
+                </div>
+                <table>
+                  <thead><tr><th>Username</th><th>Role</th><th>Can access</th><th></th></tr></thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id}>
+                        <td>{u.username}{u.id === currentUser.id && <span className="panel-tag" style={{ marginInlineStart: 8 }}>You</span>}</td>
+                        <td>{u.role === 'owner' ? 'Owner' : 'Member'}</td>
+                        <td style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+                          {u.role === 'owner'
+                            ? 'Everything'
+                            : PERMISSIONS.filter((p) => u.permissions?.[p]).map((p) => PERMISSION_LABELS[p]).join(', ') || 'Nothing yet'}
+                        </td>
+                        <td>
+                          {u.role !== 'owner' && (
+                            <div className="row-actions">
+                              <span onClick={() => openUserModal(u)}>Edit</span>
+                              <span className="danger" onClick={() => deleteUser(u.id)}>Delete</span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {tab === 'account' && (
+            <section className="tab-panel active">
+              <div className="panel">
+                <div className="panel-head"><h3>My Account</h3></div>
+                <form onSubmit={saveAccount}>
+                  <Field label="Username">
+                    <input className="neutral-input" value={accountUsername} onChange={(e) => setAccountUsername(e.target.value)} autoComplete="username" />
+                  </Field>
+                  <Field label="New password (optional)" hint="leave blank to keep your current password">
+                    <input className="neutral-input" type="password" value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+                  </Field>
+                  {accountError && <p className="field-hint" style={{ color: 'var(--red)', marginBottom: 14 }}>{accountError}</p>}
+                  <div className="settings-actions">
+                    <button className="save-btn" type="submit">Save changes</button>
+                    <span className={`saved-note ${accountSaved ? 'show' : ''}`}>Saved ✓</span>
+                  </div>
+                </form>
+              </div>
+            </section>
+          )}
         </main>
       </div>
 
@@ -1181,6 +1454,36 @@ export default function AdminPage() {
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setPlanModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save plan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {userModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-box">
+            <h3>{editingUserId ? 'Edit User' : 'Add User'}</h3>
+            <form onSubmit={saveUser}>
+              <Field label="Username">
+                <input value={userForm.username} onChange={(e) => setUserForm((f) => ({ ...f, username: e.target.value }))} placeholder="Username" autoComplete="off" />
+              </Field>
+              <Field label={editingUserId ? 'New password (optional)' : 'Password'} hint={editingUserId ? 'leave blank to keep their current password' : 'at least 8 characters'}>
+                <input type="password" value={userForm.password} onChange={(e) => setUserForm((f) => ({ ...f, password: e.target.value }))} placeholder="••••••••" autoComplete="new-password" />
+              </Field>
+              <label className="repeat-label">Can access</label>
+              <div className="permissions-grid">
+                {PERMISSIONS.map((key) => (
+                  <label className="permission-check" key={key}>
+                    <input type="checkbox" checked={userForm.permissions[key]} onChange={() => toggleUserPermission(key)} />
+                    {PERMISSION_LABELS[key]}
+                  </label>
+                ))}
+              </div>
+              {userFormError && <p className="field-hint" style={{ color: 'var(--red)', marginTop: 14 }}>{userFormError}</p>}
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setUserModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save user</button>
               </div>
             </form>
           </div>

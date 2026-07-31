@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getInvoices, saveInvoices, uid } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 function normalizeSections(sections) {
   if (!Array.isArray(sections)) return [];
@@ -11,10 +12,14 @@ function normalizeSections(sections) {
 }
 
 export async function GET() {
+  const gate = await requirePermission('invoices');
+  if (gate.error) return gate.error;
   return NextResponse.json(await getInvoices());
 }
 
 export async function POST(request) {
+  const gate = await requirePermission('invoices');
+  if (gate.error) return gate.error;
   const body = await request.json();
   if (!body.projectName?.trim()) {
     return NextResponse.json({ error: 'Project name is required' }, { status: 400 });

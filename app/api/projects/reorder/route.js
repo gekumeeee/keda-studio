@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getProjects, saveProjects } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 // Reorder the stored projects array to match the given list of ids.
 // The array order is the source of truth for how projects appear on the
 // /portfolio page (and the hero gallery), so this is what the admin's
 // move-up / move-down controls call.
 export async function POST(request) {
+  const gate = await requirePermission('projects');
+  if (gate.error) return gate.error;
   const body = await request.json();
   const ids = Array.isArray(body?.ids) ? body.ids : null;
   if (!ids) {

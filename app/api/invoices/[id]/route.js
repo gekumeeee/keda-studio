@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getInvoices, saveInvoices } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 function normalizeSections(sections) {
   if (!Array.isArray(sections)) return [];
@@ -11,6 +12,8 @@ function normalizeSections(sections) {
 }
 
 export async function PUT(request, { params }) {
+  const gate = await requirePermission('invoices');
+  if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
   const invoices = await getInvoices();
@@ -32,6 +35,8 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  const gate = await requirePermission('invoices');
+  if (gate.error) return gate.error;
   const { id } = await params;
   const invoices = await getInvoices();
   await saveInvoices(invoices.filter((i) => i.id !== id));

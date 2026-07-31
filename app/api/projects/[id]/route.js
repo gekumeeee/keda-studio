@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getProjects, saveProjects } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 export async function PUT(request, { params }) {
+  const gate = await requirePermission('projects');
+  if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
   const projects = await getProjects();
@@ -25,6 +28,8 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  const gate = await requirePermission('projects');
+  if (gate.error) return gate.error;
   const { id } = await params;
   const projects = await getProjects();
   await saveProjects(projects.filter((p) => p.id !== id));

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPlans, savePlans } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
@@ -7,6 +8,8 @@ function normalizeItems(items) {
 }
 
 export async function PUT(request, { params }) {
+  const gate = await requirePermission('plans');
+  if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
   const plans = await getPlans();
@@ -29,6 +32,8 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  const gate = await requirePermission('plans');
+  if (gate.error) return gate.error;
   const { id } = await params;
   const plans = await getPlans();
   await savePlans(plans.filter((p) => p.id !== id));

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getClients, saveClients } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 export async function PUT(request, { params }) {
+  const gate = await requirePermission('clients');
+  if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
   const clients = await getClients();
@@ -19,6 +22,8 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  const gate = await requirePermission('clients');
+  if (gate.error) return gate.error;
   const { id } = await params;
   const clients = await getClients();
   await saveClients(clients.filter((c) => c.id !== id));

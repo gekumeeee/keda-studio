@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPlans, savePlans, uid } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
@@ -7,10 +8,14 @@ function normalizeItems(items) {
 }
 
 export async function GET() {
+  const gate = await requirePermission('plans');
+  if (gate.error) return gate.error;
   return NextResponse.json(await getPlans());
 }
 
 export async function POST(request) {
+  const gate = await requirePermission('plans');
+  if (gate.error) return gate.error;
   const body = await request.json();
   if (!body.name?.trim()) {
     return NextResponse.json({ error: 'Plan name is required' }, { status: 400 });

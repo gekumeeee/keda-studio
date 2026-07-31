@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getProjects, saveProjects, uid } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 export async function GET() {
+  const gate = await requirePermission('projects');
+  if (gate.error) return gate.error;
   const projects = await getProjects();
   return NextResponse.json(projects);
 }
 
 export async function POST(request) {
+  const gate = await requirePermission('projects');
+  if (gate.error) return gate.error;
   const body = await request.json();
   if (!body.title || !body.title.trim()) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 });

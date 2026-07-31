@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSettings, saveSettings } from '@/lib/store';
 import { DEFAULTS, mergeSettings } from '@/lib/defaults';
+import { requirePermission } from '@/lib/auth';
 
 function isLoc(v) {
   return v && typeof v === 'object' && !Array.isArray(v) && ('en' in v || 'ar' in v);
@@ -11,11 +12,15 @@ function cleanLoc(v) {
 }
 
 export async function GET() {
+  const gate = await requirePermission('settings');
+  if (gate.error) return gate.error;
   const saved = await getSettings();
   return NextResponse.json(mergeSettings(saved));
 }
 
 export async function PUT(request) {
+  const gate = await requirePermission('settings');
+  if (gate.error) return gate.error;
   const body = await request.json();
   const clean = {};
 

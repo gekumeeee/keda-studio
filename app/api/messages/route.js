@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getMessages, saveMessages, uid } from '@/lib/store';
+import { requirePermission } from '@/lib/auth';
 
 export async function GET() {
+  const gate = await requirePermission('messages');
+  if (gate.error) return gate.error;
   return NextResponse.json(await getMessages());
 }
 
+// Intentionally NOT gated — this is the public contact form's submit endpoint.
 export async function POST(request) {
   const body = await request.json();
   if (!body.name?.trim() || !body.email?.trim() || !body.message?.trim()) {
