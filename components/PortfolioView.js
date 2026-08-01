@@ -54,7 +54,7 @@ export default function PortfolioView({ projects, settings, lang = 'en' }) {
         </div>
       </section>
 
-      <DiagMarquee />
+      <DiagMarquee settings={settings} lang={lang} />
 
       <section className="marketing-section" style={{ paddingTop: 0 }}>
         <div className="wrap">

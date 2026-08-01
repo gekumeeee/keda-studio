@@ -53,7 +53,7 @@ export default function AboutView({ projectCount, clientCount, settings, lang = 
         </div>
       </section>
 
-      <DiagMarquee />
+      <DiagMarquee settings={settings} lang={lang} />
 
       <section className="big-cta">
         <Reveal className="wrap">

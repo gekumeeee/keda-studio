@@ -144,7 +144,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
         </div>
       </section>
 
-      <DiagMarquee />
+      <DiagMarquee settings={settings} lang={lang} />
 
       <section className="marketing-section" id="clients">
         <div className="wrap">
@@ -283,7 +283,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
         </Reveal>
       </section>
 
-      <GlyphStrip />
+      <GlyphStrip settings={settings} lang={lang} />
       <Footer settings={settings} lang={lang} />
     </>
   );
