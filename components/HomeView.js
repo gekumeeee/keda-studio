@@ -161,7 +161,11 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
               <div className="clients-track">
                 {clientMarquee.map((c, i) => (
                   <div className="client-item" key={i}>
-                    {c.logo ? <img src={c.logo} alt={c.name} /> : <span>{c.name}</span>}
+                    {c.logo ? (
+                      <img src={c.logo} alt={c.name} draggable={false} onContextMenu={(e) => e.preventDefault()} />
+                    ) : (
+                      <span>{c.name}</span>
+                    )}
                   </div>
                 ))}
               </div>
