@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
 import PortfolioVideo from '@/components/PortfolioVideo';
-import { formatAmount, invoiceTotals } from '@/lib/invoiceMath';
+import { formatAmount, invoiceTotals, contractTotal } from '@/lib/invoiceMath';
 
 const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
 const METHOD_LABELS = { whatsapp: 'WhatsApp', email: 'Email', call: 'Phone call' };
@@ -14,6 +14,7 @@ const TAB_TITLES = {
   messages: 'Messages',
   invoices: 'Invoices',
   plans: 'Plans',
+  contracts: 'Contracts',
   settings: 'Site Content',
   users: 'Users',
   account: 'My Account',
@@ -25,25 +26,27 @@ const TAB_SUB = {
   messages: 'Messages sent from your contact form.',
   invoices: 'Branded invoices you can send to clients as a PDF.',
   plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
+  contracts: 'Agreements for clients or team members — deliverables, total and terms — saved and exportable as a PDF.',
   settings: 'Edit every piece of text on your homepage, in both languages.',
   users: 'Add people to the admin and control exactly what each of them can see and edit.',
   account: 'Change your own username and password.',
 };
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', settings: '✎', users: '☺', account: '⚿' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', settings: '✎', users: '☺', account: '⚿' };
 // Every tab except 'overview' is gated by a matching permission key. 'overview'
 // has no key here — it's always shown to any logged-in user. 'users' isn't
 // permission-based at all (owner-only, checked separately from `permissions`).
 const TAB_GROUPS = [
   { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
-  { label: 'Documents', tabs: ['invoices', 'plans'] },
+  { label: 'Documents', tabs: ['invoices', 'plans', 'contracts'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
-const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', settings: 'Site Content' };
+const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', settings: 'Site Content' };
 const PERMISSIONS = Object.keys(PERMISSION_LABELS);
 const EMPTY_PERMISSIONS = Object.fromEntries(PERMISSIONS.map((p) => [p, false]));
 const EMPTY_USER = { username: '', password: '', permissions: { ...EMPTY_PERMISSIONS } };
 const EMPTY_INVOICE = { clientName: '', projectName: '', currency: 'LE', discount: '', sections: [{ title: '', price: '', items: [''] }] };
 const EMPTY_PLAN = { name: '', description: '', price: '', currency: 'LE', cycle: '', items: [''] };
+const EMPTY_CONTRACT = { title: '', partyType: 'client', partyName: '', role: '', startDate: '', endDate: '', currency: 'LE', items: [{ label: '', quantity: '', amount: '' }], terms: '', notes: '' };
 
 // Preloaded example plans shown in the empty state — one click adds them all
 // as real plans the user can then edit or delete. Not auto-inserted; the user
@@ -160,6 +163,12 @@ export default function AdminPage() {
   const [downloadingPlanId, setDownloadingPlanId] = useState(null);
   const [seedingPlans, setSeedingPlans] = useState(false);
 
+  const [contracts, setContracts] = useState([]);
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+  const [editingContractId, setEditingContractId] = useState(null);
+  const [contractForm, setContractForm] = useState(EMPTY_CONTRACT);
+  const [downloadingContractId, setDownloadingContractId] = useState(null);
+
   useEffect(() => {
     checkSession();
   }, []);
@@ -194,13 +203,14 @@ export default function AdminPage() {
   }
 
   async function loadAll(perms) {
-    const [p, c, m, s, inv, pl] = await Promise.all([
+    const [p, c, m, s, inv, pl, con] = await Promise.all([
       perms.projects ? fetchJsonSafe('/api/projects', []) : Promise.resolve([]),
       perms.clients ? fetchJsonSafe('/api/clients', []) : Promise.resolve([]),
       perms.messages ? fetchJsonSafe('/api/messages', []) : Promise.resolve([]),
       perms.settings ? fetchJsonSafe('/api/settings', {}) : Promise.resolve({}),
       perms.invoices ? fetchJsonSafe('/api/invoices', []) : Promise.resolve([]),
       perms.plans ? fetchJsonSafe('/api/plans', []) : Promise.resolve([]),
+      perms.contracts ? fetchJsonSafe('/api/contracts', []) : Promise.resolve([]),
     ]);
     setProjects(p);
     setClients(c);
@@ -208,6 +218,7 @@ export default function AdminPage() {
     setSettingsForm(mergeSettings(s));
     setInvoices(inv);
     setPlans(Array.isArray(pl) ? pl : []);
+    setContracts(Array.isArray(con) ? con : []);
   }
 
   async function loadUsers() {
@@ -693,6 +704,86 @@ export default function AdminPage() {
     }
   }
 
+  // ---- contracts ----
+  function openContractModal(contract) {
+    if (contract) {
+      setEditingContractId(contract.id);
+      setContractForm({
+        title: contract.title || '',
+        partyType: contract.partyType || 'client',
+        partyName: contract.partyName || '',
+        role: contract.role || '',
+        startDate: contract.startDate || '',
+        endDate: contract.endDate || '',
+        currency: contract.currency || 'LE',
+        items: contract.items?.length ? contract.items : [{ label: '', quantity: '', amount: '' }],
+        terms: contract.terms || '',
+        notes: contract.notes || '',
+      });
+    } else {
+      setEditingContractId(null);
+      setContractForm(EMPTY_CONTRACT);
+    }
+    setContractModalOpen(true);
+  }
+  function updateContractItem(idx, field, value) {
+    setContractForm((f) => ({ ...f, items: f.items.map((it, i) => (i === idx ? { ...it, [field]: value } : it)) }));
+  }
+  function addContractItem() {
+    setContractForm((f) => ({ ...f, items: [...f.items, { label: '', quantity: '', amount: '' }] }));
+  }
+  function removeContractItem(idx) {
+    setContractForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
+  }
+  async function saveContract(e) {
+    e.preventDefault();
+    if (!contractForm.title.trim()) return;
+    const payload = { ...contractForm, items: contractForm.items.filter((it) => it.label.trim() || it.quantity.trim() || it.amount.trim()) };
+    if (editingContractId) {
+      const res = await fetch(`/api/contracts/${editingContractId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const updated = await res.json();
+      setContracts((prev) => prev.map((c) => (c.id === editingContractId ? updated : c)));
+    } else {
+      const res = await fetch('/api/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const created = await res.json();
+      setContracts((prev) => [created, ...prev]);
+    }
+    setContractModalOpen(false);
+  }
+  async function deleteContract(id) {
+    if (!confirm('Delete this contract? This cannot be undone.')) return;
+    await fetch(`/api/contracts/${id}`, { method: 'DELETE' });
+    setContracts((prev) => prev.filter((c) => c.id !== id));
+  }
+  async function duplicateContract(contract) {
+    const { id: _drop, updated: _u, ...rest } = contract;
+    const payload = { ...rest, title: `${contract.title} (copy)` };
+    const res = await fetch('/api/contracts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const created = await res.json();
+    setContracts((prev) => [created, ...prev]);
+  }
+  async function downloadContract(contract) {
+    setDownloadingContractId(contract.id);
+    try {
+      const { downloadContractPdf } = await import('@/lib/pdfTemplates');
+      await downloadContractPdf(contract);
+    } finally {
+      setDownloadingContractId(null);
+    }
+  }
+
   if (authStatus === 'checking') return null;
 
   if (authStatus === 'needsSetup') {
@@ -1031,6 +1122,48 @@ export default function AdminPage() {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </section>
+          )}
+
+          {tab === 'contracts' && (
+            <section className="tab-panel active">
+              <div className="panel">
+                <div className="panel-head">
+                  <h3>Contracts</h3>
+                  <button type="button" className="add-btn" onClick={() => openContractModal(null)}>+ New Contract</button>
+                </div>
+                {contracts.length === 0 ? (
+                  <div className="empty">No contracts yet — create one for a client or a team member and download it as a branded PDF.</div>
+                ) : (
+                  <table>
+                    <thead><tr><th>Title</th><th>For</th><th>Total</th><th>Updated</th><th></th></tr></thead>
+                    <tbody>
+                      {contracts.map((c) => {
+                        const total = contractTotal(c);
+                        return (
+                          <tr key={c.id}>
+                            <td>{c.title}</td>
+                            <td>
+                              {c.partyName || '—'}
+                              <br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{c.partyType === 'employee' ? 'Team member' : 'Client'}{c.role ? ` · ${c.role}` : ''}</span>
+                            </td>
+                            <td>{total > 0 ? `${formatAmount(total)} ${c.currency}` : '—'}</td>
+                            <td>{fmtDate(c.updated)}</td>
+                            <td>
+                              <div className="row-actions">
+                                <span onClick={() => downloadContract(c)}>{downloadingContractId === c.id ? 'Preparing…' : 'Download PDF'}</span>
+                                <span onClick={() => openContractModal(c)}>Edit</span>
+                                <span onClick={() => duplicateContract(c)}>Duplicate</span>
+                                <span className="danger" onClick={() => deleteContract(c.id)}>Delete</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -1454,6 +1587,81 @@ export default function AdminPage() {
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setPlanModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save plan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {contractModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-box modal-box-wide">
+            <h3>{editingContractId ? 'Edit Contract' : 'New Contract'}</h3>
+            <form onSubmit={saveContract}>
+              <Field label="Contract title">
+                <input value={contractForm.title} onChange={(e) => setContractForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Design Services Agreement" />
+              </Field>
+              <div className="field-row">
+                <Field label="This contract is for">
+                  <select value={contractForm.partyType} onChange={(e) => setContractForm((f) => ({ ...f, partyType: e.target.value }))}>
+                    <option value="client">A client</option>
+                    <option value="employee">A team member</option>
+                  </select>
+                </Field>
+                <Field label="Name">
+                  <input value={contractForm.partyName} onChange={(e) => setContractForm((f) => ({ ...f, partyName: e.target.value }))} placeholder="Person or company name" />
+                </Field>
+              </div>
+              <div className="field-row">
+                <Field label="Role (optional)" hint="e.g. Designer">
+                  <input value={contractForm.role} onChange={(e) => setContractForm((f) => ({ ...f, role: e.target.value }))} placeholder="Role" />
+                </Field>
+                <Field label="Start date (optional)">
+                  <input type="date" className="neutral-input" value={contractForm.startDate} onChange={(e) => setContractForm((f) => ({ ...f, startDate: e.target.value }))} />
+                </Field>
+                <Field label="End date (optional)">
+                  <input type="date" className="neutral-input" value={contractForm.endDate} onChange={(e) => setContractForm((f) => ({ ...f, endDate: e.target.value }))} />
+                </Field>
+              </div>
+
+              <label className="repeat-label">Scope of work</label>
+              {contractForm.items.map((it, i) => (
+                <div className="repeat-item" key={i}>
+                  <input value={it.label} onChange={(e) => updateContractItem(i, 'label', e.target.value)} placeholder="What will be done (e.g. Logo design)" />
+                  <input className="neutral-input" style={{ flex: 'none', width: 90 }} value={it.quantity} onChange={(e) => updateContractItem(i, 'quantity', e.target.value)} placeholder="Qty" />
+                  <input className="neutral-input" style={{ flex: 'none', width: 110 }} value={it.amount} onChange={(e) => updateContractItem(i, 'amount', e.target.value)} placeholder="Amount" />
+                  <button type="button" className="repeat-remove" onClick={() => removeContractItem(i)} disabled={contractForm.items.length <= 1}>✕</button>
+                </div>
+              ))}
+              <button type="button" className="repeat-add" onClick={addContractItem}>+ Add item</button>
+
+              <div className="field-row" style={{ marginTop: 16 }}>
+                <Field label="Currency">
+                  <input className="neutral-input" value={contractForm.currency} onChange={(e) => setContractForm((f) => ({ ...f, currency: e.target.value }))} placeholder="LE" />
+                </Field>
+                <div className="field" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                  <div className="invoice-totals-preview" style={{ marginTop: 0 }}>
+                    <span>Total <b>{formatAmount(contractTotal(contractForm))} {contractForm.currency}</b></span>
+                  </div>
+                </div>
+              </div>
+
+              <Field label="Terms & details" hint="one point per line">
+                <textarea
+                  className="items-textarea"
+                  rows={7}
+                  value={contractForm.terms}
+                  onChange={(e) => setContractForm((f) => ({ ...f, terms: e.target.value }))}
+                  placeholder={'Write the agreement details here, e.g.\nRevisions: up to 3 rounds per deliverable.\nPayment is made monthly within 5 days of month end.\nAll source files remain the property of KEDA.'}
+                />
+              </Field>
+              <Field label="Notes (optional)">
+                <textarea value={contractForm.notes} onChange={(e) => setContractForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Anything else worth noting" />
+              </Field>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setContractModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save contract</button>
               </div>
             </form>
           </div>
