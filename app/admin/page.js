@@ -164,6 +164,8 @@ export default function AdminPage() {
   const [seedingPlans, setSeedingPlans] = useState(false);
 
   const [contracts, setContracts] = useState([]);
+  // which side of the Contracts tab is showing: 'client' or 'team'
+  const [contractView, setContractView] = useState('client');
   const [contractModalOpen, setContractModalOpen] = useState(false);
   const [editingContractId, setEditingContractId] = useState(null);
   const [contractForm, setContractForm] = useState(EMPTY_CONTRACT);
@@ -722,7 +724,8 @@ export default function AdminPage() {
       });
     } else {
       setEditingContractId(null);
-      setContractForm(EMPTY_CONTRACT);
+      // new contracts default to whichever side (client/team) is being viewed
+      setContractForm({ ...EMPTY_CONTRACT, partyType: contractView === 'team' ? 'employee' : 'client' });
     }
     setContractModalOpen(true);
   }
@@ -756,6 +759,9 @@ export default function AdminPage() {
       const created = await res.json();
       setContracts((prev) => [created, ...prev]);
     }
+    // follow the contract to its own side, so it's never saved "into" the
+    // list the user isn't currently looking at
+    setContractView(payload.partyType === 'employee' ? 'team' : 'client');
     setContractModalOpen(false);
   }
   async function deleteContract(id) {
@@ -1129,47 +1135,85 @@ export default function AdminPage() {
             </section>
           )}
 
-          {tab === 'contracts' && (
-            <section className="tab-panel active">
-              <div className="panel">
-                <div className="panel-head">
-                  <h3>Contracts</h3>
-                  <button type="button" className="add-btn" onClick={() => openContractModal(null)}>+ New Contract</button>
+          {tab === 'contracts' && (() => {
+            const shown = contracts.filter((c) => (contractView === 'team' ? c.partyType === 'employee' : c.partyType !== 'employee'));
+            const clientCount = contracts.filter((c) => c.partyType !== 'employee').length;
+            const teamCount = contracts.filter((c) => c.partyType === 'employee').length;
+            const isTeamView = contractView === 'team';
+            return (
+              <section className="tab-panel active">
+                <div className="contract-view-bar">
+                  <div className="lang-seg">
+                    <button type="button" className={!isTeamView ? 'active' : ''} onClick={() => setContractView('client')}>
+                      Clients{clientCount > 0 ? ` (${clientCount})` : ''}
+                    </button>
+                    <button type="button" className={isTeamView ? 'active' : ''} onClick={() => setContractView('team')}>
+                      Team{teamCount > 0 ? ` (${teamCount})` : ''}
+                    </button>
+                  </div>
+                  <button type="button" className="add-btn" onClick={() => openContractModal(null)}>
+                    + New {isTeamView ? 'Team' : 'Client'} Contract
+                  </button>
                 </div>
-                {contracts.length === 0 ? (
-                  <div className="empty">No contracts yet — create one for a client or a team member and download it as a branded PDF.</div>
-                ) : (
-                  <table>
-                    <thead><tr><th>Title</th><th>For</th><th>Total</th><th>Updated</th><th></th></tr></thead>
-                    <tbody>
-                      {contracts.map((c) => {
-                        const total = contractTotal(c);
-                        return (
-                          <tr key={c.id}>
-                            <td>{c.title}</td>
-                            <td>
-                              {c.partyName || '—'}
-                              <br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{c.partyType === 'employee' ? 'Team member' : 'Client'}{c.role ? ` · ${c.role}` : ''}</span>
-                            </td>
-                            <td>{total > 0 ? `${formatAmount(total)} ${c.currency}` : '—'}</td>
-                            <td>{fmtDate(c.updated)}</td>
-                            <td>
-                              <div className="row-actions">
-                                <span onClick={() => downloadContract(c)}>{downloadingContractId === c.id ? 'Preparing…' : 'Download PDF'}</span>
-                                <span onClick={() => openContractModal(c)}>Edit</span>
-                                <span onClick={() => duplicateContract(c)}>Duplicate</span>
-                                <span className="danger" onClick={() => deleteContract(c.id)}>Delete</span>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </section>
-          )}
+
+                <div className="panel">
+                  <div className="panel-head">
+                    <h3>{isTeamView ? 'Team Agreements' : 'Client Agreements'}</h3>
+                    <span className="panel-tag">{isTeamView ? 'People working with you' : 'Clients you work for'}</span>
+                  </div>
+                  {shown.length === 0 ? (
+                    <div className="empty">
+                      {isTeamView
+                        ? 'No team agreements yet — add one for a designer, editor or anyone working with you.'
+                        : 'No client agreements yet — add one for a client you’re doing work for.'}
+                    </div>
+                  ) : (
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>{isTeamView ? 'Team member' : 'Client'}</th>
+                          <th>{isTeamView ? 'Compensation' : 'Value'}</th>
+                          <th>Period</th>
+                          <th>Updated</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shown.map((c) => {
+                          const total = contractTotal(c);
+                          return (
+                            <tr key={c.id}>
+                              <td>{c.title}</td>
+                              <td>
+                                {c.partyName || '—'}
+                                {c.role && <><br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{c.role}</span></>}
+                              </td>
+                              <td>{total > 0 ? `${formatAmount(total)} ${c.currency}` : '—'}</td>
+                              <td style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+                                {c.startDate || c.endDate
+                                  ? `${c.startDate ? fmtDate(c.startDate) : '—'} → ${c.endDate ? fmtDate(c.endDate) : 'open'}`
+                                  : '—'}
+                              </td>
+                              <td>{fmtDate(c.updated)}</td>
+                              <td>
+                                <div className="row-actions">
+                                  <span onClick={() => downloadContract(c)}>{downloadingContractId === c.id ? 'Preparing…' : 'Download PDF'}</span>
+                                  <span onClick={() => openContractModal(c)}>Edit</span>
+                                  <span onClick={() => duplicateContract(c)}>Duplicate</span>
+                                  <span className="danger" onClick={() => deleteContract(c.id)}>Delete</span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </section>
+            );
+          })()}
 
           {tab === 'settings' && (
             <section className="tab-panel active">
@@ -1596,7 +1640,9 @@ export default function AdminPage() {
       {contractModalOpen && (
         <div className="modal-overlay open">
           <div className="modal-box modal-box-wide">
-            <h3>{editingContractId ? 'Edit Contract' : 'New Contract'}</h3>
+            <h3>
+              {editingContractId ? 'Edit' : 'New'} {contractForm.partyType === 'employee' ? 'Team' : 'Client'} Contract
+            </h3>
             <form onSubmit={saveContract}>
               <Field label="Contract title">
                 <input value={contractForm.title} onChange={(e) => setContractForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Design Services Agreement" />
@@ -1608,12 +1654,12 @@ export default function AdminPage() {
                     <option value="employee">A team member</option>
                   </select>
                 </Field>
-                <Field label="Name">
-                  <input value={contractForm.partyName} onChange={(e) => setContractForm((f) => ({ ...f, partyName: e.target.value }))} placeholder="Person or company name" />
+                <Field label={contractForm.partyType === 'employee' ? 'Team member name' : 'Client name'}>
+                  <input value={contractForm.partyName} onChange={(e) => setContractForm((f) => ({ ...f, partyName: e.target.value }))} placeholder={contractForm.partyType === 'employee' ? 'Person name' : 'Person or company name'} />
                 </Field>
               </div>
               <div className="field-row">
-                <Field label="Role (optional)" hint="e.g. Designer">
+                <Field label="Role (optional)" hint={contractForm.partyType === 'employee' ? 'e.g. Designer' : 'e.g. Retainer'}>
                   <input value={contractForm.role} onChange={(e) => setContractForm((f) => ({ ...f, role: e.target.value }))} placeholder="Role" />
                 </Field>
                 <Field label="Start date (optional)">
@@ -1624,10 +1670,12 @@ export default function AdminPage() {
                 </Field>
               </div>
 
-              <label className="repeat-label">Scope of work</label>
+              <label className="repeat-label">
+                {contractForm.partyType === 'employee' ? 'Role & responsibilities' : 'Scope of work & deliverables'}
+              </label>
               {contractForm.items.map((it, i) => (
                 <div className="repeat-item" key={i}>
-                  <input value={it.label} onChange={(e) => updateContractItem(i, 'label', e.target.value)} placeholder="What will be done (e.g. Logo design)" />
+                  <input value={it.label} onChange={(e) => updateContractItem(i, 'label', e.target.value)} placeholder={contractForm.partyType === 'employee' ? 'What they will do (e.g. Social media designs)' : 'What will be delivered (e.g. Logo design)'} />
                   <input className="neutral-input" style={{ flex: 'none', width: 90 }} value={it.quantity} onChange={(e) => updateContractItem(i, 'quantity', e.target.value)} placeholder="Qty" />
                   <input className="neutral-input" style={{ flex: 'none', width: 110 }} value={it.amount} onChange={(e) => updateContractItem(i, 'amount', e.target.value)} placeholder="Amount" />
                   <button type="button" className="repeat-remove" onClick={() => removeContractItem(i)} disabled={contractForm.items.length <= 1}>✕</button>

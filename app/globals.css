@@ -777,6 +777,11 @@ td.msg-cell{max-width:340px; color:var(--text-dim);}
    lines at once while listing deliverables / included items */
 .items-textarea, textarea.items-textarea{min-height:150px !important; line-height:1.55;}
 .repeat-card textarea.items-textarea{min-height:150px;}
+/* Contracts tab: Clients / Team switcher above the table */
+.contract-view-bar{
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  margin-bottom:22px;
+}
 .permissions-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;}
 .permission-check{
   display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text);
