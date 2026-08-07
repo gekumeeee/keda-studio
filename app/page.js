@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
   return {
-    title: `${settings.siteName || 'KEDA'} — Brand & Creative Studio`,
+    title: settings.siteName || 'Keda Agency',
   };
 }
 

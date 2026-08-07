@@ -1236,7 +1236,7 @@ export default function AdminPage() {
                   <div className="panel">
                     <div className="panel-head"><h3>Brand</h3><span className="panel-tag">Both languages</span></div>
                     <Field label="Site name (used in page titles)">
-                      <input className="neutral-input" value={settingsForm.siteName} onChange={setNeutral('siteName')} placeholder="e.g. KEDA" />
+                      <input className="neutral-input" value={settingsForm.siteName} onChange={setNeutral('siteName')} placeholder="e.g. Keda Agency" />
                     </Field>
                   </div>
 

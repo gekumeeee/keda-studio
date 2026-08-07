@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
 
 export const metadata = {
-  title: 'KEDA — Brand & Creative Studio',
+  title: 'Keda Agency',
   description:
     'KEDA is a full-service brand and creative studio in Cairo, building distinct, timeless brands for the Egyptian and MENA market.',
 };

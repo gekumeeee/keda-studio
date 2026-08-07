@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
-  return { title: `Contact — ${settings.siteName || 'KEDA'}` };
+  return { title: `Contact — ${settings.siteName || 'Keda Agency'}` };
 }
 
 export default async function ContactPage() {

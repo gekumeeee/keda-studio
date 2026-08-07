@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
-  return { title: `About — ${settings.siteName || 'KEDA'}` };
+  return { title: `About — ${settings.siteName || 'Keda Agency'}` };
 }
 
 export default async function AboutPage() {
