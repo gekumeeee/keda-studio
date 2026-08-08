@@ -26,6 +26,7 @@ export async function PUT(request, { params }) {
     ...base,
     title: body.title?.trim() || base.title,
     partyType: ['client', 'employee'].includes(body.partyType) ? body.partyType : base.partyType,
+    clientId: body.clientId !== undefined ? body.clientId.trim() : (base.clientId || ''),
     partyName: body.partyName !== undefined ? body.partyName.trim() : base.partyName,
     role: body.role !== undefined ? body.role.trim() : base.role,
     startDate: body.startDate !== undefined ? body.startDate.trim() : base.startDate,

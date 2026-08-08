@@ -15,6 +15,7 @@ const TAB_TITLES = {
   invoices: 'Invoices',
   plans: 'Plans',
   contracts: 'Contracts',
+  clauses: 'Clause Library',
   settings: 'Site Content',
   users: 'Users',
   account: 'My Account',
@@ -27,26 +28,35 @@ const TAB_SUB = {
   invoices: 'Branded invoices you can send to clients as a PDF.',
   plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
   contracts: 'Agreements for clients or team members — deliverables, total and terms — saved and exportable as a PDF.',
+  clauses: 'Reusable text blocks — insert them into contracts, plans and invoices with one click instead of retyping.',
   settings: 'Edit every piece of text on your homepage, in both languages.',
   users: 'Add people to the admin and control exactly what each of them can see and edit.',
   account: 'Change your own username and password.',
 };
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', settings: '✎', users: '☺', account: '⚿' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', clauses: '❝', settings: '✎', users: '☺', account: '⚿' };
 // Every tab except 'overview' is gated by a matching permission key. 'overview'
 // has no key here — it's always shown to any logged-in user. 'users' isn't
 // permission-based at all (owner-only, checked separately from `permissions`).
+// 'clauses' rides on the 'plans' permission (see TAB_PERMISSION_KEY below)
+// rather than getting its own bucket — it's only ever used from inside the
+// Plan/Contract/Invoice modals, so a separate toggle in the Users tab would
+// be a footgun (lib/auth.js's PERMISSIONS array and this file's
+// PERMISSION_LABELS are two independently hand-synced sources of truth).
 const TAB_GROUPS = [
   { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
-  { label: 'Documents', tabs: ['invoices', 'plans', 'contracts'] },
+  { label: 'Documents', tabs: ['invoices', 'plans', 'contracts', 'clauses'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
+const TAB_PERMISSION_KEY = { clauses: 'plans' };
 const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', settings: 'Site Content' };
 const PERMISSIONS = Object.keys(PERMISSION_LABELS);
 const EMPTY_PERMISSIONS = Object.fromEntries(PERMISSIONS.map((p) => [p, false]));
 const EMPTY_USER = { username: '', password: '', permissions: { ...EMPTY_PERMISSIONS } };
-const EMPTY_INVOICE = { clientName: '', projectName: '', currency: 'LE', discount: '', sections: [{ title: '', price: '', items: [''] }] };
+const EMPTY_INVOICE = { clientId: '', clientName: '', projectName: '', currency: 'LE', discount: '', sections: [{ title: '', price: '', items: [''] }], status: 'draft', issueDate: '', dueDate: '' };
+const INVOICE_STATUS_LABELS = { draft: 'Draft', sent: 'Sent', paid: 'Paid', overdue: 'Overdue' };
 const EMPTY_PLAN = { name: '', description: '', price: '', currency: 'LE', cycle: '', items: [''] };
-const EMPTY_CONTRACT = { title: '', partyType: 'client', partyName: '', role: '', startDate: '', endDate: '', currency: 'LE', items: [{ label: '', quantity: '', amount: '' }], terms: '', notes: '' };
+const EMPTY_CONTRACT = { title: '', partyType: 'client', clientId: '', partyName: '', role: '', startDate: '', endDate: '', currency: 'LE', items: [{ label: '', quantity: '', amount: '' }], terms: '', notes: '' };
+const EMPTY_CLAUSE = { name: '', body: '' };
 
 // Preloaded example plans shown in the empty state — one click adds them all
 // as real plans the user can then edit or delete. Not auto-inserted; the user
@@ -102,6 +112,40 @@ function fmtDate(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// Effective status of an invoice: 'paid' | 'overdue' | 'sent' | 'draft'.
+// 'overdue' is derived (a sent invoice whose due date has passed), never stored.
+function invoiceStatus(inv) {
+  if (inv.status === 'paid') return 'paid';
+  if (inv.status === 'sent' && inv.dueDate) {
+    const due = new Date(inv.dueDate);
+    if (!isNaN(due) && due < new Date(new Date().toDateString())) return 'overdue';
+  }
+  return inv.status || 'draft';
+}
+
+function isCurrentMonth(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return false;
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
+// A client contract is "active" when today falls within its start/end window;
+// a missing start counts as already-started, a missing end as open-ended.
+function isContractActive(c) {
+  if (c.partyType === 'employee') return false;
+  const today = new Date(new Date().toDateString());
+  if (c.startDate) {
+    const s = new Date(c.startDate);
+    if (!isNaN(s) && s > today) return false;
+  }
+  if (c.endDate) {
+    const e = new Date(c.endDate);
+    if (!isNaN(e) && e < today) return false;
+  }
+  return true;
+}
+
 // Stable field wrapper (module-level so inputs never lose focus on re-render).
 function Field({ label, hint, children }) {
   return (
@@ -109,6 +153,51 @@ function Field({ label, hint, children }) {
       <label>{label}{hint ? <span className="field-hint-inline">{hint}</span> : null}</label>
       {children}
     </div>
+  );
+}
+
+// Dropdown that inserts a saved clause's body into whatever field it's placed
+// next to, then resets itself — the field keeps owning its own text/array
+// state, this just appends to it (see the three call sites below).
+function ClauseInsertSelect({ clauses, onInsert, label = 'Insert from library' }) {
+  if (!clauses.length) return null;
+  return (
+    <select
+      className="clause-insert-select"
+      value=""
+      onChange={(e) => {
+        const c = clauses.find((cl) => cl.id === e.target.value);
+        if (c) onInsert(c.body);
+        e.target.value = '';
+      }}
+    >
+      <option value="">{`+ ${label}…`}</option>
+      {clauses.map((c) => (
+        <option key={c.id} value={c.id}>{c.name}</option>
+      ))}
+    </select>
+  );
+}
+
+// Links an invoice/contract to an existing client record. Picking one calls
+// onPick(client); the caller sets clientId + copies the name into its own
+// free-text name field (which stays editable — hand-editing it unlinks again).
+function ClientPickSelect({ clients, value, onPick }) {
+  if (!clients.length) return null;
+  return (
+    <select
+      className="client-pick-select"
+      value={value || ''}
+      onChange={(e) => {
+        const c = clients.find((cl) => cl.id === e.target.value);
+        onPick(c || null);
+      }}
+    >
+      <option value="">Link to a saved client…</option>
+      {clients.map((c) => (
+        <option key={c.id} value={c.id}>{c.name}</option>
+      ))}
+    </select>
   );
 }
 
@@ -149,6 +238,7 @@ export default function AdminPage() {
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState(null);
   const [clientForm, setClientForm] = useState({ name: '', logo: '' });
+  const [clientDetailId, setClientDetailId] = useState(null);
 
   const [invoices, setInvoices] = useState([]);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
@@ -162,6 +252,16 @@ export default function AdminPage() {
   const [planForm, setPlanForm] = useState(EMPTY_PLAN);
   const [downloadingPlanId, setDownloadingPlanId] = useState(null);
   const [seedingPlans, setSeedingPlans] = useState(false);
+
+  const [proposalModalOpen, setProposalModalOpen] = useState(false);
+  const [proposalPlan, setProposalPlan] = useState(null);
+  const [proposalClientName, setProposalClientName] = useState('');
+  const [downloadingProposal, setDownloadingProposal] = useState(false);
+
+  const [clauses, setClauses] = useState([]);
+  const [clauseModalOpen, setClauseModalOpen] = useState(false);
+  const [editingClauseId, setEditingClauseId] = useState(null);
+  const [clauseForm, setClauseForm] = useState(EMPTY_CLAUSE);
 
   const [contracts, setContracts] = useState([]);
   // which side of the Contracts tab is showing: 'client' or 'team'
@@ -205,7 +305,7 @@ export default function AdminPage() {
   }
 
   async function loadAll(perms) {
-    const [p, c, m, s, inv, pl, con] = await Promise.all([
+    const [p, c, m, s, inv, pl, con, cla] = await Promise.all([
       perms.projects ? fetchJsonSafe('/api/projects', []) : Promise.resolve([]),
       perms.clients ? fetchJsonSafe('/api/clients', []) : Promise.resolve([]),
       perms.messages ? fetchJsonSafe('/api/messages', []) : Promise.resolve([]),
@@ -213,6 +313,8 @@ export default function AdminPage() {
       perms.invoices ? fetchJsonSafe('/api/invoices', []) : Promise.resolve([]),
       perms.plans ? fetchJsonSafe('/api/plans', []) : Promise.resolve([]),
       perms.contracts ? fetchJsonSafe('/api/contracts', []) : Promise.resolve([]),
+      // clauses ride on the 'plans' permission — see TAB_PERMISSION_KEY
+      perms.plans ? fetchJsonSafe('/api/clauses', []) : Promise.resolve([]),
     ]);
     setProjects(p);
     setClients(c);
@@ -221,6 +323,7 @@ export default function AdminPage() {
     setInvoices(inv);
     setPlans(Array.isArray(pl) ? pl : []);
     setContracts(Array.isArray(con) ? con : []);
+    setClauses(Array.isArray(cla) ? cla : []);
   }
 
   async function loadUsers() {
@@ -553,11 +656,15 @@ export default function AdminPage() {
     if (invoice) {
       setEditingInvoiceId(invoice.id);
       setInvoiceForm({
+        clientId: invoice.clientId || '',
         clientName: invoice.clientName || '',
         projectName: invoice.projectName || '',
         currency: invoice.currency || 'LE',
         discount: invoice.discount || '',
         sections: invoice.sections?.length ? invoice.sections : [{ title: '', price: '', items: [''] }],
+        status: invoice.status || 'draft',
+        issueDate: invoice.issueDate || '',
+        dueDate: invoice.dueDate || '',
       });
     } else {
       setEditingInvoiceId(null);
@@ -613,6 +720,40 @@ export default function AdminPage() {
     } finally {
       setDownloadingInvoiceId(null);
     }
+  }
+  async function markInvoicePaid(invoice) {
+    // paidDate is set server-side — take the response as source of truth.
+    const res = await fetch(`/api/invoices/${invoice.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'paid' }),
+    });
+    const updated = await res.json();
+    setInvoices((prev) => prev.map((i) => (i.id === invoice.id ? updated : i)));
+  }
+  // Clone an invoice as a fresh draft for a new billing month, then open it so
+  // the owner can adjust the period label / dates before sending.
+  async function newMonthInvoice(invoice) {
+    const today = new Date().toISOString().slice(0, 10);
+    const payload = {
+      clientId: invoice.clientId || '',
+      clientName: invoice.clientName || '',
+      projectName: invoice.projectName || '',
+      currency: invoice.currency || 'LE',
+      discount: invoice.discount || '',
+      sections: invoice.sections || [],
+      status: 'draft',
+      issueDate: today,
+      dueDate: '',
+    };
+    const res = await fetch('/api/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const created = await res.json();
+    setInvoices((prev) => [created, ...prev]);
+    openInvoiceModal(created);
   }
 
   // ---- plans ----
@@ -684,6 +825,22 @@ export default function AdminPage() {
       setDownloadingPlanId(null);
     }
   }
+  function openProposalModal(plan) {
+    setProposalPlan(plan);
+    setProposalClientName('');
+    setProposalModalOpen(true);
+  }
+  async function downloadProposal(e) {
+    e.preventDefault();
+    setDownloadingProposal(true);
+    try {
+      const { downloadProposalPdf } = await import('@/lib/pdfTemplates');
+      await downloadProposalPdf(proposalPlan, proposalClientName);
+      setProposalModalOpen(false);
+    } finally {
+      setDownloadingProposal(false);
+    }
+  }
   // "Add example plans" button in the empty state — POSTs each example plan
   // one after another so they appear as regular editable/deletable plans.
   async function addExamplePlans() {
@@ -706,6 +863,56 @@ export default function AdminPage() {
     }
   }
 
+  // ---- clause library ----
+  function openClauseModal(clause) {
+    if (clause) {
+      setEditingClauseId(clause.id);
+      setClauseForm({ name: clause.name || '', body: clause.body || '' });
+    } else {
+      setEditingClauseId(null);
+      setClauseForm(EMPTY_CLAUSE);
+    }
+    setClauseModalOpen(true);
+  }
+  async function saveClause(e) {
+    e.preventDefault();
+    if (!clauseForm.name.trim()) return;
+    if (editingClauseId) {
+      const res = await fetch(`/api/clauses/${editingClauseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clauseForm),
+      });
+      const updated = await res.json();
+      setClauses((prev) => prev.map((c) => (c.id === editingClauseId ? updated : c)));
+    } else {
+      const res = await fetch('/api/clauses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clauseForm),
+      });
+      const created = await res.json();
+      setClauses((prev) => [created, ...prev]);
+    }
+    setClauseModalOpen(false);
+  }
+  async function deleteClause(id) {
+    if (!confirm('Delete this clause? This cannot be undone.')) return;
+    await fetch(`/api/clauses/${id}`, { method: 'DELETE' });
+    setClauses((prev) => prev.filter((c) => c.id !== id));
+  }
+  async function duplicateClause(clause) {
+    const { id: _drop, updated: _u, ...rest } = clause;
+    const payload = { ...rest, name: `${clause.name} (copy)` };
+    const res = await fetch('/api/clauses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const created = await res.json();
+    setClauses((prev) => [created, ...prev]);
+  }
+
   // ---- contracts ----
   function openContractModal(contract) {
     if (contract) {
@@ -713,6 +920,7 @@ export default function AdminPage() {
       setContractForm({
         title: contract.title || '',
         partyType: contract.partyType || 'client',
+        clientId: contract.clientId || '',
         partyName: contract.partyName || '',
         role: contract.role || '',
         startDate: contract.startDate || '',
@@ -846,7 +1054,10 @@ export default function AdminPage() {
   // Filter every tab (except 'overview', always shown) down to what this user
   // is actually allowed to see, then drop any group left with no tabs at all.
   const visibleGroups = TAB_GROUPS
-    .map((group) => ({ ...group, tabs: group.tabs.filter((key) => key === 'overview' || permissions[key]) }))
+    .map((group) => ({
+      ...group,
+      tabs: group.tabs.filter((key) => key === 'overview' || permissions[TAB_PERMISSION_KEY[key] || key]),
+    }))
     .filter((group) => group.tabs.length > 0);
   const configureExtras = ['account', ...(isOwner ? ['users'] : [])];
 
@@ -860,7 +1071,7 @@ export default function AdminPage() {
               <div className="side-group" key={group.label}>
                 <div className="side-group-label">{group.label}</div>
                 {group.tabs.map((key) => (
-                  <a key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+                  <a key={key} className={tab === key ? 'active' : ''} onClick={() => { setTab(key); setClientDetailId(null); }}>
                     <span className="side-icon">{TAB_ICONS[key]}</span>
                     {TAB_TITLES[key]}
                     {key === 'messages' && messages.length > 0 && <span className="side-badge">{messages.length}</span>}
@@ -897,28 +1108,82 @@ export default function AdminPage() {
           {tab === 'overview' && (
             <section className="tab-panel active">
               <div className="stat-grid">
-                <div className="stat-card">
-                  <div className="label">Projects Published</div>
-                  <div className="value">{liveCount}</div>
-                  <div className="delta">{liveCount ? `${projects.length} total (incl. drafts)` : 'Add your first case study'}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="label">Clients Listed</div>
-                  <div className="value">{clients.length}</div>
-                  <div className="delta">{clients.length ? 'Showing on homepage' : 'Add your first client'}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="label">New Messages</div>
-                  <div className="value">{messages.length}</div>
-                  <div className="delta">{messages.length ? 'From your contact form' : 'Nothing yet'}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="label">Site Status</div>
-                  <div className="value" style={{ fontSize: 20 }}>{liveCount > 0 ? 'Live' : 'Draft'}</div>
-                  <div className="delta" style={{ color: liveCount > 0 ? 'var(--green)' : 'var(--gold)' }}>
-                    {liveCount > 0 ? 'Showing on homepage' : 'Not live'}
-                  </div>
-                </div>
+                {(() => {
+                  // Money cards need the invoices permission; fall back to the
+                  // original site cards for a member who can't see billing.
+                  if (!permissions.invoices) {
+                    return (
+                      <>
+                        <div className="stat-card">
+                          <div className="label">Projects Published</div>
+                          <div className="value">{liveCount}</div>
+                          <div className="delta">{liveCount ? `${projects.length} total (incl. drafts)` : 'Add your first case study'}</div>
+                        </div>
+                        <div className="stat-card">
+                          <div className="label">Clients Listed</div>
+                          <div className="value">{clients.length}</div>
+                          <div className="delta">{clients.length ? 'Showing on homepage' : 'Add your first client'}</div>
+                        </div>
+                        <div className="stat-card">
+                          <div className="label">New Messages</div>
+                          <div className="value">{messages.length}</div>
+                          <div className="delta">{messages.length ? 'From your contact form' : 'Nothing yet'}</div>
+                        </div>
+                        <div className="stat-card">
+                          <div className="label">Site Status</div>
+                          <div className="value" style={{ fontSize: 20 }}>{liveCount > 0 ? 'Live' : 'Draft'}</div>
+                          <div className="delta" style={{ color: liveCount > 0 ? 'var(--green)' : 'var(--gold)' }}>
+                            {liveCount > 0 ? 'Showing on homepage' : 'Not live'}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  }
+                  const revenue = invoices.filter((i) => i.status === 'paid' && isCurrentMonth(i.paidDate)).reduce((s, i) => s + invoiceTotals(i).total, 0);
+                  const outstanding = invoices.filter((i) => i.status === 'sent').reduce((s, i) => s + invoiceTotals(i).total, 0);
+                  const overdueList = invoices.filter((i) => invoiceStatus(i) === 'overdue');
+                  const overdue = overdueList.reduce((s, i) => s + invoiceTotals(i).total, 0);
+                  const activeContracts = contracts.filter(isContractActive).length;
+                  // dominant currency across invoices, so mixed-currency setups
+                  // still show a sensible suffix (fallback LE).
+                  const curCount = {};
+                  invoices.forEach((i) => { const c = i.currency || 'LE'; curCount[c] = (curCount[c] || 0) + 1; });
+                  const cur = Object.keys(curCount).sort((a, b) => curCount[b] - curCount[a])[0] || 'LE';
+                  return (
+                    <>
+                      <div className="stat-card">
+                        <div className="label">This month&apos;s revenue</div>
+                        <div className="value" style={{ fontSize: 26 }}>{formatAmount(revenue)} {cur}</div>
+                        <div className="delta" style={{ color: 'var(--green)' }}>Paid this month</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="label">Outstanding</div>
+                        <div className="value" style={{ fontSize: 26 }}>{formatAmount(outstanding)} {cur}</div>
+                        <div className="delta">Sent, awaiting payment</div>
+                      </div>
+                      <div className="stat-card">
+                        <div className="label">Overdue</div>
+                        <div className="value" style={{ fontSize: 26, color: overdue > 0 ? 'var(--red)' : 'var(--text)' }}>{formatAmount(overdue)} {cur}</div>
+                        <div className="delta" style={{ color: overdue > 0 ? 'var(--red)' : undefined }}>
+                          {overdueList.length ? `${overdueList.length} invoice${overdueList.length === 1 ? '' : 's'} past due` : 'Nothing overdue'}
+                        </div>
+                      </div>
+                      {permissions.contracts ? (
+                        <div className="stat-card">
+                          <div className="label">Active client contracts</div>
+                          <div className="value">{activeContracts}</div>
+                          <div className="delta">Currently in effect</div>
+                        </div>
+                      ) : (
+                        <div className="stat-card">
+                          <div className="label">Clients Listed</div>
+                          <div className="value">{clients.length}</div>
+                          <div className="delta">{clients.length ? 'Showing on homepage' : 'Add your first client'}</div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="panel">
@@ -984,38 +1249,112 @@ export default function AdminPage() {
             </section>
           )}
 
-          {tab === 'clients' && (
-            <section className="tab-panel active">
-              <div className="panel">
-                <div className="panel-head">
-                  <h3>Client Logos</h3>
-                  <button type="button" className="add-btn" onClick={() => openClientModal(null)}>+ Add Client</button>
-                </div>
-                <table>
-                  <thead><tr><th>Logo</th><th>Name</th><th>Added</th><th></th></tr></thead>
-                  <tbody>
-                    {clients.length === 0 ? (
-                      <tr><td colSpan={4}><div className="empty">No clients added yet.</div></td></tr>
+          {tab === 'clients' && (() => {
+            const detailClient = clientDetailId ? clients.find((c) => c.id === clientDetailId) : null;
+            if (detailClient) {
+              const clientInvoices = invoices.filter((i) => i.clientId === detailClient.id);
+              const clientContracts = contracts.filter((c) => c.clientId === detailClient.id);
+              const billed = clientInvoices.reduce((sum, i) => sum + invoiceTotals(i).total, 0);
+              const paid = clientInvoices.filter((i) => i.status === 'paid').reduce((sum, i) => sum + invoiceTotals(i).total, 0);
+              const currency = clientInvoices[0]?.currency || 'LE';
+              return (
+                <section className="tab-panel active">
+                  <div className="client-detail-head">
+                    <button type="button" className="btn-secondary" onClick={() => setClientDetailId(null)}>← Back to clients</button>
+                    <h2 className="client-detail-name">{detailClient.name}</h2>
+                  </div>
+                  <div className="stat-grid">
+                    <div className="stat-card"><div className="label">Total billed</div><div className="value" style={{ fontSize: 24 }}>{formatAmount(billed)} {currency}</div></div>
+                    <div className="stat-card"><div className="label">Paid</div><div className="value" style={{ fontSize: 24, color: 'var(--green)' }}>{formatAmount(paid)} {currency}</div></div>
+                    <div className="stat-card"><div className="label">Outstanding</div><div className="value" style={{ fontSize: 24, color: billed - paid > 0 ? 'var(--red)' : 'var(--text)' }}>{formatAmount(billed - paid)} {currency}</div></div>
+                    <div className="stat-card"><div className="label">Active contracts</div><div className="value">{clientContracts.filter(isContractActive).length}</div></div>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-head"><h3>Invoices</h3></div>
+                    {clientInvoices.length === 0 ? (
+                      <div className="empty">No invoices linked to this client yet.</div>
                     ) : (
-                      clients.map((c) => (
-                        <tr key={c.id}>
-                          <td>{c.logo ? <img src={c.logo} alt={c.name} className="client-logo-thumb" /> : <span className="no-logo">—</span>}</td>
-                          <td>{c.name}</td>
-                          <td>{fmtDate(c.added)}</td>
-                          <td>
-                            <div className="row-actions">
-                              <span onClick={() => openClientModal(c)}>Edit</span>
-                              <span className="danger" onClick={() => deleteClient(c.id)}>Delete</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      <table>
+                        <thead><tr><th>Project</th><th>Total</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                        <tbody>
+                          {clientInvoices.map((inv) => {
+                            const st = invoiceStatus(inv);
+                            return (
+                              <tr key={inv.id}>
+                                <td>{inv.projectName}</td>
+                                <td>{formatAmount(invoiceTotals(inv).total)} {inv.currency}</td>
+                                <td><span className={`inv-status ${st}`}>{INVOICE_STATUS_LABELS[st]}</span></td>
+                                <td>{fmtDate(inv.updated)}</td>
+                                <td><div className="row-actions"><span onClick={() => openInvoiceModal(inv)}>Edit</span></div></td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
+                  </div>
+                  <div className="panel">
+                    <div className="panel-head"><h3>Contracts</h3></div>
+                    {clientContracts.length === 0 ? (
+                      <div className="empty">No contracts linked to this client yet.</div>
+                    ) : (
+                      <table>
+                        <thead><tr><th>Title</th><th>Value</th><th>Period</th><th></th></tr></thead>
+                        <tbody>
+                          {clientContracts.map((c) => {
+                            const total = contractTotal(c);
+                            return (
+                              <tr key={c.id}>
+                                <td>{c.title}</td>
+                                <td>{total > 0 ? `${formatAmount(total)} ${c.currency}` : '—'}</td>
+                                <td style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+                                  {c.startDate || c.endDate ? `${c.startDate ? fmtDate(c.startDate) : '—'} → ${c.endDate ? fmtDate(c.endDate) : 'open'}` : '—'}
+                                </td>
+                                <td><div className="row-actions"><span onClick={() => openContractModal(c)}>Edit</span></div></td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </section>
+              );
+            }
+            return (
+              <section className="tab-panel active">
+                <div className="panel">
+                  <div className="panel-head">
+                    <h3>Client Logos</h3>
+                    <button type="button" className="add-btn" onClick={() => openClientModal(null)}>+ Add Client</button>
+                  </div>
+                  <table>
+                    <thead><tr><th>Logo</th><th>Name</th><th>Added</th><th></th></tr></thead>
+                    <tbody>
+                      {clients.length === 0 ? (
+                        <tr><td colSpan={4}><div className="empty">No clients added yet.</div></td></tr>
+                      ) : (
+                        clients.map((c) => (
+                          <tr key={c.id}>
+                            <td>{c.logo ? <img src={c.logo} alt={c.name} className="client-logo-thumb" /> : <span className="no-logo">—</span>}</td>
+                            <td>{c.name}</td>
+                            <td>{fmtDate(c.added)}</td>
+                            <td>
+                              <div className="row-actions">
+                                <span onClick={() => setClientDetailId(c.id)}>View</span>
+                                <span onClick={() => openClientModal(c)}>Edit</span>
+                                <span className="danger" onClick={() => deleteClient(c.id)}>Delete</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            );
+          })()}
 
           {tab === 'messages' && (
             <section className="tab-panel active">
@@ -1054,21 +1393,25 @@ export default function AdminPage() {
                   <button type="button" className="add-btn" onClick={() => openInvoiceModal(null)}>+ New Invoice</button>
                 </div>
                 <table>
-                  <thead><tr><th>Project</th><th>Client</th><th>Total</th><th>Updated</th><th></th></tr></thead>
+                  <thead><tr><th>Project</th><th>Client</th><th>Total</th><th>Status</th><th>Updated</th><th></th></tr></thead>
                   <tbody>
                     {invoices.length === 0 ? (
-                      <tr><td colSpan={5}><div className="empty">No invoices yet — create one to send a client a branded PDF breakdown.</div></td></tr>
+                      <tr><td colSpan={6}><div className="empty">No invoices yet — create one to send a client a branded PDF breakdown.</div></td></tr>
                     ) : (
                       invoices.map((inv) => {
                         const { total } = invoiceTotals(inv);
+                        const st = invoiceStatus(inv);
                         return (
                           <tr key={inv.id}>
                             <td>{inv.projectName}</td>
                             <td>{inv.clientName || '—'}</td>
                             <td>{formatAmount(total)} {inv.currency}</td>
+                            <td><span className={`inv-status ${st}`}>{INVOICE_STATUS_LABELS[st]}</span></td>
                             <td>{fmtDate(inv.updated)}</td>
                             <td>
                               <div className="row-actions">
+                                {inv.status !== 'paid' && <span onClick={() => markInvoicePaid(inv)}>Mark paid</span>}
+                                <span onClick={() => newMonthInvoice(inv)}>New month</span>
                                 <span onClick={() => downloadInvoice(inv)}>{downloadingInvoiceId === inv.id ? 'Preparing…' : 'Download PDF'}</span>
                                 <span onClick={() => openInvoiceModal(inv)}>Edit</span>
                                 <span className="danger" onClick={() => deleteInvoice(inv.id)}>Delete</span>
@@ -1121,6 +1464,7 @@ export default function AdminPage() {
                           <td>
                             <div className="row-actions">
                               <span onClick={() => downloadPlan(p)}>{downloadingPlanId === p.id ? 'Preparing…' : 'Download PDF'}</span>
+                              <span onClick={() => openProposalModal(p)}>Send as Proposal</span>
                               <span onClick={() => openPlanModal(p)}>Edit</span>
                               <span onClick={() => duplicatePlan(p)}>Duplicate</span>
                               <span className="danger" onClick={() => deletePlan(p.id)}>Delete</span>
@@ -1214,6 +1558,44 @@ export default function AdminPage() {
               </section>
             );
           })()}
+
+          {tab === 'clauses' && (
+            <section className="tab-panel active">
+              <div className="panel">
+                <div className="panel-head">
+                  <h3>Clause Library</h3>
+                  <button type="button" className="add-btn" onClick={() => openClauseModal(null)}>+ New Clause</button>
+                </div>
+                {clauses.length === 0 ? (
+                  <div className="empty">
+                    No saved clauses yet — add one (e.g. a payment-terms line or a revisions policy) and it'll show up as an "Insert from library" option inside Contracts, Plans and Invoices.
+                  </div>
+                ) : (
+                  <table>
+                    <thead><tr><th>Name</th><th>Body</th><th>Updated</th><th></th></tr></thead>
+                    <tbody>
+                      {clauses.map((c) => (
+                        <tr key={c.id}>
+                          <td>{c.name}</td>
+                          <td style={{ color: 'var(--text-dim)', fontSize: 12, maxWidth: 420 }}>
+                            {c.body.length > 90 ? `${c.body.slice(0, 90)}…` : c.body}
+                          </td>
+                          <td>{fmtDate(c.updated)}</td>
+                          <td>
+                            <div className="row-actions">
+                              <span onClick={() => openClauseModal(c)}>Edit</span>
+                              <span onClick={() => duplicateClause(c)}>Duplicate</span>
+                              <span className="danger" onClick={() => deleteClause(c.id)}>Delete</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </section>
+          )}
 
           {tab === 'settings' && (
             <section className="tab-panel active">
@@ -1543,8 +1925,29 @@ export default function AdminPage() {
                 <Field label="Project name">
                   <input value={invoiceForm.projectName} onChange={(e) => setInvoiceForm((f) => ({ ...f, projectName: e.target.value }))} placeholder="Project name" />
                 </Field>
-                <Field label="Client name (optional)">
-                  <input value={invoiceForm.clientName} onChange={(e) => setInvoiceForm((f) => ({ ...f, clientName: e.target.value }))} placeholder="Client name" />
+                <Field label="Client (optional)" hint="pick a saved client or type a name">
+                  <ClientPickSelect
+                    clients={clients}
+                    value={invoiceForm.clientId}
+                    onPick={(c) => setInvoiceForm((f) => ({ ...f, clientId: c ? c.id : '', clientName: c ? c.name : f.clientName }))}
+                  />
+                  <input value={invoiceForm.clientName} onChange={(e) => setInvoiceForm((f) => ({ ...f, clientName: e.target.value, clientId: '' }))} placeholder="Client name" />
+                </Field>
+              </div>
+
+              <div className="field-row">
+                <Field label="Status">
+                  <select value={invoiceForm.status} onChange={(e) => setInvoiceForm((f) => ({ ...f, status: e.target.value }))}>
+                    <option value="draft">Draft</option>
+                    <option value="sent">Sent</option>
+                    <option value="paid">Paid</option>
+                  </select>
+                </Field>
+                <Field label="Issue date (optional)">
+                  <input type="date" className="neutral-input" value={invoiceForm.issueDate} onChange={(e) => setInvoiceForm((f) => ({ ...f, issueDate: e.target.value }))} />
+                </Field>
+                <Field label="Due date (optional)">
+                  <input type="date" className="neutral-input" value={invoiceForm.dueDate} onChange={(e) => setInvoiceForm((f) => ({ ...f, dueDate: e.target.value }))} />
                 </Field>
               </div>
 
@@ -1557,6 +1960,11 @@ export default function AdminPage() {
                     <input className="neutral-input" style={{ flex: 'none', width: 130 }} value={s.price} onChange={(e) => updateInvoiceSection(i, 'price', e.target.value)} placeholder="Price" />
                     <button type="button" className="repeat-remove" onClick={() => removeInvoiceSection(i)} disabled={invoiceForm.sections.length <= 1}>✕</button>
                   </div>
+                  <ClauseInsertSelect
+                    clauses={clauses}
+                    label="Insert item"
+                    onInsert={(body) => updateInvoiceSectionItems(i, [...s.items.filter((it) => it.trim()), ...body.split('\n').filter((l) => l.trim())].join('\n'))}
+                  />
                   <textarea
                     className="items-textarea"
                     rows={6}
@@ -1620,6 +2028,11 @@ export default function AdminPage() {
                 </Field>
               </div>
               <Field label="What's included" hint="one line per item">
+                <ClauseInsertSelect
+                  clauses={clauses}
+                  label="Insert item"
+                  onInsert={(body) => updatePlanItems([...planForm.items.filter((i) => i.trim()), ...body.split('\n').filter((l) => l.trim())].join('\n'))}
+                />
                 <textarea
                   className="items-textarea"
                   rows={8}
@@ -1631,6 +2044,25 @@ export default function AdminPage() {
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setPlanModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save plan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {proposalModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-box">
+            <h3>Send &ldquo;{proposalPlan?.name}&rdquo; as a Proposal</h3>
+            <form onSubmit={downloadProposal}>
+              <Field label="Client / company name (optional)" hint="shown as “Prepared for …” on the PDF">
+                <input value={proposalClientName} onChange={(e) => setProposalClientName(e.target.value)} placeholder="e.g. Cartellino Rosso" />
+              </Field>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setProposalModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={downloadingProposal}>
+                  {downloadingProposal ? 'Preparing…' : 'Download proposal'}
+                </button>
               </div>
             </form>
           </div>
@@ -1655,7 +2087,14 @@ export default function AdminPage() {
                   </select>
                 </Field>
                 <Field label={contractForm.partyType === 'employee' ? 'Team member name' : 'Client name'}>
-                  <input value={contractForm.partyName} onChange={(e) => setContractForm((f) => ({ ...f, partyName: e.target.value }))} placeholder={contractForm.partyType === 'employee' ? 'Person name' : 'Person or company name'} />
+                  {contractForm.partyType !== 'employee' && (
+                    <ClientPickSelect
+                      clients={clients}
+                      value={contractForm.clientId}
+                      onPick={(c) => setContractForm((f) => ({ ...f, clientId: c ? c.id : '', partyName: c ? c.name : f.partyName }))}
+                    />
+                  )}
+                  <input value={contractForm.partyName} onChange={(e) => setContractForm((f) => ({ ...f, partyName: e.target.value, clientId: '' }))} placeholder={contractForm.partyType === 'employee' ? 'Person name' : 'Person or company name'} />
                 </Field>
               </div>
               <div className="field-row">
@@ -1695,6 +2134,11 @@ export default function AdminPage() {
               </div>
 
               <Field label="Terms & details" hint="one point per line">
+                <ClauseInsertSelect
+                  clauses={clauses}
+                  label="Insert clause"
+                  onInsert={(body) => setContractForm((f) => ({ ...f, terms: f.terms.trim() ? `${f.terms}\n${body}` : body }))}
+                />
                 <textarea
                   className="items-textarea"
                   rows={7}
@@ -1710,6 +2154,32 @@ export default function AdminPage() {
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setContractModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save contract</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {clauseModalOpen && (
+        <div className="modal-overlay open">
+          <div className="modal-box modal-box-wide">
+            <h3>{editingClauseId ? 'Edit Clause' : 'New Clause'}</h3>
+            <form onSubmit={saveClause}>
+              <Field label="Name" hint="shown in the “Insert from library” dropdown">
+                <input value={clauseForm.name} onChange={(e) => setClauseForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Standard payment terms" />
+              </Field>
+              <Field label="Text" hint="one point per line if it's more than one">
+                <textarea
+                  className="items-textarea"
+                  rows={7}
+                  value={clauseForm.body}
+                  onChange={(e) => setClauseForm((f) => ({ ...f, body: e.target.value }))}
+                  placeholder={'e.g.\nPayment is due within 7 days of invoice date.\nLate payments incur a 2% monthly fee.'}
+                />
+              </Field>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setClauseModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save clause</button>
               </div>
             </form>
           </div>

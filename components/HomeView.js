@@ -8,6 +8,7 @@ import DiagMarquee from './DiagMarquee';
 import Floaters from './Floaters';
 import Reveal from './Reveal';
 import CountUp from './CountUp';
+import StatCounter from './StatCounter';
 import RotatingWord from './RotatingWord';
 import HeroGallery from './HeroGallery';
 import GlyphIcon from './GlyphIcon';
@@ -180,24 +181,26 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
             <div className="eyebrow center-eyebrow">{pick(settings.servicesEyebrow, lang)}</div>
             <h2 className="big-heading">{pick(settings.servicesHeading, lang).replace(/\n/g, ' ')}</h2>
           </Reveal>
-          <Reveal className="cap-grid">
+          <div className="cap-grid">
             {settings.services.map((svc, i) => (
-              <div
+              <Reveal
+                as="div"
                 className={`cap-card ${svc.image ? 'has-image' : CAP_CLASSES[i % CAP_CLASSES.length]}`}
                 key={i}
+                delay={i * 80}
                 onMouseMove={handleCapSpotlight}
               >
                 {svc.image && <div className="cap-bg" style={{ backgroundImage: `url(${svc.image})` }} />}
                 <div className="cap-content">
                   <div className="top"><h4>{pick(svc.title, lang)}</h4><div className="arrow">↗</div></div>
                   <div>
-                    {svc.stat && <div className="cap-stat">{svc.stat}</div>}
+                    {svc.stat && <StatCounter value={svc.stat} className="cap-stat" />}
                     <p>{pick(svc.desc, lang)}</p>
                   </div>
                 </div>
-              </div>
+              </Reveal>
             ))}
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -260,18 +263,18 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
             <div className="eyebrow center-eyebrow">{pick(settings.impactEyebrow, lang)}</div>
             <h2 className="big-heading">{pick(settings.impactHeading, lang).replace(/\n/g, ' ')}</h2>
           </Reveal>
-          <Reveal className="impact-grid">
+          <div className="impact-grid">
             {settings.impact.map((it, i) => (
-              <div className="impact-card" key={i}>
+              <Reveal as="div" className="impact-card" key={i} delay={i * 80}>
                 <div className="impact-icon" style={{ background: it.color }}>
                   <GlyphIcon type={IMPACT_GLYPHS[i % IMPACT_GLYPHS.length]} />
                 </div>
-                <div className="impact-value">{it.value}</div>
+                <StatCounter value={it.value} className="impact-value" />
                 <div className="impact-label">{pick(it.label, lang)}</div>
                 <div className="impact-sub">{pick(it.sub, lang)}</div>
-              </div>
+              </Reveal>
             ))}
-          </Reveal>
+          </div>
         </div>
       </section>
 

@@ -25,13 +25,20 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
   }
   const invoices = await getInvoices();
+  const status = ['draft', 'sent', 'paid'].includes(body.status) ? body.status : 'draft';
   const invoice = {
     id: uid(),
+    clientId: (body.clientId || '').trim(),
     clientName: (body.clientName || '').trim(),
     projectName: body.projectName.trim(),
     currency: (body.currency || 'LE').trim() || 'LE',
     discount: (body.discount || '').trim(),
     sections: normalizeSections(body.sections),
+    status,
+    issueDate: (body.issueDate || '').trim(),
+    dueDate: (body.dueDate || '').trim(),
+    // paidDate is server-managed: only stamped when the invoice is created paid
+    paidDate: status === 'paid' ? new Date().toISOString() : '',
     updated: new Date().toISOString(),
   };
   invoices.unshift(invoice);

@@ -21,13 +21,25 @@ export async function PUT(request, { params }) {
   if (idx === -1) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
+  const base = invoices[idx];
+  const status = ['draft', 'sent', 'paid'].includes(body.status) ? body.status : (base.status || 'draft');
+  // paidDate is authoritative here, not client-supplied: stamp it the moment an
+  // invoice first becomes paid, clear it if it moves back to draft/sent.
+  let paidDate = base.paidDate || '';
+  if (status === 'paid' && !paidDate) paidDate = new Date().toISOString();
+  if (status !== 'paid') paidDate = '';
   invoices[idx] = {
-    ...invoices[idx],
-    clientName: body.clientName !== undefined ? body.clientName.trim() : invoices[idx].clientName,
-    projectName: body.projectName?.trim() || invoices[idx].projectName,
-    currency: body.currency !== undefined ? body.currency.trim() || 'LE' : invoices[idx].currency,
-    discount: body.discount !== undefined ? body.discount.trim() : invoices[idx].discount,
-    sections: body.sections !== undefined ? normalizeSections(body.sections) : invoices[idx].sections,
+    ...base,
+    clientId: body.clientId !== undefined ? body.clientId.trim() : (base.clientId || ''),
+    clientName: body.clientName !== undefined ? body.clientName.trim() : base.clientName,
+    projectName: body.projectName?.trim() || base.projectName,
+    currency: body.currency !== undefined ? body.currency.trim() || 'LE' : base.currency,
+    discount: body.discount !== undefined ? body.discount.trim() : base.discount,
+    sections: body.sections !== undefined ? normalizeSections(body.sections) : base.sections,
+    status,
+    issueDate: body.issueDate !== undefined ? body.issueDate.trim() : (base.issueDate || ''),
+    dueDate: body.dueDate !== undefined ? body.dueDate.trim() : (base.dueDate || ''),
+    paidDate,
     updated: new Date().toISOString(),
   };
   await saveInvoices(invoices);

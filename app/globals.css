@@ -108,7 +108,8 @@ html[dir="rtl"] .marquee-phrase{letter-spacing:normal;}
 
 /* ================= marketing header / nav ================= */
 header{
-  position:sticky; top:0; z-index:50; padding:26px 0;
+  position:sticky; top:0; z-index:50; padding-block:26px;
+  transition: padding-block .2s ease;
 }
 header nav{
   /* grid (not flex+space-between) so .nav-links is geometrically centered
@@ -125,10 +126,11 @@ header nav{
   padding-block:12px;
   padding-inline-start:26px;
   padding-inline-end:14px;
+  transition: padding-block .2s ease, background .2s ease;
 }
 .logo{font-family:var(--display); font-weight:600; font-size:22px; display:flex; align-items:center; flex:none; line-height:1; justify-self:start;}
 .logo .placeholder-tag{font-family:var(--mono); font-size:9px; color:var(--text-dim); text-transform:uppercase; display:block; margin-top:-2px; letter-spacing:.06em;}
-.logo-img{height:46px; width:auto; display:block;}
+.logo-img{height:46px; width:auto; display:block; transition:height .2s ease;}
 .nav-links{display:flex; gap:36px; align-items:center; height:46px; justify-self:center;}
 .nav-links a{font-size:12.5px; font-weight:500; line-height:1; color:var(--text-dim); transition:color .25s ease; text-transform:uppercase; letter-spacing:.03em;}
 .nav-links a:hover, .nav-links a.active{color:var(--gold);}
@@ -419,10 +421,34 @@ header nav{
 .work-row-text h3{font-family:var(--display); font-weight:700; font-size:38px; line-height:1.12; margin:14px 0 22px;}
 .work-row-text .meta{font-size:14px; color:var(--text-dim); margin-bottom:10px;}
 .work-row-text .meta b{color:var(--text); font-weight:600;}
-.work-row-media{flex:1.15; min-width:0; display:flex; justify-content:center;}
+.work-row-media{flex:1.15; min-width:0; display:flex; justify-content:center; position:relative; overflow:hidden; border-radius:18px;}
 .work-row-media > *{width:100%;}
 /* portrait clips get capped so they don't tower over the row */
 .work-row-media .portfolio-video-wrap.orient-portrait{width:min(100%,360px);}
+
+/* hover reveal: "View" pill + rotated keda brand-tag, senu.studio-inspired */
+.work-row-hover{
+  position:absolute; inset:0; z-index:3;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(10,10,10,0); transition:background .35s ease;
+  opacity:0; pointer-events:none;
+}
+.work-row-media:hover .work-row-hover{ opacity:1; background:rgba(10,10,10,0.35); }
+.work-row-view-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--text); color:var(--bg); font-weight:700; font-size:13px;
+  padding:12px 22px; border-radius:999px;
+  transform:translateY(10px); opacity:0; transition:transform .35s ease, opacity .35s ease;
+}
+.work-row-media:hover .work-row-view-btn{ transform:translateY(0); opacity:1; }
+.work-row-brand-tag{
+  position:absolute; inset-inline-end:18px; top:50%;
+  transform:translateY(-50%) rotate(90deg); transform-origin:center;
+  font-family:var(--display); font-weight:700; font-size:13px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--on-accent); background:var(--orange); padding:8px 16px; border-radius:999px; white-space:nowrap;
+  opacity:0; transition:opacity .3s ease .05s;
+}
+.work-row-media:hover .work-row-brand-tag{ opacity:1; }
 .work-row-img{
   width:100%; aspect-ratio:16/10; border-radius:18px; position:relative; overflow:hidden;
   background-size:cover; background-position:center;
@@ -703,6 +729,20 @@ footer{padding:70px 0 50px;}
   padding:10px 16px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; margin-top:4px;
 }
 .repeat-add:hover{border-color:var(--text-dim); color:var(--text);}
+.clause-insert-select{
+  display:block; background:transparent; border:1px dashed var(--line); color:var(--text-dim);
+  padding:8px 12px; border-radius:10px; cursor:pointer; font-size:12px; font-weight:600;
+  margin-bottom:8px; font-family:var(--sans); outline:none;
+}
+.clause-insert-select:hover{border-color:var(--text-dim); color:var(--text);}
+.client-pick-select{
+  display:block; width:100%; background:var(--card); border:1px solid var(--line); color:var(--text-dim);
+  padding:9px 12px; border-radius:10px; cursor:pointer; font-size:13px; margin-bottom:8px;
+  font-family:var(--sans); outline:none;
+}
+.client-pick-select:focus{border-color:var(--orange); color:var(--text);}
+.client-detail-head{display:flex; align-items:center; gap:16px; margin-bottom:20px;}
+.client-detail-name{font-family:var(--display); font-weight:700; font-size:24px;}
 .settings-save-bar{
   position:sticky; bottom:0; margin-top:8px;
   display:flex; align-items:center; gap:16px;
@@ -739,6 +779,11 @@ tr:last-child td{border-bottom:none;}
 .status{font-size:11px; padding:5px 10px; border-radius:999px; font-weight:600;}
 .status.live{background:rgba(76,175,125,0.15); color:var(--green);}
 .status.draft{background:rgba(202,203,207,0.15); color:var(--gold);}
+.inv-status{font-size:11px; padding:5px 10px; border-radius:999px; font-weight:600; white-space:nowrap;}
+.inv-status.draft{background:rgba(142,150,160,0.15); color:var(--text-dim);}
+.inv-status.sent{background:rgba(202,203,207,0.15); color:var(--gold);}
+.inv-status.paid{background:rgba(76,175,125,0.15); color:var(--green);}
+.inv-status.overdue{background:rgba(224,101,74,0.15); color:var(--red);}
 .row-actions{display:flex; gap:10px;}
 .row-actions span{font-size:12px; color:var(--text-dim); cursor:pointer;}
 .row-actions span:hover{color:var(--text);}

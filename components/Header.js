@@ -1,6 +1,7 @@
 import { UI } from '@/lib/i18n';
 import LangToggle from './LangToggle';
 import { FacebookIcon, InstagramIcon, BehanceIcon, XIcon } from './SocialIcons';
+import HeaderScrollShell from './HeaderScrollShell';
 
 export default function Header({ active, settings = {}, lang = 'en' }) {
   const t = UI[lang];
@@ -12,7 +13,7 @@ export default function Header({ active, settings = {}, lang = 'en' }) {
   ].filter((s) => s.url && s.url.trim());
 
   return (
-    <header>
+    <HeaderScrollShell>
       <div className="wrap">
         <nav>
           <a href="/" className="logo" aria-label="KEDA — home">
@@ -36,6 +37,6 @@ export default function Header({ active, settings = {}, lang = 'en' }) {
           </div>
         </nav>
       </div>
-    </header>
+    </HeaderScrollShell>
   );
 }

@@ -69,6 +69,10 @@ export default function PortfolioView({ projects, settings, lang = 'en' }) {
                     <div className="meta">{t.showcaseWork} <b>{p.work}</b></div>
                   </div>
                   <div className="work-row-media">
+                    <div className="work-row-hover">
+                      <span className="work-row-view-btn">{t.viewProject}</span>
+                      <div className="work-row-brand-tag" aria-hidden="true">keda</div>
+                    </div>
                     {p.video ? (
                       <PortfolioVideo src={p.video} poster={p.image} label={p.category} />
                     ) : p.image ? (
