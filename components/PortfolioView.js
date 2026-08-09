@@ -90,30 +90,32 @@ export default function PortfolioView({ projects, settings, lang = 'en' }) {
                     </span>
                   </Reveal>
                 )}
-                <div className="work-rows">
+                <div className="work-grid">
                   {g.items.map((p, i) => (
-                    <Reveal className={`work-row ${i % 2 === 1 ? 'flip' : ''}`} key={p.id}>
-                      <div className="work-row-text">
-                        <span className="work-row-cat">{p.category}</span>
-                        <h3>{p.title}</h3>
-                        <div className="meta">{t.showcaseWork} <b>{p.work}</b></div>
-                      </div>
-                      <div className="work-row-media">
-                        <div className="work-row-hover">
-                          <span className="work-row-view-btn">{t.viewProject}</span>
-                          <div className="work-row-brand-tag" aria-hidden="true">keda</div>
-                        </div>
+                    <Reveal className="work-card" key={p.id}>
+                      <div className={`work-card-media ${i % 2 === 1 ? 'rail-end' : 'rail-start'}`}>
                         {p.video ? (
                           <PortfolioVideo src={p.video} poster={p.image} label={p.category} orientation={p.orientation} />
                         ) : p.image ? (
-                          <div className="work-row-img" style={{ backgroundImage: `url(${p.image})` }}>
+                          <div className="work-card-img" style={{ backgroundImage: `url(${p.image})` }}>
                             <span className="label">{p.category}</span>
                           </div>
                         ) : (
-                          <div className="work-row-img" style={{ background: CARD_TINTS[i % CARD_TINTS.length] }}>
+                          <div className="work-card-img" style={{ background: CARD_TINTS[i % CARD_TINTS.length] }}>
                             <span className="label">{p.category}</span>
                           </div>
                         )}
+                        <div className="work-card-rail" aria-hidden="true">keda</div>
+                      </div>
+                      <div className="work-card-body">
+                        <div className="work-card-title-row">
+                          <h3>{p.title}</h3>
+                          <span className="work-card-view-btn">{t.viewProject}</span>
+                        </div>
+                        {p.client && p.client !== 'Placeholder' ? (
+                          <div className="meta">{t.showcaseClient} <b>{p.client}</b></div>
+                        ) : null}
+                        <div className="meta">{t.showcaseWork} <b>{p.work}</b></div>
                       </div>
                     </Reveal>
                   ))}

@@ -433,65 +433,51 @@ header nav{
 .client-group.single{margin-top:24px;}
 .client-group.single .client-group-head{flex-direction:column; align-items:center; text-align:center; gap:8px; border-bottom:none; padding-bottom:8px;}
 .client-group.single .client-group-name{font-size:clamp(38px,6vw,64px);}
-.client-group .work-rows{margin-top:56px;}
+.client-group .work-grid{margin-top:56px;}
 @media (max-width:860px){ .client-group-name{font-size:26px;} }
 
-.work-rows{display:flex; flex-direction:column; gap:110px; margin-top:64px;}
-.work-row{display:flex; align-items:center; gap:64px;}
-.work-row.flip{flex-direction:row-reverse;}
-.work-row-text{flex:1; min-width:0;}
-.work-row-cat{
-  font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
-  color:var(--orange-soft);
-}
-.work-row-text h3{font-family:var(--display); font-weight:700; font-size:38px; line-height:1.12; margin:14px 0 22px;}
-.work-row-text .meta{font-size:14px; color:var(--text-dim); margin-bottom:10px;}
-.work-row-text .meta b{color:var(--text); font-weight:600;}
-.work-row-media{flex:1.15; min-width:0; display:flex; justify-content:center; position:relative; overflow:hidden; border-radius:18px;}
-.work-row-media > *{width:100%;}
-/* portrait clips get capped so they don't tower over the row */
-.work-row-media .portfolio-video-wrap.orient-portrait{width:min(100%,360px);}
-/* homepage showcase card — cap a portrait video the same way, so it doesn't
-   blow the card's height out to match a full-width column */
+/* portfolio page — 2-column grid of cards (video on top, text below), like
+   senu.studio's reference layout. Landscape videos render wide (16:9),
+   portrait render tall (9:16) — sizing comes straight from the grid column
+   width, no artificial cap needed like the old full-width rows required. */
+.work-grid{display:grid; grid-template-columns:1fr 1fr; gap:56px 40px;}
+/* homepage showcase card — cap a portrait video so it doesn't blow the
+   card's height out to match a full-width column (the portfolio grid
+   above doesn't need this since its own column width already constrains it) */
 .showcase .portfolio-video-wrap.orient-portrait{width:min(100%,360px); margin-inline:auto;}
-
-/* hover reveal: "View" pill + rotated keda brand-tag, senu.studio-inspired */
-.work-row-hover{
-  position:absolute; inset:0; z-index:3;
-  display:flex; align-items:center; justify-content:center;
-  background:rgba(10,10,10,0); transition:background .35s ease;
-  opacity:0; pointer-events:none;
+.work-card-media{position:relative; border-radius:18px; overflow:hidden;}
+.work-card-body{margin-top:22px;}
+.work-card-title-row{display:flex; justify-content:space-between; align-items:baseline; gap:12px;}
+.work-card-title-row h3{font-family:var(--display); font-weight:700; font-size:26px; line-height:1.15;}
+.work-card-body .meta{font-size:14px; color:var(--text-dim); margin-top:10px;}
+.work-card-body .meta b{color:var(--text); font-weight:600;}
+.work-card-view-btn{
+  display:inline-flex; align-items:center; gap:6px; flex:none;
+  background:var(--text); color:var(--bg); font-weight:700; font-size:12.5px;
+  padding:10px 18px; border-radius:999px; white-space:nowrap;
 }
-.work-row-media:hover .work-row-hover{ opacity:1; background:rgba(10,10,10,0.35); }
-.work-row-view-btn{
-  display:inline-flex; align-items:center; gap:8px;
-  background:var(--text); color:var(--bg); font-weight:700; font-size:13px;
-  padding:12px 22px; border-radius:999px;
-  transform:translateY(10px); opacity:0; transition:transform .35s ease, opacity .35s ease;
-}
-.work-row-media:hover .work-row-view-btn{ transform:translateY(0); opacity:1; }
-.work-row-brand-tag{
-  position:absolute; inset-inline-end:18px; top:50%;
+/* brand rail — always visible (not a hover reveal), hugs the outer edge of
+   the grid: left side on column 1, right side on column 2 */
+.work-card-rail{
+  position:absolute; top:50%; z-index:2;
   transform:translateY(-50%) rotate(90deg); transform-origin:center;
   font-family:var(--display); font-weight:700; font-size:13px; letter-spacing:.08em; text-transform:uppercase;
   color:var(--on-accent); background:var(--orange); padding:8px 16px; border-radius:999px; white-space:nowrap;
-  opacity:0; transition:opacity .3s ease .05s;
 }
-.work-row-media:hover .work-row-brand-tag{ opacity:1; }
-.work-row-img{
-  width:100%; aspect-ratio:16/10; border-radius:18px; position:relative; overflow:hidden;
+.work-card-media.rail-start .work-card-rail{inset-inline-start:-4px;}
+.work-card-media.rail-end .work-card-rail{inset-inline-end:-4px;}
+.work-card-img{
+  width:100%; aspect-ratio:16/10; position:relative; overflow:hidden;
   background-size:cover; background-position:center;
 }
-.work-row-img .label{
+.work-card-img .label{
   position:absolute; top:20px; inset-inline-start:20px; font-family:var(--display); font-weight:800;
   font-size:22px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.5);
 }
 .portfolio-empty{text-align:center; color:var(--text-dim); font-size:14px; padding:20px 0 40px;}
 @media (max-width:860px){
-  .work-rows{gap:70px;}
-  .work-row, .work-row.flip{flex-direction:column; gap:24px; align-items:stretch;}
-  .work-row-media{justify-content:center;}
-  .work-row-text h3{font-size:30px;}
+  .work-grid{grid-template-columns:1fr; gap:48px;}
+  .work-card-title-row h3{font-size:24px;}
 }
 
 /* our impact — 4 stat cards with circular icons */
