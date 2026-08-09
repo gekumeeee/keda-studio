@@ -233,7 +233,7 @@ export default function AdminPage() {
 
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState(null);
-  const [projectForm, setProjectForm] = useState({ title: '', category: 'Branding', client: '', work: '', image: '', video: '', status: 'live' });
+  const [projectForm, setProjectForm] = useState({ title: '', category: 'Branding', clientId: '', client: '', work: '', image: '', video: '', orientation: 'auto', status: 'live' });
 
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState(null);
@@ -535,15 +535,17 @@ export default function AdminPage() {
       setProjectForm({
         title: project.title,
         category: project.category,
+        clientId: project.clientId || '',
         client: project.client,
         work: project.work,
         image: project.image || '',
         video: project.video || '',
+        orientation: project.orientation || 'auto',
         status: project.status,
       });
     } else {
       setEditingProjectId(null);
-      setProjectForm({ title: '', category: 'Branding', client: '', work: '', image: '', video: '', status: 'live' });
+      setProjectForm({ title: '', category: 'Branding', clientId: '', client: '', work: '', image: '', video: '', orientation: 'auto', status: 'live' });
     }
     setProjectModalOpen(true);
   }
@@ -1254,6 +1256,7 @@ export default function AdminPage() {
             if (detailClient) {
               const clientInvoices = invoices.filter((i) => i.clientId === detailClient.id);
               const clientContracts = contracts.filter((c) => c.clientId === detailClient.id);
+              const clientProjects = projects.filter((p) => p.clientId === detailClient.id);
               const billed = clientInvoices.reduce((sum, i) => sum + invoiceTotals(i).total, 0);
               const paid = clientInvoices.filter((i) => i.status === 'paid').reduce((sum, i) => sum + invoiceTotals(i).total, 0);
               const currency = clientInvoices[0]?.currency || 'LE';
@@ -1264,10 +1267,30 @@ export default function AdminPage() {
                     <h2 className="client-detail-name">{detailClient.name}</h2>
                   </div>
                   <div className="stat-grid">
+                    <div className="stat-card"><div className="label">Work / projects</div><div className="value">{clientProjects.length}</div></div>
                     <div className="stat-card"><div className="label">Total billed</div><div className="value" style={{ fontSize: 24 }}>{formatAmount(billed)} {currency}</div></div>
                     <div className="stat-card"><div className="label">Paid</div><div className="value" style={{ fontSize: 24, color: 'var(--green)' }}>{formatAmount(paid)} {currency}</div></div>
                     <div className="stat-card"><div className="label">Outstanding</div><div className="value" style={{ fontSize: 24, color: billed - paid > 0 ? 'var(--red)' : 'var(--text)' }}>{formatAmount(billed - paid)} {currency}</div></div>
-                    <div className="stat-card"><div className="label">Active contracts</div><div className="value">{clientContracts.filter(isContractActive).length}</div></div>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-head"><h3>Work</h3></div>
+                    {clientProjects.length === 0 ? (
+                      <div className="empty">No projects linked to this client yet.</div>
+                    ) : (
+                      <table>
+                        <thead><tr><th>Title</th><th>Category</th><th>Status</th><th></th></tr></thead>
+                        <tbody>
+                          {clientProjects.map((p) => (
+                            <tr key={p.id}>
+                              <td>{p.title}</td>
+                              <td>{p.category}</td>
+                              <td><span className={`status ${p.status}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span></td>
+                              <td><div className="row-actions"><span onClick={() => openProjectModal(p)}>Edit</span></div></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                   <div className="panel">
                     <div className="panel-head"><h3>Invoices</h3></div>
@@ -1861,8 +1884,13 @@ export default function AdminPage() {
                   {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </Field>
-              <Field label="Client">
-                <input value={projectForm.client} onChange={(e) => setProjectForm((f) => ({ ...f, client: e.target.value }))} placeholder="e.g. Sunset Coffee Co." />
+              <Field label="Client" hint="pick a saved client or type a name — projects group by client">
+                <ClientPickSelect
+                  clients={clients}
+                  value={projectForm.clientId}
+                  onPick={(c) => setProjectForm((f) => ({ ...f, clientId: c ? c.id : '', client: c ? c.name : f.client }))}
+                />
+                <input value={projectForm.client} onChange={(e) => setProjectForm((f) => ({ ...f, client: e.target.value, clientId: '' }))} placeholder="e.g. Sunset Coffee Co." />
               </Field>
               <Field label="Work included">
                 <input value={projectForm.work} onChange={(e) => setProjectForm((f) => ({ ...f, work: e.target.value }))} placeholder="e.g. Logo, Guidelines, Naming" />
@@ -1870,12 +1898,19 @@ export default function AdminPage() {
               <Field label="Thumbnail image URL (optional)">
                 <input value={projectForm.image} onChange={(e) => setProjectForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://…  (shows in the hero gallery, used as video poster)" />
               </Field>
-              <Field label="Video URL (optional)" hint="portrait or landscape — sized automatically">
-                <input value={projectForm.video} onChange={(e) => setProjectForm((f) => ({ ...f, video: e.target.value }))} placeholder="https://…mp4  (shown instead of the image on the portfolio page)" />
+              <Field label="Video URL (optional)" hint="direct .mp4 or a Facebook / YouTube / Instagram / Vimeo link">
+                <input value={projectForm.video} onChange={(e) => setProjectForm((f) => ({ ...f, video: e.target.value }))} placeholder="https://…  (mp4 file or a video page link)" />
+              </Field>
+              <Field label="Video orientation" hint="Auto reads real files; set it for Facebook/embed links">
+                <select value={projectForm.orientation} onChange={(e) => setProjectForm((f) => ({ ...f, orientation: e.target.value }))}>
+                  <option value="auto">Auto</option>
+                  <option value="landscape">Landscape (16:9)</option>
+                  <option value="portrait">Portrait (9:16)</option>
+                </select>
               </Field>
               {projectForm.video ? (
                 <div className="admin-video-preview">
-                  <PortfolioVideo src={projectForm.video} poster={projectForm.image} />
+                  <PortfolioVideo src={projectForm.video} poster={projectForm.image} orientation={projectForm.orientation} />
                 </div>
               ) : null}
               <Field label="Status">

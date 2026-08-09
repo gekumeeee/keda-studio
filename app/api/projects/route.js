@@ -21,10 +21,12 @@ export async function POST(request) {
     id: uid(),
     title: body.title.trim(),
     category: body.category || 'Branding',
+    clientId: (body.clientId || '').trim(),
     client: (body.client || '').trim() || 'Placeholder',
     work: (body.work || '').trim() || 'Details coming soon',
     image: (body.image || '').trim(),
     video: (body.video || '').trim(),
+    orientation: ['landscape', 'portrait'].includes(body.orientation) ? body.orientation : 'auto',
     status: body.status === 'draft' ? 'draft' : 'live',
     updated: new Date().toISOString(),
   };
