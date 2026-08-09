@@ -420,30 +420,20 @@ header nav{
 .admin-video-preview{margin:-6px 0 16px;}
 .admin-video-preview .portfolio-video-wrap{max-width:200px; margin:0 auto; border-radius:12px;}
 
-/* portfolio page — alternating full-width rows (text ↔ video), like senu.studio.
-   Landscape videos render wide (16:9), portrait render tall (9:16). Rows flip
-   side on every other project. */
-/* portfolio grouped by client — a heading per client, then their work rows */
-.client-group{margin-top:72px;}
-.client-group:first-child{margin-top:48px;}
-.client-group-head{display:flex; align-items:baseline; gap:16px; padding-bottom:22px; border-bottom:1px solid var(--line);}
-.client-group-name{font-family:var(--display); font-weight:700; font-size:34px; line-height:1.1;}
-.client-group-count{font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim);}
-/* a single client fills the page — larger, centered banner */
-.client-group.single{margin-top:24px;}
-.client-group.single .client-group-head{flex-direction:column; align-items:center; text-align:center; gap:8px; border-bottom:none; padding-bottom:8px;}
-.client-group.single .client-group-name{font-size:clamp(38px,6vw,64px);}
-.client-group .work-grid{margin-top:56px;}
-@media (max-width:860px){ .client-group-name{font-size:26px;} }
+/* portfolio page — one shared 2-column grid of cards (video on top, text
+   below), mixed clients side by side, like the senu.studio reference. If
+   every visible project belongs to the same client, its name gets a big
+   centered banner above the grid instead of repeating on every card. */
+.portfolio-client-banner{text-align:center; margin-bottom:24px;}
+.portfolio-client-banner h2{font-family:var(--display); font-weight:700; font-size:clamp(38px,6vw,64px); line-height:1.1;}
+@media (max-width:860px){ .portfolio-client-banner h2{font-size:26px;} }
 
-/* portfolio page — 2-column grid of cards (video on top, text below), like
-   senu.studio's reference layout. Landscape videos render wide (16:9),
-   portrait render tall (9:16) — sizing comes straight from the grid column
-   width, no artificial cap needed like the old full-width rows required. */
 .work-grid{display:grid; grid-template-columns:1fr 1fr; gap:56px 40px;}
-/* homepage showcase card — cap a portrait video so it doesn't blow the
-   card's height out to match a full-width column (the portfolio grid
-   above doesn't need this since its own column width already constrains it) */
+/* a portrait video sized off a full grid-column width would be enormous —
+   cap the card itself so its height stays reasonable regardless of how wide
+   the column actually renders. Landscape cards are left unconstrained. */
+.work-card.is-portrait{max-width:400px;}
+/* homepage showcase card — same cap, same reason */
 .showcase .portfolio-video-wrap.orient-portrait{width:min(100%,360px); margin-inline:auto;}
 .work-card-media{position:relative; border-radius:18px; overflow:hidden;}
 .work-card-body{margin-top:22px;}
