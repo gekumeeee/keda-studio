@@ -430,10 +430,8 @@ header nav{
 }
 .portfolio-client-banner h2{font-family:var(--display); font-weight:700; font-size:clamp(38px,6vw,64px); line-height:1.1;}
 .portfolio-client-logo{
-  flex:none; width:clamp(48px,8vw,84px); height:clamp(48px,8vw,84px); border-radius:50%;
-  background:var(--bg-soft); border:1px solid var(--line);
-  display:flex; align-items:center; justify-content:center; overflow:hidden; padding:12px;
-  box-shadow:0 0 0 6px rgba(183,190,198,0.06), 0 14px 32px rgba(0,0,0,0.4);
+  flex:none; width:clamp(48px,8vw,84px); height:clamp(48px,8vw,84px);
+  display:flex; align-items:center; justify-content:center;
 }
 .portfolio-client-logo img{width:100%; height:100%; object-fit:contain;}
 @media (max-width:860px){ .portfolio-client-banner h2{font-size:26px;} }
@@ -443,7 +441,13 @@ header nav{
 /* a portrait video sized off a full grid-column width would be enormous —
    cap the card itself so its height stays reasonable regardless of how wide
    the column actually renders. Landscape cards are left unconstrained. */
-.work-card.is-portrait{max-width:400px;}
+.work-card.is-portrait{max-width:360px;}
+/* staggered "brick" rhythm like the reference — the right-hand column sits
+   a little lower than its row partner. Grid-only (each column's items still
+   line up under each other); skipped on the single-column mobile layout,
+   where every card is already full-width and a stagger would just read as
+   random extra gaps between them. */
+@media (min-width:861px){ .work-card:nth-child(even){margin-top:72px;} }
 /* homepage showcase card — same cap, same reason */
 .showcase .portfolio-video-wrap.orient-portrait{width:min(100%,360px); margin-inline:auto;}
 .work-card-media{position:relative; border-radius:18px; overflow:hidden;}
