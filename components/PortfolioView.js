@@ -29,7 +29,7 @@ function isPortraitProject(p) {
   return embed.kind === 'embed' && guessEmbedOrientation(p.video) === 'portrait';
 }
 
-export default function PortfolioView({ projects, settings, lang = 'en' }) {
+export default function PortfolioView({ projects, settings, clients = [], lang = 'en' }) {
   const t = UI[lang];
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -55,6 +55,9 @@ export default function PortfolioView({ projects, settings, lang = 'en' }) {
   );
   const soleClientName =
     clientKeys.size === 1 && !clientKeys.has(null) ? (pool[0].client || '').trim() : null;
+  const soleClientLogo = soleClientName && pool[0].clientId
+    ? clients.find((c) => c.id === pool[0].clientId)?.logo || null
+    : null;
 
   return (
     <>
@@ -92,6 +95,11 @@ export default function PortfolioView({ projects, settings, lang = 'en' }) {
             <>
               {soleClientName ? (
                 <Reveal className="portfolio-client-banner">
+                  {soleClientLogo ? (
+                    <span className="portfolio-client-logo">
+                      <img src={soleClientLogo} alt={soleClientName} />
+                    </span>
+                  ) : null}
                   <h2>{soleClientName}</h2>
                 </Reveal>
               ) : null}
