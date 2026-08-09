@@ -850,6 +850,9 @@ td.msg-cell{max-width:340px; color:var(--text-dim);}
 .btn-secondary:hover{border-color:var(--text-dim);}
 .btn-secondary:disabled{opacity:.6; cursor:default;}
 .lang-edit-actions .btn-secondary{flex:none; padding:10px 18px;}
+.fetch-title-row{display:flex; align-items:center; gap:12px; margin-top:8px;}
+.fetch-title-row .btn-secondary{flex:none; padding:8px 14px; font-size:12.5px;}
+.fetch-title-error{font-size:12px; color:var(--red);}
 .btn-primary{flex:1; background:var(--orange); border:none; color:var(--on-accent); padding:12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px;}
 .btn-primary:hover{opacity:.9;}
 

@@ -234,6 +234,8 @@ export default function AdminPage() {
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [projectForm, setProjectForm] = useState({ title: '', category: 'Branding', clientId: '', client: '', work: '', image: '', video: '', orientation: 'auto', status: 'live' });
+  const [fetchingTitle, setFetchingTitle] = useState(false);
+  const [titleFetchError, setTitleFetchError] = useState(false);
 
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState(null);
@@ -547,6 +549,7 @@ export default function AdminPage() {
       setEditingProjectId(null);
       setProjectForm({ title: '', category: 'Branding', clientId: '', client: '', work: '', image: '', video: '', orientation: 'auto', status: 'live' });
     }
+    setTitleFetchError(false);
     setProjectModalOpen(true);
   }
 
@@ -571,6 +574,28 @@ export default function AdminPage() {
       setProjects((prev) => [created, ...prev]);
     }
     setProjectModalOpen(false);
+  }
+
+  // Pulls the video's own title (og:title) via /api/video-title and fills
+  // the Title field with its first few words — never overwrites silently,
+  // only runs when the admin explicitly clicks the button.
+  async function fetchTitleFromVideo() {
+    if (!projectForm.video.trim()) return;
+    setFetchingTitle(true);
+    setTitleFetchError(false);
+    try {
+      const res = await fetch(`/api/video-title?url=${encodeURIComponent(projectForm.video.trim())}`);
+      const data = await res.json();
+      if (data.title) {
+        setProjectForm((f) => ({ ...f, title: data.title }));
+      } else {
+        setTitleFetchError(true);
+      }
+    } catch {
+      setTitleFetchError(true);
+    } finally {
+      setFetchingTitle(false);
+    }
   }
 
   async function deleteProject(id) {
@@ -1898,8 +1923,20 @@ export default function AdminPage() {
               <Field label="Thumbnail image URL (optional)">
                 <input value={projectForm.image} onChange={(e) => setProjectForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://…  (shows in the hero gallery, used as video poster)" />
               </Field>
-              <Field label="Video URL (optional)" hint="direct .mp4 or a Facebook / YouTube / Instagram / Vimeo link">
-                <input value={projectForm.video} onChange={(e) => setProjectForm((f) => ({ ...f, video: e.target.value }))} placeholder="https://…  (mp4 file or a video page link)" />
+              <Field label="Video URL (optional)" hint="direct .mp4 or a Facebook / YouTube / Instagram / TikTok / Vimeo link">
+                <input
+                  value={projectForm.video}
+                  onChange={(e) => { setProjectForm((f) => ({ ...f, video: e.target.value })); setTitleFetchError(false); }}
+                  placeholder="https://…  (mp4 file or a video page link)"
+                />
+                {projectForm.video.trim() ? (
+                  <div className="fetch-title-row">
+                    <button type="button" className="btn-secondary" onClick={fetchTitleFromVideo} disabled={fetchingTitle}>
+                      {fetchingTitle ? 'Fetching…' : '↺ Get title from video'}
+                    </button>
+                    {titleFetchError ? <span className="fetch-title-error">Couldn&apos;t read a title from that link — enter it manually.</span> : null}
+                  </div>
+                ) : null}
               </Field>
               <Field label="Video orientation" hint="Auto reads real files; set it for Facebook/embed links">
                 <select value={projectForm.orientation} onChange={(e) => setProjectForm((f) => ({ ...f, orientation: e.target.value }))}>
