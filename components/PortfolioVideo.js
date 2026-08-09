@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getVideoEmbed } from '@/lib/videoEmbed';
+import { getVideoEmbed, guessEmbedOrientation } from '@/lib/videoEmbed';
 
 export default function PortfolioVideo({ src, poster, label, orientation = 'auto', className = '' }) {
   const [detected, setDetected] = useState(null);
@@ -13,12 +13,13 @@ export default function PortfolioVideo({ src, poster, label, orientation = 'auto
   }
 
   // Explicit admin choice wins; otherwise fall back to metadata (for real
-  // files, where we can measure it) or a landscape default (for embeds, whose
-  // dimensions we can't read from inside an iframe).
+  // files, where we can measure it) or a URL-shape guess (for embeds, whose
+  // dimensions we can't read from inside a cross-origin iframe — reels/shorts
+  // links guess portrait, everything else guesses landscape).
   const resolved =
     orientation && orientation !== 'auto'
       ? orientation
-      : detected || (embed.kind === 'embed' ? 'landscape' : null);
+      : detected || (embed.kind === 'embed' ? guessEmbedOrientation(src) : null);
 
   const wrapCls = `portfolio-video-wrap ${resolved ? `orient-${resolved}` : ''} ${embed.kind === 'embed' ? 'is-embed' : ''} ${className}`.trim();
 
