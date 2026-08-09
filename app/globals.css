@@ -403,6 +403,13 @@ header nav{
 /* embeds bring their own title/chrome — hide our category label so they don't clash */
 .portfolio-video-wrap.is-embed{background:#000;}
 .portfolio-video-wrap.is-embed .label{display:none;}
+/* platform embeds (Facebook in particular) reserve a fixed-height header bar
+   (profile photo, name, share icon) above the actual video — that bar isn't
+   part of a strict 9:16 video, so a pure 9/16 box squeezes the real video
+   smaller than the frame around it. Giving the box a bit more height lets
+   the video portion land closer to its native ratio instead of looking
+   letterboxed inside its own frame. */
+.portfolio-video-wrap.is-embed.orient-portrait{aspect-ratio:9/17.5;}
 .portfolio-video-wrap .label{
   position:absolute; top:20px; inset-inline-start:20px; z-index:2; font-family:var(--display); font-weight:800; font-size:22px; color:#fff;
   text-shadow:0 2px 10px rgba(0,0,0,.5); pointer-events:none;
@@ -442,6 +449,9 @@ header nav{
 .work-row-media > *{width:100%;}
 /* portrait clips get capped so they don't tower over the row */
 .work-row-media .portfolio-video-wrap.orient-portrait{width:min(100%,360px);}
+/* homepage showcase card — cap a portrait video the same way, so it doesn't
+   blow the card's height out to match a full-width column */
+.showcase .portfolio-video-wrap.orient-portrait{width:min(100%,360px); margin-inline:auto;}
 
 /* hover reveal: "View" pill + rotated keda brand-tag, senu.studio-inspired */
 .work-row-hover{

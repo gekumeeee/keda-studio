@@ -12,6 +12,7 @@ import StatCounter from './StatCounter';
 import RotatingWord from './RotatingWord';
 import HeroGallery from './HeroGallery';
 import GlyphIcon from './GlyphIcon';
+import PortfolioVideo from './PortfolioVideo';
 import { UI, pick } from '@/lib/i18n';
 
 const FILTERS = ['All', 'Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
@@ -75,7 +76,15 @@ function getShowcase(filter, projects, lang) {
   if (pool.length === 0) return PLACEHOLDER_SHOWCASE[lang][filter] || PLACEHOLDER_SHOWCASE[lang].All;
   const sorted = [...pool].sort((a, b) => new Date(b.updated) - new Date(a.updated));
   const p = sorted[0];
-  return { title: p.title, client: p.client, work: p.work, label: p.category, image: p.image || '' };
+  return {
+    title: p.title,
+    client: p.client,
+    work: p.work,
+    label: p.category,
+    image: p.image || '',
+    video: p.video || '',
+    orientation: p.orientation || 'auto',
+  };
 }
 
 // glyph shapes used inside the impact circles
@@ -223,14 +232,20 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
           <Reveal className="showcase" style={{ opacity: fading ? 0 : 1 }}>
             <div>
               <h3>{showcase.title}</h3>
-              <div className="meta">{t.showcaseClient} <b>{showcase.client}</b></div>
+              {showcase.client && showcase.client !== 'Placeholder' ? (
+                <div className="meta">{t.showcaseClient} <b>{showcase.client}</b></div>
+              ) : null}
               <div className="meta">{t.showcaseWork} <b>{showcase.work}</b></div>
               <a href="#" className="view-btn">{t.viewProject}</a>
             </div>
-            <div className={`video-frame ${showcase.image ? 'has-image' : ''}`} style={showcase.image ? { backgroundImage: `url(${showcase.image})` } : undefined}>
-              <div className="label">{showcase.label}</div>
-              <div className="play"></div>
-            </div>
+            {showcase.video ? (
+              <PortfolioVideo src={showcase.video} poster={showcase.image} label={showcase.label} orientation={showcase.orientation} />
+            ) : (
+              <div className={`video-frame ${showcase.image ? 'has-image' : ''}`} style={showcase.image ? { backgroundImage: `url(${showcase.image})` } : undefined}>
+                <div className="label">{showcase.label}</div>
+                <div className="play"></div>
+              </div>
+            )}
           </Reveal>
         </div>
       </section>
