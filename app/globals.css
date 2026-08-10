@@ -429,19 +429,23 @@ header nav{
   text-align:center; margin-bottom:24px;
 }
 .portfolio-client-banner h2{font-family:var(--display); font-weight:700; font-size:clamp(38px,6vw,64px); line-height:1.1;}
-.portfolio-client-logo{
-  flex:none; width:clamp(48px,8vw,84px); height:clamp(48px,8vw,84px);
-  display:flex; align-items:center; justify-content:center;
-}
-.portfolio-client-logo img{width:100%; height:100%; object-fit:contain;}
+/* height-driven, not a forced square box — a wide/rectangular logo forced
+   into a square would shrink to fit its height and float tiny with empty
+   side padding. Width follows the image's own natural aspect ratio instead,
+   staying vertically centered against the name via the row's align-items. */
+.portfolio-client-logo{flex:none; height:clamp(48px,8vw,84px); display:flex; align-items:center;}
+.portfolio-client-logo img{height:100%; width:auto; max-width:220px; object-fit:contain; display:block;}
 @media (max-width:860px){ .portfolio-client-banner h2{font-size:26px;} }
 @media (max-width:600px){ .portfolio-client-banner{flex-direction:column; gap:14px;} }
 
 .work-grid{display:grid; grid-template-columns:1fr 1fr; gap:56px 40px;}
 /* a portrait video sized off a full grid-column width would be enormous —
    cap the card itself so its height stays reasonable regardless of how wide
-   the column actually renders. Landscape cards are left unconstrained. */
-.work-card.is-portrait{max-width:360px;}
+   the column actually renders. Landscape cards are left unconstrained.
+   margin-inline:auto centers the capped card in its (much wider) column —
+   without it, a block element with just a max-width hugs the column's
+   start edge, leaving all the leftover width as dead space on one side. */
+.work-card.is-portrait{max-width:300px; margin-inline:auto;}
 /* staggered "brick" rhythm like the reference — the right-hand column sits
    a little lower than its row partner. Grid-only (each column's items still
    line up under each other); skipped on the single-column mobile layout,
