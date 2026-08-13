@@ -209,7 +209,6 @@ header nav{
 .hero-col{display:flex; flex-direction:column; gap:14px; will-change:transform;}
 .hero-col.up{animation:galleryUp 34s linear infinite;}
 .hero-col.down{animation:galleryDown 34s linear infinite;}
-.hero-gallery:hover .hero-col{animation-play-state:paused;}
 @keyframes galleryUp{
   from{transform:translateY(0);}
   to{transform:translateY(-50%);}
