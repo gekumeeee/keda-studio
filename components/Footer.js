@@ -3,7 +3,7 @@ import { FacebookIcon, InstagramIcon, BehanceIcon, XIcon } from './SocialIcons';
 
 export default function Footer({ settings = {}, lang = 'en' }) {
   const t = UI[lang];
-  const note = pick(settings.footerNote, lang) || '© 2026 KEDA — Brand & Creative Studio, Cairo';
+  const note = pick(settings.footerNote, lang) || '© 2026 KEDA — Brand & Creative Agency, Cairo';
   const socials = [
     { url: settings.facebookUrl, label: 'Facebook', Icon: FacebookIcon },
     { url: settings.instagramUrl, label: 'Instagram', Icon: InstagramIcon },

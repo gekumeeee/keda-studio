@@ -5,7 +5,7 @@ import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
 export const metadata = {
   title: 'Keda Agency',
   description:
-    'KEDA is a full-service brand and creative studio in Cairo, building distinct, timeless brands for the Egyptian and MENA market.',
+    'KEDA is a full-service brand and creative agency in Cairo, building distinct, timeless brands for the Egyptian and MENA market.',
 };
 
 export default async function RootLayout({ children }) {
