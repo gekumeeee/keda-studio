@@ -1238,29 +1238,44 @@ body:has(.site){background:var(--ink);}
    the blocks read as objects on the ink ground — which is also why their
    many accents don't count against the one-accent-per-section rule. */
 .site .brand-block{
-  height:72px; width:auto; flex:none;
+  height:62px; width:auto; flex:none;
   display:block; user-select:none; pointer-events:none;
 }
-.site .block-track{display:flex; align-items:center; gap:34px; padding:0 17px;}
+.site .block-track{display:flex; align-items:center; gap:30px; padding:0 15px;}
 
-.site .diag-marquee{height:210px; margin:26px 0 64px;}
-.site .diag-row{height:96px; background:transparent; box-shadow:none; overflow:visible;}
-.site .diag-row.a{top:8px;}
-.site .diag-row.b{top:100px;}
+/* The blocks ride on solid paper bars. Paper (not an accent) keeps the band
+   out of the colour budget and gives the blocks' black outlines something to
+   read against.
+   Both lanes tilt the SAME way rather than mirroring each other: the rows are
+   124% of the viewport wide, so a rotation's vertical drift grows with screen
+   width. Mirrored tilts converge as the screen gets wider and eventually
+   overlap — and two same-coloured bars overlapping merge into one shape
+   instead of reading as two. Tilted in parallel the gap is constant at every
+   width. The counter-motion still reads, because it comes from the two tracks
+   scrolling in opposite directions, not from the tilt.
+   The vw terms in the offsets and the container height reserve room for that
+   same drift, so the rotated corners never clip against the container. */
+.site .diag-marquee{height:calc(196px + 5vw); margin:26px 0 64px;}
+.site .diag-row{
+  height:86px; background:var(--paper); box-shadow:none; overflow:hidden;
+}
+.site .diag-row.a{top:calc(2vw + 6px); transform:rotate(-1.4deg);}
+.site .diag-row.b{top:calc(2vw + 110px); transform:rotate(-1.4deg);}
 
 .site .glyph-strip{
-  background:transparent;
-  height:108px;
-  border-top:1px solid rgba(242,239,230,0.18);
-  border-bottom:1px solid rgba(242,239,230,0.18);
+  background:var(--paper);
+  height:96px;
+  border-top:none;
+  border-bottom:none;
 }
 @media (max-width:700px){
-  .site .brand-block{height:52px;}
-  .site .block-track{gap:22px;}
-  .site .diag-marquee{height:160px;}
-  .site .diag-row{height:72px;}
-  .site .diag-row.b{top:78px;}
-  .site .glyph-strip{height:84px;}
+  .site .brand-block{height:44px;}
+  .site .block-track{gap:20px;}
+  .site .diag-marquee{height:calc(142px + 5vw);}
+  .site .diag-row{height:62px;}
+  .site .diag-row.a{top:calc(2vw + 4px);}
+  .site .diag-row.b{top:calc(2vw + 80px);}
+  .site .glyph-strip{height:72px;}
 }
 .site .floaters svg{color:var(--paper); opacity:.12;}
 /* flat scrim over gallery captions instead of a gradient */
