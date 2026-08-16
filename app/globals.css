@@ -1241,7 +1241,34 @@ body:has(.site){background:var(--ink);}
   height:62px; width:auto; flex:none;
   display:block; user-select:none; pointer-events:none;
 }
-.site .block-track{display:flex; align-items:center; gap:30px; padding:0 15px;}
+/* The bar holds two identical groups and slides each by -100% of its OWN
+   width, so the second lands exactly where the first started. The older
+   single-track / translateX(-50%) pattern only fills the bar while one copy
+   is wider than the bar itself — once the bar outgrew it, every cycle ended
+   with a bare stretch (765px of empty bar at 1810px wide). min-width:100%
+   makes a group at least as wide as the bar no matter the viewport, so the
+   gap cannot come back; if the blocks don't naturally fill that width,
+   space-around spreads them instead of leaving a hole.
+   padding-inline-end matches the gap so the seam between the two groups is
+   spaced like every other pair. */
+.site .block-track{
+  display:flex; align-items:stretch;
+  width:100%; flex:none;
+  gap:0; padding:0;
+  animation:none;
+}
+.site .block-group{
+  flex:none; display:flex; align-items:center;
+  gap:30px; padding-inline-end:30px;
+  min-width:100%; justify-content:space-around;
+  animation:scrollBlocks 34s linear infinite;
+}
+@keyframes scrollBlocks{
+  from{transform:translateX(0);}
+  to{transform:translateX(-100%);}
+}
+.site .diag-row .block-group{animation-duration:30s;}
+.site .diag-row.b .block-group{animation-direction:reverse;}
 
 /* The blocks ride on solid paper bars. Paper (not an accent) keeps the band
    out of the colour budget and gives the blocks' black outlines something to
@@ -1270,7 +1297,7 @@ body:has(.site){background:var(--ink);}
 }
 @media (max-width:700px){
   .site .brand-block{height:44px;}
-  .site .block-track{gap:20px;}
+  .site .block-group{gap:20px; padding-inline-end:20px;}
   .site .diag-marquee{height:calc(142px + 5vw);}
   .site .diag-row{height:62px;}
   .site .diag-row.a{top:calc(2vw + 4px);}
