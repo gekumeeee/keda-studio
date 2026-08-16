@@ -1,22 +1,29 @@
 :root{
-  /* dark theme, same as before — only the hues shift: identity color is now
-     blue-gray (the requested palette), not orange. --orange/--orange-soft/
-     --gold keep their old names (touching every className would be a much
-     bigger diff) but now hold pale blue-gray tones used directly as accents.
-     Since those tones are pale, anywhere they're a solid button/badge
-     background needs dark text instead of white — that's what --on-accent
-     is for. --green/--red/--blue are semantic/decorative and unchanged. */
+  /* dark theme, admin identity now runs on the KEDA brand accents instead of
+     the old pale blue-gray placeholder. --orange/--orange-soft keep their
+     old names (touching every className would be a much bigger diff) but
+     now hold --acid — the same flagship accent the public site uses for
+     Services, so buttons, the active nav icon, badges and focus rings read
+     as unmistakably KEDA rather than generic dashboard chrome. --gold holds
+     --tangerine instead, so "pending" states (draft/sent) stay visually
+     distinct from the acid used on actionable buttons. --on-accent stays
+     dark: acid and tangerine are both light enough that dark text is the
+     correct (and high-contrast) choice — see the .site accent-fill rules
+     further down for the one exception, cobalt, which carries white text.
+     --green/--red/--blue are semantic (paid/overdue/link) and unchanged —
+     those need to stay universally readable as success/danger regardless
+     of brand accent. */
   --bg:#0F1113;
   --bg-soft:#15181B;
   --card:#1B1F23;
   --line: rgba(220,224,228,0.10);
   --text:#FAFAFA;
   --text-dim:#8E96A0;
-  --orange:#B7BEC6;
-  --orange-soft:#C1C5CA;
+  --orange:#D6FF3D;
+  --orange-soft:#D6FF3D;
   --blue:#1E6FEB;
   --green:#4CAF7D;
-  --gold:#CACBCF;
+  --gold:#FF5C1A;
   --red:#E0654A;
   --on-accent:#14171A;
   --display:'Bricolage Grotesque', sans-serif;
@@ -696,7 +703,7 @@ footer{padding:70px 0 50px;}
 }
 .login-note{
   margin-top:18px; font-size:12px; color:var(--text-dim); line-height:1.6;
-  background:rgba(183,190,198,0.10); border:1px solid rgba(183,190,198,0.3); border-radius:10px; padding:12px 14px;
+  background:rgba(214,255,61,0.10); border:1px solid rgba(214,255,61,0.3); border-radius:10px; padding:12px 14px;
 }
 .error{color:var(--red); font-size:12px; margin-top:10px; display:none;}
 .error.show{display:block;}
@@ -792,8 +799,8 @@ footer{padding:70px 0 50px;}
 .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:32px;}
 .topbar h1{font-family:var(--display); font-weight:700; font-size:26px;}
 .topbar .env-tag{
-  font-family:var(--mono); font-size:11px; color:var(--orange); border:1px solid rgba(183,190,198,0.4);
-  padding:6px 12px; border-radius:999px; background:rgba(183,190,198,0.08);
+  font-family:var(--mono); font-size:11px; color:var(--orange); border:1px solid rgba(214,255,61,0.4);
+  padding:6px 12px; border-radius:999px; background:rgba(214,255,61,0.08);
 }
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
@@ -816,10 +823,10 @@ td{padding:14px 12px; font-size:14px; border-bottom:1px solid var(--line);}
 tr:last-child td{border-bottom:none;}
 .status{font-size:11px; padding:5px 10px; border-radius:999px; font-weight:600;}
 .status.live{background:rgba(76,175,125,0.15); color:var(--green);}
-.status.draft{background:rgba(202,203,207,0.15); color:var(--gold);}
+.status.draft{background:rgba(255,92,26,0.15); color:var(--gold);}
 .inv-status{font-size:11px; padding:5px 10px; border-radius:999px; font-weight:600; white-space:nowrap;}
 .inv-status.draft{background:rgba(142,150,160,0.15); color:var(--text-dim);}
-.inv-status.sent{background:rgba(202,203,207,0.15); color:var(--gold);}
+.inv-status.sent{background:rgba(255,92,26,0.15); color:var(--gold);}
 .inv-status.paid{background:rgba(76,175,125,0.15); color:var(--green);}
 .inv-status.overdue{background:rgba(224,101,74,0.15); color:var(--red);}
 .row-actions{display:flex; gap:10px;}
@@ -832,7 +839,7 @@ tr:last-child td{border-bottom:none;}
   color:var(--text-dim); font-size:13px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:color .15s ease, border-color .15s ease, background .15s ease;
 }
-.order-btn:hover:not(:disabled){color:var(--text); border-color:var(--orange); background:rgba(183,190,198,0.1);}
+.order-btn:hover:not(:disabled){color:var(--text); border-color:var(--orange); background:rgba(214,255,61,0.1);}
 .order-btn:disabled{opacity:.3; cursor:default;}
 td.msg-cell{max-width:340px; color:var(--text-dim);}
 .empty{text-align:center; padding:40px 20px; color:var(--text-dim); font-size:14px;}
