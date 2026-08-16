@@ -87,7 +87,7 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
         </div>
       </section>
 
-      <DiagMarquee settings={settings} lang={lang} />
+      <DiagMarquee />
 
       <section className="marketing-section" style={{ paddingTop: 0 }}>
         <div className="wrap">

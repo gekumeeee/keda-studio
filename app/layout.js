@@ -24,7 +24,7 @@ export default async function RootLayout({ children }) {
         />
       </head>
       <body>
-        <img src="/keda-white.png" alt="" aria-hidden="true" className="site-watermark" />
+        <img src="/brand/keda-logomark-white.svg" alt="" aria-hidden="true" className="site-watermark" />
         {children}
       </body>
     </html>

@@ -16,7 +16,8 @@ export default function Footer({ settings = {}, lang = 'en' }) {
       <div className="wrap">
         <div className="foot-grid">
           <div>
-            <img src="/keda-white.png" alt="KEDA" className="foot-logo-img" />
+            {/* the footer has room for the full lockup (mark + wordmark) */}
+            <img src="/brand/keda-logo-white.svg" alt="KEDA Agency" className="foot-logo-img" />
             {socials.length > 0 && (
               <div className="foot-social">
                 {socials.map(({ url, label, Icon, cls }) => (

@@ -18,8 +18,9 @@ export default function Header({ active, settings = {}, lang = 'en' }) {
         <nav>
           <a href="/" className="logo" aria-label="KEDA — home">
             {/* the logo is only ever ink or paper — never coloured. The header
-                sits on the ink ground, so it takes the paper mark. */}
-            <img src="/keda-white.png" alt="KEDA" className="logo-img" />
+                sits on the ink ground, so it takes the white mark. The nav is
+                tight, so it's the logomark alone rather than the full lockup. */}
+            <img src="/brand/keda-logomark-white.svg" alt="KEDA" className="logo-img" />
           </a>
           <div className="nav-links">
             <a href="/" className={active === 'home' ? 'active' : ''}>{t.nav.home}</a>

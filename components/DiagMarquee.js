@@ -1,29 +1,26 @@
-import { pick } from '@/lib/i18n';
+import { blockTrack } from '@/lib/blocks';
 
-// Phrase repeated per row — duplicated once ([...half, ...half]) so the
-// translateX(-50%) loop lands on an identical frame and the scroll never
-// visibly "jumps" (unlike the old icon version, exact repetition matters a
-// lot more for readable text than for abstract shapes).
-const REPEAT = 8;
-
-export default function DiagMarquee({ settings = {}, lang = 'en' }) {
-  const line1 = pick(settings?.ctaLine1, lang);
-  const line2 = pick(settings?.ctaLine2, lang);
-  const phrase = [line1, line2].filter(Boolean).join(' ').trim()
-    || (lang === 'ar' ? 'خليها كده.' : "Let's make it keda.");
-  const half = Array.from({ length: REPEAT }, () => phrase);
-  const full = [...half, ...half];
+// Two counter-scrolling diagonal rows of the isometric KEDA blocks. Replaces
+// the older repeating "Let's make it keda." text rows — the offset on the
+// second row keeps the two lanes from mirroring each other exactly.
+export default function DiagMarquee() {
+  const rowA = blockTrack(14, 0);
+  const rowB = blockTrack(14, 5);
 
   return (
     <div className="diag-marquee" aria-hidden="true">
       <div className="diag-row a">
-        <div className="track marquee-text-track">
-          {full.map((p, i) => <span className="marquee-phrase" key={i}>{p}</span>)}
+        <div className="track block-track">
+          {rowA.map((src, i) => (
+            <img className="brand-block" src={src} alt="" key={i} draggable={false} />
+          ))}
         </div>
       </div>
       <div className="diag-row b">
-        <div className="track marquee-text-track">
-          {full.map((p, i) => <span className="marquee-phrase" key={i}>{p}</span>)}
+        <div className="track block-track">
+          {rowB.map((src, i) => (
+            <img className="brand-block" src={src} alt="" key={i} draggable={false} />
+          ))}
         </div>
       </div>
     </div>

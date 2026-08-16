@@ -126,9 +126,9 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
   const clientMarquee = [...clientFilled, ...clientFilled];
 
   return (
-    // .site carries the light editorial theme (ink on paper) and the accent
-    // token set — see globals.css. The admin dashboard deliberately sits
-    // outside it and keeps the dark theme.
+    // .site carries the dark monochrome base (paper type on ink) and the
+    // accent token set — see globals.css. The admin dashboard deliberately
+    // sits outside it and keeps its own separate dark theme.
     <div className="site">
       <Header active="home" settings={settings} lang={lang} />
 
@@ -157,7 +157,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
         </div>
       </section>
 
-      <DiagMarquee settings={settings} lang={lang} />
+      <DiagMarquee />
 
       <section className="marketing-section" id="clients">
         <div className="wrap">
@@ -325,7 +325,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
         </div>
       </section>
 
-      <GlyphStrip settings={settings} lang={lang} />
+      <GlyphStrip />
       <Footer settings={settings} lang={lang} />
     </div>
   );

@@ -1231,21 +1231,37 @@ body:has(.site){background:var(--ink);}
 }
 .site footer .foot-col a{color:var(--paper);}
 
-/* ---------------- decorative bands ---------------- */
-/* Paper, not an accent — a bright monochrome bar reading out of the ink
-   ground. Being identity rather than accent, it costs nothing against the
-   25% colour budget and can never clash with an adjacent accent. */
-.site .diag-row.a,
-.site .diag-row.b{background:var(--paper); box-shadow:none;}
-.site .diag-row .marquee-phrase{color:rgba(13,13,13,0.55);}
-/* the glyph strip sits between the cobalt CTA and the footer — paper keeps
-   those two grounds from touching */
-.site .glyph-strip{
-  background:var(--paper);
-  border-top:1px solid var(--ink);
-  border-bottom:1px solid var(--ink);
+/* ---------------- brand block marquees ---------------- */
+/* The isometric KEDA character blocks scroll where the repeating
+   "Let's make it keda." type used to run. They're brand illustration rather
+   than section colour, so the bars they sit in lose their fill entirely and
+   the blocks read as objects on the ink ground — which is also why their
+   many accents don't count against the one-accent-per-section rule. */
+.site .brand-block{
+  height:72px; width:auto; flex:none;
+  display:block; user-select:none; pointer-events:none;
 }
-.site .glyph-strip .marquee-phrase{color:rgba(13,13,13,0.55);}
+.site .block-track{display:flex; align-items:center; gap:34px; padding:0 17px;}
+
+.site .diag-marquee{height:210px; margin:26px 0 64px;}
+.site .diag-row{height:96px; background:transparent; box-shadow:none; overflow:visible;}
+.site .diag-row.a{top:8px;}
+.site .diag-row.b{top:100px;}
+
+.site .glyph-strip{
+  background:transparent;
+  height:108px;
+  border-top:1px solid rgba(242,239,230,0.18);
+  border-bottom:1px solid rgba(242,239,230,0.18);
+}
+@media (max-width:700px){
+  .site .brand-block{height:52px;}
+  .site .block-track{gap:22px;}
+  .site .diag-marquee{height:160px;}
+  .site .diag-row{height:72px;}
+  .site .diag-row.b{top:78px;}
+  .site .glyph-strip{height:84px;}
+}
 .site .floaters svg{color:var(--paper); opacity:.12;}
 /* flat scrim over gallery captions instead of a gradient */
 .site .gcard-label{background:rgba(13,13,13,0.78);}

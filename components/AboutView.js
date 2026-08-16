@@ -53,7 +53,7 @@ export default function AboutView({ projectCount, clientCount, settings, lang = 
         </div>
       </section>
 
-      <DiagMarquee settings={settings} lang={lang} />
+      <DiagMarquee />
 
       <section className="big-cta">
         <div className="accent-band sec-cobalt">
