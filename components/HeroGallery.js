@@ -5,13 +5,16 @@
 // mirroring the senu-style hero gallery. Content comes from live projects;
 // when there aren't enough, tiles repeat to keep the columns full.
 
+// The hero carries no accent — colour enters the page further down. These
+// placeholder tiles therefore stay strictly monochrome, alternating ink
+// surfaces with paper ones so the columns still read as a varied grid.
 const TILE_COLORS = [
-  { bg: 'var(--blue)', fg: '#fff' },
-  { bg: '#2b2926', fg: 'var(--text)' },
-  { bg: 'var(--green)', fg: '#0A0A0A' },
-  { bg: '#3a2a20', fg: 'var(--text)' },
-  { bg: 'var(--gold)', fg: '#0A0A0A' },
-  { bg: 'var(--orange)', fg: 'var(--on-accent)' },
+  { bg: 'var(--paper)', fg: 'var(--ink)' },
+  { bg: '#1A1A1A', fg: 'var(--paper)' },
+  { bg: 'var(--ink)', fg: 'var(--paper)' },
+  { bg: 'var(--paper)', fg: 'var(--ink)' },
+  { bg: '#262626', fg: 'var(--paper)' },
+  { bg: '#1A1A1A', fg: 'var(--paper)' },
 ];
 
 function Tile({ project, colorIndex }) {

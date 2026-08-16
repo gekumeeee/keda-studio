@@ -60,7 +60,7 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
     : null;
 
   return (
-    <>
+    <div className="site">
       <Header active="portfolio" settings={settings} lang={lang} />
 
       <section className="marketing-section" style={{ paddingBottom: 0 }}>
@@ -141,6 +141,6 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
       </section>
 
       <Footer settings={settings} lang={lang} />
-    </>
+    </div>
   );
 }

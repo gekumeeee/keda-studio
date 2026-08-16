@@ -126,7 +126,10 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
   const clientMarquee = [...clientFilled, ...clientFilled];
 
   return (
-    <>
+    // .site carries the light editorial theme (ink on paper) and the accent
+    // token set — see globals.css. The admin dashboard deliberately sits
+    // outside it and keeps the dark theme.
+    <div className="site">
       <Header active="home" settings={settings} lang={lang} />
 
       <section className="hero">
@@ -184,12 +187,18 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
         </div>
       </section>
 
+      {/* services — acid. The heading stays on the ink ground and only the
+          card row carries the fill, which is what keeps the page near the
+          75/25 ratio instead of flooding a whole screenful with colour. */}
       <section className="marketing-section" id="work">
         <div className="wrap">
           <Reveal className="section-head center-head">
             <div className="eyebrow center-eyebrow">{pick(settings.servicesEyebrow, lang)}</div>
             <h2 className="big-heading">{pick(settings.servicesHeading, lang).replace(/\n/g, ' ')}</h2>
           </Reveal>
+        </div>
+        <div className="accent-band sec-acid">
+          <div className="wrap">
           <div className="cap-grid">
             {settings.services.map((svc, i) => (
               <Reveal
@@ -209,6 +218,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
                 </div>
               </Reveal>
             ))}
+          </div>
           </div>
         </div>
       </section>
@@ -250,12 +260,16 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
         </div>
       </section>
 
+      {/* about — violet; the body copy sits on an ink block inside the band */}
       <section className="marketing-section" id="about">
         <div className="wrap">
           <Reveal className="section-head">
             <div className="eyebrow">{pick(settings.aboutEyebrow, lang)}</div>
             <TwoTone text={pick(settings.aboutHeading, lang)} />
           </Reveal>
+        </div>
+        <div className="accent-band sec-violet">
+          <div className="wrap">
           <Reveal className="about-box">
             <p>{pick(settings.aboutBody, lang)}</p>
             <div className="about-stats">
@@ -269,6 +283,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
               </div>
             </div>
           </Reveal>
+          </div>
         </div>
       </section>
 
@@ -281,7 +296,9 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
           <div className="impact-grid">
             {settings.impact.map((it, i) => (
               <Reveal as="div" className="impact-card" key={i} delay={i * 80}>
-                <div className="impact-icon" style={{ background: it.color }}>
+                {/* no per-item colour: the impact section stays unaccented, so
+                    each icon is a flat ink block rather than four hues */}
+                <div className="impact-icon">
                   <GlyphIcon type={IMPACT_GLYPHS[i % IMPACT_GLYPHS.length]} />
                 </div>
                 <StatCounter value={it.value} className="impact-value" />
@@ -293,20 +310,23 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
         </div>
       </section>
 
+      {/* closing CTA — cobalt, the one accent that carries white text */}
       <section className="big-cta">
-        <Reveal className="wrap">
-          <h2>
-            <span className="line1">{pick(settings.ctaLine1, lang)}</span>
-            <span className="line2">{pick(settings.ctaLine2, lang)}</span>
-          </h2>
-          <a href="/contact" className="cta-btn magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
-            {pick(settings.ctaButton, lang)}
-          </a>
-        </Reveal>
+        <div className="accent-band sec-cobalt">
+          <Reveal className="wrap">
+            <h2>
+              <span className="line1">{pick(settings.ctaLine1, lang)}</span>
+              <span className="line2">{pick(settings.ctaLine2, lang)}</span>
+            </h2>
+            <a href="/contact" className="cta-btn magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
+              {pick(settings.ctaButton, lang)}
+            </a>
+          </Reveal>
+        </div>
       </section>
 
       <GlyphStrip settings={settings} lang={lang} />
       <Footer settings={settings} lang={lang} />
-    </>
+    </div>
   );
 }

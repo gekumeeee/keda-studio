@@ -9,7 +9,7 @@ export default function AboutView({ projectCount, clientCount, settings, lang = 
   const t = UI[lang];
 
   return (
-    <>
+    <div className="site">
       <Header active="about" settings={settings} lang={lang} />
 
       <section className="marketing-section" style={{ paddingBottom: 40 }}>
@@ -56,16 +56,18 @@ export default function AboutView({ projectCount, clientCount, settings, lang = 
       <DiagMarquee settings={settings} lang={lang} />
 
       <section className="big-cta">
-        <Reveal className="wrap">
-          <h2>
-            <span className="line1">{pick(settings.ctaLine1, lang)}</span>
-            <span className="line2">{pick(settings.ctaLine2, lang)}</span>
-          </h2>
-          <a href="/contact" className="cta-btn">{pick(settings.ctaButton, lang)}</a>
-        </Reveal>
+        <div className="accent-band sec-cobalt">
+          <Reveal className="wrap">
+            <h2>
+              <span className="line1">{pick(settings.ctaLine1, lang)}</span>
+              <span className="line2">{pick(settings.ctaLine2, lang)}</span>
+            </h2>
+            <a href="/contact" className="cta-btn">{pick(settings.ctaButton, lang)}</a>
+          </Reveal>
+        </div>
       </section>
 
       <Footer settings={settings} lang={lang} />
-    </>
+    </div>
   );
 }

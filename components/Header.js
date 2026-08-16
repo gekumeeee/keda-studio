@@ -17,6 +17,8 @@ export default function Header({ active, settings = {}, lang = 'en' }) {
       <div className="wrap">
         <nav>
           <a href="/" className="logo" aria-label="KEDA — home">
+            {/* the logo is only ever ink or paper — never coloured. The header
+                sits on the ink ground, so it takes the paper mark. */}
             <img src="/keda-white.png" alt="KEDA" className="logo-img" />
           </a>
           <div className="nav-links">

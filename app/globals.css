@@ -22,6 +22,21 @@
   --display:'Bricolage Grotesque', sans-serif;
   --sans:'Inter', sans-serif;
   --mono:'IBM Plex Mono', monospace;
+
+  /* ---- KEDA brand colour system (public site) ----
+     Black + warm off-white are the identity; the six accents are guests,
+     used only as flat fills. These live on :root so both the site and the
+     admin can reference them, but the light editorial *theme* they belong
+     to is scoped to .site at the bottom of this file — the admin keeps the
+     dark tokens above. */
+  --ink:#0D0D0D;
+  --paper:#F2EFE6;
+  --acid:#D6FF3D;
+  --magenta:#FF2E88;
+  --cobalt:#1E4BFF;
+  --tangerine:#FF5C1A;
+  --violet:#8A3DFF;
+  --aqua:#00E5C0;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
@@ -1003,3 +1018,306 @@ html[dir="rtl"] .hero p{margin-left:0; margin-right:0;}
 .content-editor.rtl-preview .repeat-item select{
   direction:ltr; text-align:left; font-family:var(--sans);
 }
+
+/* ================================================================ */
+/* ============= KEDA COLOUR SYSTEM — public site ================= */
+/* ================================================================ */
+/* Monochrome base with a six-colour accent set used strictly as FLAT
+   FILLS — bands, solid blocks and bars. Colour never appears as body
+   text or as a heading colour, and no section carries more than one
+   accent.
+
+   The base runs DARK: --ink is the ground and --paper is the type, the
+   inverse of the original brief's paper page. Everything else in the
+   system is unchanged — the accents, the one-accent-per-section rule,
+   the flat fills and the ink-on-accent text rule all still hold, because
+   they were written against the accents rather than against the ground.
+
+   Scoped to .site (the wrapper every marketing view renders) rather
+   than :root, so the admin dashboard keeps its own separate dark theme
+   defined at the top of this file. */
+
+.site{
+  /* The marketing CSS above is written against the old dark token names.
+     Remapping them here re-themes every existing rule at once instead of
+     rewriting each one. Every legacy *accent* slot collapses to --paper
+     on purpose: accents now only ever arrive as the band fills declared
+     below, never as text or incidental UI colour. */
+  --bg:var(--ink);
+  --bg-soft:#141414;
+  --card:#1A1A1A;
+  --text:var(--paper);
+  --text-dim:rgba(242,239,230,0.64);
+  --line:rgba(242,239,230,0.18);
+  --orange:var(--paper);
+  --orange-soft:var(--paper);
+  --gold:var(--paper);
+  --blue:var(--paper);
+  --green:var(--paper);
+  --red:var(--paper);
+  --on-accent:var(--ink);
+
+  /* The accent of the section currently being painted. Secondary buttons
+     fill with this on hover; defaults to paper on unaccented sections. */
+  --section-accent:var(--paper);
+  --on-section-accent:var(--ink);
+
+  background:var(--ink);
+  color:var(--paper);
+}
+/* the page behind the wrapper (overscroll, short pages) must match */
+body:has(.site){background:var(--ink);}
+
+/* ---------------- accent bands ---------------- */
+/* Each accented section gets exactly one accent, laid in as a band that is
+   full-bleed horizontally but only as tall as the content it carries — the
+   section's heading and its vertical breathing room stay on paper.
+   That is what holds the page at roughly 75/25 paper-to-colour and keeps any
+   single screenful from going more than half colour, which a full-section
+   fill cannot do: a 600–700px section on a ~900px viewport is ~78% colour on
+   its own. Bands are still a FILL (rule 3) — just a bar rather than a flood. */
+.site .accent-band{padding:64px 0;}
+.site .big-cta{padding:70px 0;}
+.site .big-cta .accent-band{padding:84px 0;}
+.site .page-hero{padding:56px 0 0;}
+.site .page-hero .accent-band{padding:52px 0 60px;}
+
+/* ---------------- section accent fills ---------------- */
+.site .sec-acid{
+  background:var(--acid);
+  --section-accent:var(--acid);
+  --on-section-accent:var(--ink);
+  --text-dim:rgba(13,13,13,0.68);
+  --line:rgba(13,13,13,0.22);
+}
+.site .sec-violet{
+  background:var(--violet);
+  --section-accent:var(--violet);
+  --on-section-accent:var(--paper);
+  /* Violet is a DARK accent — ink on it measures only ~3.9:1. The brief
+     carved out cobalt as "may carry white text" for exactly this reason;
+     violet is the same case, so it takes paper type rather than ink. */
+  --text:var(--paper);
+  --text-dim:rgba(242,239,230,0.86);
+  --line:rgba(242,239,230,0.32);
+  --orange:var(--paper);
+  --orange-soft:var(--paper);
+  --gold:var(--paper);
+  --on-accent:var(--violet);
+}
+.site .sec-cobalt{
+  background:var(--cobalt);
+  color:#FFFFFF;
+  /* the one accent allowed to carry white text */
+  --text:#FFFFFF;
+  --text-dim:rgba(255,255,255,0.82);
+  --line:rgba(255,255,255,0.30);
+  --section-accent:#FFFFFF;
+  --on-section-accent:var(--cobalt);
+  --on-accent:var(--cobalt);
+  /* the legacy accent slots default to ink site-wide; on the one dark fill
+     they have to flip to white or small type (eyebrows, rules) goes muddy */
+  --orange:#FFFFFF;
+  --orange-soft:#FFFFFF;
+  --gold:#FFFFFF;
+}
+
+/* ---------------- hero — ink ground, paper type, no accent ---------- */
+.site .hero{background:var(--ink);}
+/* the rotating headline word is a heading: it takes the base type colour,
+   never an accent */
+.site .hero h1 .rotating-word{color:var(--paper);}
+.site .hero h1 .accent{color:var(--paper);}
+
+/* ---------------- services — acid ---------------- */
+/* Cards inside an accented band must not introduce a second colour, so they
+   invert to ink blocks — dark cards reading out of the bright acid fill. */
+.site .sec-acid .cap-card{
+  background:var(--ink);
+  border:1px solid var(--ink);
+  --text:var(--paper);
+  --text-dim:rgba(242,239,230,0.72);
+  color:var(--paper);
+}
+.site .sec-acid .cap-card h4{color:var(--paper);}
+.site .sec-acid .cap-card .cap-stat{color:var(--paper);}
+.site .sec-acid .cap-card p{color:rgba(242,239,230,0.72);}
+.site .sec-acid .cap-card .arrow{border-color:rgba(242,239,230,0.45); color:var(--paper);}
+.site .sec-acid .cap-card::before{display:none;}
+.site .sec-acid .cap-card:hover{border-color:var(--ink); transform:translateY(-6px);}
+.site .cap-card .arrow{border-color:var(--ink);}
+.site .cap-card.has-image{background:var(--ink);}
+.site .cap-card.has-image .cap-bg::after{
+  content:''; position:absolute; inset:0;
+  background:rgba(13,13,13,0.55);
+}
+.site .cap-card.has-image .cap-content{color:var(--paper);}
+.site .cap-card.has-image p{color:rgba(242,239,230,0.82);}
+
+/* ---------------- selected work — paper base, accent per card ------- */
+/* The one place several accents legitimately coexist: each card is its own
+   block, and the section itself stays paper. */
+.site .work-card-rail{background:var(--ink); color:var(--paper);}
+.site .work-card:nth-child(4n+1) .work-card-rail{background:var(--magenta); color:var(--ink);}
+.site .work-card:nth-child(4n+2) .work-card-rail{background:var(--cobalt); color:#FFFFFF;}
+.site .work-card:nth-child(4n+3) .work-card-rail{background:var(--tangerine); color:var(--ink);}
+.site .work-card:nth-child(4n+4) .work-card-rail{background:var(--aqua); color:var(--ink);}
+.site .video-frame{background:var(--ink);}
+.site .video-frame.has-image::before{background:rgba(13,13,13,0.30);}
+.site .portfolio-video-wrap{background:var(--ink);}
+
+/* ---------------- about — violet ---------------- */
+/* Body copy sits on an ink block rather than directly on the violet fill:
+   the same move as the acid cards, and it keeps long text at full contrast. */
+.site .sec-violet .about-box{
+  background:var(--ink);
+  border:1px solid var(--ink);
+}
+.site .sec-violet .about-box p{color:rgba(242,239,230,0.76);}
+.site .sec-violet .about-stats .stat{background:#1A1A1A; border:1px solid rgba(242,239,230,0.18);}
+.site .sec-violet .about-stats .stat .num{color:var(--paper);}
+.site .sec-violet .about-stats .stat .label{color:rgba(242,239,230,0.64);}
+/* about page panel — flat violet, no gradient */
+.site .about-panel{background:var(--violet);}
+.site .about-panel-side{background:var(--ink); color:var(--paper);}
+.site .about-panel-text h3{color:var(--paper);}
+.site .about-panel-text p{color:rgba(242,239,230,0.78);}
+.site .about-panel-media-fallback{
+  background:var(--ink); border:1px solid rgba(242,239,230,0.3);
+}
+.site .about-panel-media-fallback span{color:rgba(242,239,230,0.55);}
+/* Copy on the violet panel sits on its own ink block rather than on the
+   fill — still flat, still one accent, just legible at body size. */
+.site .about-panel-text{
+  background:var(--ink); border-radius:18px; padding:34px 32px;
+}
+
+/* ---------------- impact — unaccented, monochrome blocks ------------ */
+/* The four icon circles are data-coloured in the admin; on the site they
+   render as one paper block each so the section keeps a single accent. */
+.site .impact-card{background:#141414; border:1px solid var(--line);}
+.site .impact-icon{background:var(--paper); color:var(--ink);}
+.site .impact-icon svg{color:var(--ink);}
+
+/* ---------------- contact / CTA — cobalt ---------------- */
+/* the contact band needs bottom padding of its own — .page-hero was built to
+   sit on the page ground, so its 30px tail reads as a clipped fill */
+.site .page-hero.sec-cobalt{padding-bottom:70px;}
+.site .sec-cobalt .contact-big-heading span,
+.site .sec-cobalt .contact-big-heading b{color:#FFFFFF;}
+.site .big-cta h2 .line1{color:inherit; opacity:.55;}
+.site .big-cta h2 .line2{color:inherit;}
+.site .sec-cobalt .contact-form{background:transparent; border:1px solid rgba(255,255,255,0.35);}
+.site .sec-cobalt .field input,
+.site .sec-cobalt .field select,
+.site .sec-cobalt .field textarea{color:#FFFFFF;}
+.site .sec-cobalt .field select option{background:var(--cobalt); color:#FFFFFF;}
+
+/* ---------------- footer — ink ground, paper type ---------------- */
+/* the page is already ink, so the footer earns its edge from a hairline
+   rather than from a change of ground */
+.site footer{
+  background:var(--ink);
+  color:var(--paper);
+  border-top:1px solid rgba(242,239,230,0.18);
+  --text:var(--paper);
+  --text-dim:rgba(242,239,230,0.62);
+  --line:rgba(242,239,230,0.22);
+  --section-accent:var(--paper);
+  --on-section-accent:var(--ink);
+  --orange:var(--paper);
+  --orange-soft:var(--paper);
+  --gold:var(--paper);
+}
+.site footer .foot-col a{color:var(--paper);}
+
+/* ---------------- decorative bands ---------------- */
+/* Paper, not an accent — a bright monochrome bar reading out of the ink
+   ground. Being identity rather than accent, it costs nothing against the
+   25% colour budget and can never clash with an adjacent accent. */
+.site .diag-row.a,
+.site .diag-row.b{background:var(--paper); box-shadow:none;}
+.site .diag-row .marquee-phrase{color:rgba(13,13,13,0.55);}
+/* the glyph strip sits between the cobalt CTA and the footer — paper keeps
+   those two grounds from touching */
+.site .glyph-strip{
+  background:var(--paper);
+  border-top:1px solid var(--ink);
+  border-bottom:1px solid var(--ink);
+}
+.site .glyph-strip .marquee-phrase{color:rgba(13,13,13,0.55);}
+.site .floaters svg{color:var(--paper); opacity:.12;}
+/* flat scrim over gallery captions instead of a gradient */
+.site .gcard-label{background:rgba(13,13,13,0.78);}
+.site .gcard{background:#1A1A1A; color:var(--paper);}
+
+/* ---------------- header ---------------- */
+.site header nav{border:1px solid rgba(242,239,230,0.22);}
+.site .nav-links a{color:rgba(242,239,230,0.66);}
+.site .nav-links a:hover,
+.site .nav-links a.active{color:var(--paper); text-decoration:underline; text-underline-offset:4px;}
+
+/* ---------------- links ---------------- */
+/* Links never change colour — they underline. */
+.site .foot-col a:hover{text-decoration:underline; text-underline-offset:4px;}
+.site .email-copy-big{color:var(--text);}
+
+/* ---------------- buttons ---------------- */
+/* Primary: paper fill, ink text -> cobalt fill, white text on hover.
+   (Inverted from the brief's ink-fill primary, which would disappear into
+   the ink ground; the cobalt hover state is unchanged.) */
+.site .hero-cta,
+.site .cta-btn,
+.site .nav-cta,
+.site .showcase .view-btn,
+.site .work-card-view-btn,
+.site .contact-form .send-btn,
+.site .filter-pill.active{
+  background:var(--paper); color:var(--ink); border-color:var(--paper);
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+}
+.site .hero-cta:hover,
+.site .cta-btn:hover,
+.site .nav-cta:hover,
+.site .showcase .view-btn:hover,
+.site .work-card-view-btn:hover,
+.site .contact-form .send-btn:hover,
+.site .filter-pill.active:hover{
+  background:var(--cobalt); color:#FFFFFF; border-color:var(--cobalt); opacity:1;
+}
+/* on the cobalt section a cobalt-filled button would vanish — invert it */
+.site .sec-cobalt .cta-btn,
+.site .sec-cobalt .contact-form .send-btn{background:#FFFFFF; color:var(--cobalt); border-color:#FFFFFF;}
+.site .sec-cobalt .cta-btn:hover,
+.site .sec-cobalt .contact-form .send-btn:hover{background:var(--ink); color:#FFFFFF; border-color:var(--ink);}
+
+/* Secondary: transparent with a 1px ink border, filling with the current
+   section's accent on hover. */
+.site .filter-pill,
+.site .email-copy-btn,
+.site .lang-toggle,
+.site .nav-social a,
+.site .foot-social a{
+  background:transparent; border:1px solid var(--text); color:var(--text);
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+}
+.site .filter-pill:hover,
+.site .email-copy-btn:hover,
+.site .lang-toggle:hover,
+.site .nav-social a:hover,
+.site .foot-social a:hover{
+  background:var(--section-accent);
+  color:var(--on-section-accent);
+  border-color:var(--section-accent);
+}
+.site .filter-pill.active:hover{color:#FFFFFF;}
+
+/* ---------------- focus ---------------- */
+.site :focus-visible{outline:2px solid var(--cobalt); outline-offset:2px;}
+
+/* ---------------- flat-colour guarantees ---------------- */
+/* Scroll reveals animate position and opacity only — never colour. */
+.site .reveal{transition:opacity .7s ease, transform .7s ease;}
+.site .cap-card{transition:transform .3s ease, border-color .3s ease;}
+.site .impact-card{transition:transform .3s ease, border-color .3s ease;}
+.site .mosaic .tile:hover{box-shadow:none;}

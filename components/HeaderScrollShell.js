@@ -26,7 +26,8 @@ export default function HeaderScrollShell({ children }) {
       el.style.paddingBlock = `${26 - 12 * p}px`;
       if (nav) {
         nav.style.paddingBlock = `${12 - 4 * p}px`;
-        nav.style.background = `rgba(21,20,18,${(0.58 + 0.24 * p).toFixed(3)})`;
+        // --ink, the site's ground, deepening as the header shrinks
+        nav.style.background = `rgba(13,13,13,${(0.62 + 0.28 * p).toFixed(3)})`;
       }
       if (logo) logo.style.height = `${46 - 10 * p}px`;
     }
