@@ -1124,9 +1124,9 @@ body:has(.site){background:var(--ink);}
 
 /* ---------------- hero — ink ground, paper type, no accent ---------- */
 .site .hero{background:var(--ink);}
-/* the rotating headline word is a heading: it takes the base type colour,
-   never an accent */
-.site .hero h1 .rotating-word{color:var(--paper);}
+/* The rotating headline word is the one deliberate exception to "colour is
+   never type": it cycles through the brand accents, set inline from the admin
+   (see RotatingWord.js). The rest of the headline stays paper. */
 .site .hero h1 .accent{color:var(--paper);}
 
 /* ---------------- services — acid ---------------- */

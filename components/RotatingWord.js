@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
-// Cycles through phrases, fading between them.
-// The per-phrase colour stored in the admin is deliberately NOT applied: the
-// brand system keeps colour out of headings entirely (accents are section
-// fills only), so the rotating word inherits the hero's ink like the rest of
-// the headline. The stored colour is left in the data model so the choice
-// survives if a coloured treatment is ever reinstated.
+// Cycles through phrases, fading between them, each in its own brand accent.
+// This is the deliberate exception to the rule that colour never touches type
+// — everywhere else on the site accents are flat fills only. Colours come from
+// the admin (WORD_COLORS in lib/defaults.js), already normalised through
+// resolveWordColor() so pre-palette values don't render as plain white.
 export default function RotatingWord({ phrases }) {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -36,6 +35,7 @@ export default function RotatingWord({ phrases }) {
     <span
       className="rotating-word"
       style={{
+        color: current.color,
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(10px)',
       }}
