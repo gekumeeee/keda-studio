@@ -247,13 +247,29 @@ header nav{
 }
 .gcard img{width:100%; height:100%; object-fit:cover;}
 .gcard-title{position:relative; z-index:2;}
-.gcard-label{
-  position:absolute; left:0; right:0; bottom:0; z-index:2;
-  padding:18px 12px 10px; font-size:12px; font-weight:600; text-align:left; color:#fff;
-  background:linear-gradient(transparent, rgba(0,0,0,0.7));
-}
+
+/* mobile counterpart of .hero-gallery — hidden until the 900px breakpoint
+   below, where it replaces the 3-column grid entirely. Three columns on a
+   phone squeeze each image down to under 100px wide; one wide swipeable row
+   keeps every card big enough to actually see. */
+.hero-slide{display:none;}
 @media (max-width:900px){
-  .hero-gallery{height:460px; margin-top:20px;}
+  .hero-gallery{display:none;}
+  /* .hero-slide's actual GRID item is its <Reveal> wrapper (a plain block
+     div), not .hero-slide itself — grid items default to min-width:auto, so
+     that wrapper refuses to shrink below the combined width of .hero-slide's
+     fixed-width children, and the whole grid track (and page) stretches to
+     fit instead of the slide scrolling internally. min-width:0 here is what
+     actually lets the track respect the viewport. */
+  .hero-grid > .reveal{min-width:0;}
+  .hero-slide{
+    display:flex; gap:14px; margin-top:20px;
+    overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+    padding:2px 4px 12px; scrollbar-width:none;
+  }
+  .hero-slide::-webkit-scrollbar{display:none;}
+  .hero-slide .hero-slide-item{width:78vw; max-width:340px; scroll-snap-align:center;}
 }
 
 /* portfolio mosaic */
@@ -1320,8 +1336,6 @@ body:has(.site){background:var(--ink);}
   .site .glyph-strip{height:72px;}
 }
 .site .floaters svg{color:var(--paper); opacity:.12;}
-/* flat scrim over gallery captions instead of a gradient */
-.site .gcard-label{background:rgba(13,13,13,0.78);}
 .site .gcard{background:#1A1A1A; color:var(--paper);}
 
 /* ---------------- header ---------------- */

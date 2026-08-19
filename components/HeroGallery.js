@@ -1,13 +1,18 @@
 'use client';
 
-// Three vertical columns of thumbnails that scroll continuously.
-// Outer columns scroll up, the middle column scrolls down (counter-motion),
-// mirroring the senu-style hero gallery. Content comes from live projects;
-// when there aren't enough, tiles repeat to keep the columns full.
+// Two responsive variants of the same tile set, toggled by CSS media query
+// (not JS) so there's no client/server layout mismatch:
+//  - .hero-gallery: three vertical columns that scroll continuously
+//    (outer up, middle down), shown from ~900px up.
+//  - .hero-slide: one wide swipeable row, shown below that — three narrow
+//    columns on a phone squeeze every image down to a sliver, so mobile gets
+//    a single row of full-size cards you scroll through sideways instead.
+// Content comes from live projects; when there aren't enough, tiles repeat
+// to keep the layout full.
 
 // The hero carries no accent — colour enters the page further down. These
 // placeholder tiles therefore stay strictly monochrome, alternating ink
-// surfaces with paper ones so the columns still read as a varied grid.
+// surfaces with paper ones so the grid still reads as varied.
 const TILE_COLORS = [
   { bg: 'var(--paper)', fg: 'var(--ink)' },
   { bg: '#1A1A1A', fg: 'var(--paper)' },
@@ -17,18 +22,21 @@ const TILE_COLORS = [
   { bg: '#1A1A1A', fg: 'var(--paper)' },
 ];
 
-function Tile({ project, colorIndex }) {
+// A real project image is shown alone — no title, no overlay. Only the
+// colour-block placeholder (no image at all) keeps its label, since that's
+// the only thing telling the two tiles apart.
+function Tile({ project, colorIndex, className = '' }) {
   const color = TILE_COLORS[colorIndex % TILE_COLORS.length];
+  const cls = `gcard ${className}`.trim();
   if (project.image) {
     return (
-      <div className="gcard">
+      <div className={cls}>
         <img src={project.image} alt={project.title} loading="lazy" />
-        <span className="gcard-label">{project.title}</span>
       </div>
     );
   }
   return (
-    <div className="gcard" style={{ background: color.bg, color: color.fg }}>
+    <div className={cls} style={{ background: color.bg, color: color.fg }}>
       <span className="gcard-title">{project.title}</span>
     </div>
   );
@@ -56,20 +64,27 @@ export default function HeroGallery({ projects, lang = 'en' }) {
     i++;
   }
 
-  // Distribute round-robin into 3 columns.
+  // Distribute round-robin into 3 columns for the desktop gallery.
   const columns = [[], [], []];
   filled.forEach((item, idx) => columns[idx % 3].push({ item, colorIndex: idx }));
 
   return (
-    <div className="hero-gallery" aria-hidden="true">
-      {columns.map((col, c) => (
-        <div key={c} className={`hero-col ${c === 1 ? 'down' : 'up'}`}>
-          {/* duplicated once for a seamless loop */}
-          {[...col, ...col].map((entry, idx) => (
-            <Tile key={idx} project={entry.item} colorIndex={entry.colorIndex} />
-          ))}
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="hero-gallery" aria-hidden="true">
+        {columns.map((col, c) => (
+          <div key={c} className={`hero-col ${c === 1 ? 'down' : 'up'}`}>
+            {/* duplicated once for a seamless loop */}
+            {[...col, ...col].map((entry, idx) => (
+              <Tile key={idx} project={entry.item} colorIndex={entry.colorIndex} />
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="hero-slide" aria-hidden="true">
+        {filled.map((item, idx) => (
+          <Tile key={idx} project={item} colorIndex={idx} className="hero-slide-item" />
+        ))}
+      </div>
+    </>
   );
 }
