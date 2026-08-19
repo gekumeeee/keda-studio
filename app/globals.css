@@ -239,37 +239,26 @@ header nav{
   from{transform:translateY(-50%);}
   to{transform:translateY(0);}
 }
+/* No padding, no border — a real image fills the rounded-corner card edge to
+   edge with nothing framing it. Only the colour-block placeholder (no image
+   at all, .gcard-placeholder) needs padding, to keep its centred title off
+   the card's edges. */
 .gcard{
   position:relative; border-radius:16px; overflow:hidden;
   aspect-ratio:3/4; flex:none;
   display:flex; align-items:center; justify-content:center;
+}
+.gcard img{width:100%; height:100%; object-fit:cover; display:block;}
+.gcard-placeholder{
   font-family:var(--display); font-weight:700; font-size:15px; text-align:center; padding:14px;
 }
-.gcard img{width:100%; height:100%; object-fit:cover;}
 .gcard-title{position:relative; z-index:2;}
 
-/* mobile counterpart of .hero-gallery — hidden until the 900px breakpoint
-   below, where it replaces the 3-column grid entirely. Three columns on a
-   phone squeeze each image down to under 100px wide; one wide swipeable row
-   keeps every card big enough to actually see. */
-.hero-slide{display:none;}
+/* Same 3-column collage at every width — mobile just runs denser (shorter
+   viewport, tighter gaps) rather than switching to a different layout. */
 @media (max-width:900px){
-  .hero-gallery{display:none;}
-  /* .hero-slide's actual GRID item is its <Reveal> wrapper (a plain block
-     div), not .hero-slide itself — grid items default to min-width:auto, so
-     that wrapper refuses to shrink below the combined width of .hero-slide's
-     fixed-width children, and the whole grid track (and page) stretches to
-     fit instead of the slide scrolling internally. min-width:0 here is what
-     actually lets the track respect the viewport. */
-  .hero-grid > .reveal{min-width:0;}
-  .hero-slide{
-    display:flex; gap:14px; margin-top:20px;
-    overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain;
-    scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
-    padding:2px 4px 12px; scrollbar-width:none;
-  }
-  .hero-slide::-webkit-scrollbar{display:none;}
-  .hero-slide .hero-slide-item{width:78vw; max-width:340px; scroll-snap-align:center;}
+  .hero-gallery{height:420px; gap:10px;}
+  .hero-col{gap:10px;}
 }
 
 /* portfolio mosaic */

@@ -1,18 +1,16 @@
 'use client';
 
-// Two responsive variants of the same tile set, toggled by CSS media query
-// (not JS) so there's no client/server layout mismatch:
-//  - .hero-gallery: three vertical columns that scroll continuously
-//    (outer up, middle down), shown from ~900px up.
-//  - .hero-slide: one wide swipeable row, shown below that — three narrow
-//    columns on a phone squeeze every image down to a sliver, so mobile gets
-//    a single row of full-size cards you scroll through sideways instead.
-// Content comes from live projects; when there aren't enough, tiles repeat
-// to keep the layout full.
+// Three vertical columns of thumbnails that scroll continuously.
+// Outer columns scroll up, the middle column scrolls down (counter-motion),
+// mirroring the senu-style hero gallery. Same 3-column collage at every
+// viewport size — mobile just gets tighter spacing (see globals.css) rather
+// than a different layout, so it reads as the same dense, edge-to-edge grid
+// of real project imagery. Content comes from live projects; when there
+// aren't enough, tiles repeat to keep the columns full.
 
 // The hero carries no accent — colour enters the page further down. These
 // placeholder tiles therefore stay strictly monochrome, alternating ink
-// surfaces with paper ones so the grid still reads as varied.
+// surfaces with paper ones so the columns still read as a varied grid.
 const TILE_COLORS = [
   { bg: 'var(--paper)', fg: 'var(--ink)' },
   { bg: '#1A1A1A', fg: 'var(--paper)' },
@@ -22,21 +20,20 @@ const TILE_COLORS = [
   { bg: '#1A1A1A', fg: 'var(--paper)' },
 ];
 
-// A real project image is shown alone — no title, no overlay. Only the
-// colour-block placeholder (no image at all) keeps its label, since that's
-// the only thing telling the two tiles apart.
-function Tile({ project, colorIndex, className = '' }) {
+// A real project image fills its card edge to edge — no title, no overlay,
+// no inset. Only the colour-block placeholder (no image at all) keeps its
+// title, since that's the only thing telling one tile from another.
+function Tile({ project, colorIndex }) {
   const color = TILE_COLORS[colorIndex % TILE_COLORS.length];
-  const cls = `gcard ${className}`.trim();
   if (project.image) {
     return (
-      <div className={cls}>
+      <div className="gcard">
         <img src={project.image} alt={project.title} loading="lazy" />
       </div>
     );
   }
   return (
-    <div className={cls} style={{ background: color.bg, color: color.fg }}>
+    <div className="gcard gcard-placeholder" style={{ background: color.bg, color: color.fg }}>
       <span className="gcard-title">{project.title}</span>
     </div>
   );
@@ -64,27 +61,20 @@ export default function HeroGallery({ projects, lang = 'en' }) {
     i++;
   }
 
-  // Distribute round-robin into 3 columns for the desktop gallery.
+  // Distribute round-robin into 3 columns.
   const columns = [[], [], []];
   filled.forEach((item, idx) => columns[idx % 3].push({ item, colorIndex: idx }));
 
   return (
-    <>
-      <div className="hero-gallery" aria-hidden="true">
-        {columns.map((col, c) => (
-          <div key={c} className={`hero-col ${c === 1 ? 'down' : 'up'}`}>
-            {/* duplicated once for a seamless loop */}
-            {[...col, ...col].map((entry, idx) => (
-              <Tile key={idx} project={entry.item} colorIndex={entry.colorIndex} />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="hero-slide" aria-hidden="true">
-        {filled.map((item, idx) => (
-          <Tile key={idx} project={item} colorIndex={idx} className="hero-slide-item" />
-        ))}
-      </div>
-    </>
+    <div className="hero-gallery" aria-hidden="true">
+      {columns.map((col, c) => (
+        <div key={c} className={`hero-col ${c === 1 ? 'down' : 'up'}`}>
+          {/* duplicated once for a seamless loop */}
+          {[...col, ...col].map((entry, idx) => (
+            <Tile key={idx} project={entry.item} colorIndex={entry.colorIndex} />
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
