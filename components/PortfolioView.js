@@ -110,7 +110,11 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
                       {p.video ? (
                         <PortfolioVideo src={p.video} poster={p.image} label={p.category} orientation={p.orientation} />
                       ) : p.image ? (
-                        <div className="work-card-img" style={{ backgroundImage: `url(${p.image})` }}>
+                        // Real image: shown at its own natural size (plain
+                        // <img>, not a background-image crop box) — the
+                        // category label still overlays it, same as before.
+                        <div className="work-card-img has-image">
+                          <img src={p.image} alt={p.title} className="work-card-img-el" />
                           <span className="label">{p.category}</span>
                         </div>
                       ) : (

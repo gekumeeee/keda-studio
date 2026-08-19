@@ -250,8 +250,18 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
             </div>
             {showcase.video ? (
               <PortfolioVideo src={showcase.video} poster={showcase.image} label={showcase.label} orientation={showcase.orientation} />
+            ) : showcase.image ? (
+              // A real image: shown at its own natural size (no forced crop,
+              // no label/play overlay) — this is the one spot on the site
+              // that's a plain <img>, not a background-image box, precisely
+              // so it isn't cropped into a fixed frame.
+              <div className="video-frame has-image">
+                <img src={showcase.image} alt={showcase.title} className="video-frame-img" />
+              </div>
             ) : (
-              <div className={`video-frame ${showcase.image ? 'has-image' : ''}`} style={showcase.image ? { backgroundImage: `url(${showcase.image})` } : undefined}>
+              // No image at all yet — the gradient placeholder still needs
+              // the label/play cue since there's nothing else to show.
+              <div className="video-frame">
                 <div className="label">{showcase.label}</div>
                 <div className="play"></div>
               </div>

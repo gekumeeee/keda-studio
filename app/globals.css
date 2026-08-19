@@ -396,11 +396,15 @@ header nav{
   background:linear-gradient(135deg,#1E6FEB,#4C8CF0);
   border-radius:18px; aspect-ratio:16/10;
   display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
-  background-size:cover; background-position:center;
 }
-.video-frame.has-image::before{
-  content:''; position:absolute; inset:0; background:rgba(10,10,10,0.3);
+/* Once there's a real image, the frame stops being a fixed 16/10 crop box —
+   it just wraps an <img> and takes whatever height that image's own ratio
+   produces at the column's width. No label, no play button, no scrim: the
+   gradient/placeholder chrome above is only for the no-image case. */
+.video-frame.has-image{
+  aspect-ratio:auto; display:block; background:none;
 }
+.video-frame-img{width:100%; height:auto; display:block;}
 .video-frame .play{
   width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,0.22); position:relative; z-index:2;
   display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);
@@ -500,6 +504,10 @@ header nav{
   width:100%; aspect-ratio:16/10; position:relative; overflow:hidden;
   background-size:cover; background-position:center;
 }
+/* Real images drop the forced 16/10 crop — the box just wraps an <img> and
+   takes the height that image's own ratio produces at the column's width. */
+.work-card-img.has-image{aspect-ratio:auto;}
+.work-card-img-el{width:100%; height:auto; display:block;}
 .work-card-img .label{
   position:absolute; top:20px; inset-inline-start:20px; font-family:var(--display); font-weight:800;
   font-size:22px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.5);
@@ -1170,7 +1178,7 @@ body:has(.site){background:var(--ink);}
 .site .work-card:nth-child(4n+3) .work-card-rail{background:var(--tangerine); color:var(--ink);}
 .site .work-card:nth-child(4n+4) .work-card-rail{background:var(--aqua); color:var(--ink);}
 .site .video-frame{background:var(--ink);}
-.site .video-frame.has-image::before{background:rgba(13,13,13,0.30);}
+.site .video-frame.has-image{background:none;}
 .site .portfolio-video-wrap{background:var(--ink);}
 
 /* ---------------- about — violet ---------------- */
