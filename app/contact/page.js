@@ -9,8 +9,7 @@ import ContactForm from '@/components/ContactForm';
 import EmailCopy from '@/components/EmailCopy';
 import { UI, pick } from '@/lib/i18n';
 
-export const dynamic = 'force-dynamic';
-
+// See app/page.js for why there's no `force-dynamic` export here.
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
   return { title: `Contact — ${settings.siteName || 'Keda Agency'}` };

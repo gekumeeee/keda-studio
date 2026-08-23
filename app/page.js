@@ -4,8 +4,12 @@ import { mergeSettings } from '@/lib/defaults';
 import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
 import HomeView from '@/components/HomeView';
 
-export const dynamic = 'force-dynamic';
-
+// No `force-dynamic` here: cookies() below already forces this page to run
+// per request regardless, so that export was redundant. The actual fix for
+// per-visit Blob reads lives one layer down, in lib/store.js's getSettings()
+// etc. — this page keeps re-executing every request (for the language
+// cookie), but the data it reads is now served from a 60s cross-request
+// cache instead of hitting Blob each time.
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
   return {

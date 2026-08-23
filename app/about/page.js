@@ -4,8 +4,7 @@ import { mergeSettings } from '@/lib/defaults';
 import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
 import AboutView from '@/components/AboutView';
 
-export const dynamic = 'force-dynamic';
-
+// See app/page.js for why there's no `force-dynamic` export here.
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
   return { title: `About — ${settings.siteName || 'Keda Agency'}` };
