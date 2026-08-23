@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
 import PortfolioVideo from '@/components/PortfolioVideo';
 import { formatAmount, invoiceTotals, contractTotal } from '@/lib/invoiceMath';
+import ReportsTab from '@/components/admin/ReportsTab';
 
 const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
 const METHOD_LABELS = { whatsapp: 'WhatsApp', email: 'Email', call: 'Phone call' };
@@ -16,6 +17,7 @@ const TAB_TITLES = {
   plans: 'Plans',
   contracts: 'Contracts',
   clauses: 'Clause Library',
+  reports: 'Reports',
   settings: 'Site Content',
   users: 'Users',
   account: 'My Account',
@@ -29,11 +31,12 @@ const TAB_SUB = {
   plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
   contracts: 'Agreements for clients or team members — deliverables, total and terms — saved and exportable as a PDF.',
   clauses: 'Reusable text blocks — insert them into contracts, plans and invoices with one click instead of retyping.',
+  reports: 'Monthly performance reports for retainer clients — enter this month’s numbers, preview the 6-page report and export it as a PDF.',
   settings: 'Edit every piece of text on your homepage, in both languages.',
   users: 'Add people to the admin and control exactly what each of them can see and edit.',
   account: 'Change your own username and password.',
 };
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', clauses: '❝', settings: '✎', users: '☺', account: '⚿' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', clauses: '❝', reports: '◨', settings: '✎', users: '☺', account: '⚿' };
 // Every tab except 'overview' is gated by a matching permission key. 'overview'
 // has no key here — it's always shown to any logged-in user. 'users' isn't
 // permission-based at all (owner-only, checked separately from `permissions`).
@@ -45,10 +48,11 @@ const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: 
 const TAB_GROUPS = [
   { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
   { label: 'Documents', tabs: ['invoices', 'plans', 'contracts', 'clauses'] },
+  { label: 'Reports', tabs: ['reports'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
 const TAB_PERMISSION_KEY = { clauses: 'plans' };
-const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', settings: 'Site Content' };
+const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', reports: 'Reports', settings: 'Site Content' };
 const PERMISSIONS = Object.keys(PERMISSION_LABELS);
 const EMPTY_PERMISSIONS = Object.fromEntries(PERMISSIONS.map((p) => [p, false]));
 const EMPTY_USER = { username: '', password: '', permissions: { ...EMPTY_PERMISSIONS } };
@@ -1837,6 +1841,11 @@ export default function AdminPage() {
               </form>
             </section>
           )}
+
+          {/* Self-contained: fetches its own data and manages its own state
+              rather than threading another dozen useState hooks through this
+              already-2000+-line file — see components/admin/ReportsTab.js. */}
+          {tab === 'reports' && <ReportsTab />}
 
           {tab === 'users' && isOwner && (
             <section className="tab-panel active">

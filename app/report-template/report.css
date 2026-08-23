@@ -1,0 +1,100 @@
+/* Client-branded report pages — deliberately isolated from globals.css's
+   KEDA dark theme (this file is only imported by the report-template route).
+   Two client colors come in as inline CSS variables per page render:
+   --rpt-primary / --rpt-secondary (see [id]/page.js). Everything else here
+   is fixed identity: Lalezar for Arabic headings, Cairo for Arabic body,
+   Helvetica Neue (system font, no license needed — falls back to Arial
+   where it isn't installed) for English/numbers. */
+
+.report-root{
+  direction:rtl;
+  background:#F2EFE6;
+  color:#171A1D;
+  font-family:'Cairo', 'Helvetica Neue', Arial, sans-serif;
+}
+/* This route still sits under the site's one shared root layout, which
+   paints a dark body background and a fixed, full-viewport KEDA watermark
+   behind every page. Both bled through here: the watermark isn't confined
+   by normal page flow, so Chromium's print pagination gave it a page of its
+   own after the real 6 (a real, not cosmetic, bug — SPEC.md requires exactly
+   6 pages). Scoped by :has() so this only ever touches report-template. */
+body:has(.report-root){ background:#F2EFE6; }
+body:has(.report-root) .site-watermark{ display:none; }
+
+.report-page{
+  width:1920px; height:1080px;
+  position:relative;
+  overflow:hidden;
+  padding:80px 96px;
+  display:flex; flex-direction:column;
+  background:#FFFFFF;
+}
+/* Breaking after every page — including the last — forces a 7th, empty
+   trailing page, since the break still fires with nothing left to fill it.
+   Excluding :last-child is what actually keeps this at 6 pages. */
+.report-page:not(:last-child){
+  break-after:page;
+  page-break-after:always;
+}
+@page{ size:1920px 1080px; margin:0; }
+
+.report-footer{
+  position:absolute; bottom:44px; inset-inline-end:96px;
+  display:flex; align-items:center; gap:14px; opacity:.55;
+}
+.report-footer-logo{ height:28px; width:auto; }
+.report-page-num{ font-family:'Helvetica Neue', Arial, sans-serif; font-size:16px; direction:ltr; }
+
+.report-section-title{
+  font-family:'Lalezar', 'Cairo', sans-serif; font-weight:400;
+  font-size:56px; color:var(--rpt-primary); margin-bottom:48px;
+}
+
+/* ---- page 1: cover ---- */
+.report-cover{
+  background:var(--rpt-primary); color:#fff;
+  align-items:center; justify-content:center; text-align:center; gap:28px;
+}
+.report-cover-logo{ max-height:180px; max-width:60%; object-fit:contain; }
+.report-cover-logo-fallback{ font-family:'Lalezar', sans-serif; font-size:72px; }
+.report-cover-title{ font-family:'Lalezar', sans-serif; font-weight:400; font-size:64px; margin-top:24px; }
+.report-cover-month{ font-family:'Helvetica Neue', Arial, sans-serif; font-size:28px; letter-spacing:.08em; opacity:.85; direction:ltr; }
+.report-cover .report-footer{ opacity:.75; filter:brightness(0) invert(1); }
+
+/* ---- page 2: executive summary ---- */
+.report-metric-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:32px; margin-bottom:56px; }
+.report-metric-card{
+  background:#F2EFE6; border-radius:20px; padding:36px 30px;
+  border-top:6px solid var(--rpt-primary);
+}
+.report-metric-label{ font-size:22px; color:#6B7580; margin-bottom:14px; }
+.report-metric-value{ font-family:'Helvetica Neue', Arial, sans-serif; font-weight:700; font-size:52px; direction:ltr; }
+.report-metric-change{ margin-top:14px; font-size:20px; direction:ltr; }
+.report-metric-change.up{ color:#2E9E5B; }
+.report-metric-change.down{ color:#D6462F; }
+.report-summary-text{ font-size:30px; line-height:1.8; max-width:70ch; }
+
+/* ---- page 3: delivered ---- */
+.report-table{ width:100%; border-collapse:collapse; font-size:28px; }
+.report-table th{ text-align:start; padding:20px 16px; color:#6B7580; font-size:20px; border-bottom:2px solid var(--rpt-primary); }
+.report-table td{ padding:24px 16px; border-bottom:1px solid #E4E1D9; }
+
+/* ---- page 4: top posts ---- */
+.report-posts-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:36px; }
+.report-post-card{ display:flex; flex-direction:column; gap:16px; }
+.report-post-image, .report-post-image-fallback{ width:100%; aspect-ratio:4/5; border-radius:16px; object-fit:cover; background:#F2EFE6; }
+.report-post-stats{ display:flex; gap:20px; font-size:22px; direction:ltr; color:#6B7580; }
+.report-post-why{ font-size:24px; line-height:1.6; }
+
+/* ---- page 5: analysis ---- */
+.report-analysis-block{ margin-bottom:44px; }
+.report-analysis-block h3{ font-family:'Lalezar', sans-serif; font-weight:400; font-size:34px; color:var(--rpt-primary); margin-bottom:12px; }
+.report-analysis-block p{ font-size:28px; line-height:1.7; max-width:80ch; }
+
+/* ---- page 6: next month ---- */
+.report-pillars{ display:flex; gap:20px; margin-bottom:40px; flex-wrap:wrap; }
+.report-pillar{ background:var(--rpt-primary); color:#fff; border-radius:999px; padding:16px 32px; font-size:26px; }
+.report-events{ display:flex; flex-direction:column; gap:14px; margin-bottom:40px; }
+.report-event{ font-size:26px; padding-inline-start:24px; border-inline-start:4px solid var(--rpt-secondary); }
+.report-renewal{ font-size:26px; color:#6B7580; margin-top:auto; }
+.report-renewal.alert{ color:#D6462F; font-weight:700; }
