@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   saveProjects, saveClients, saveMessages, saveSettings, saveInvoices, savePlans,
-  saveContracts, saveClauses, saveReportClients, saveReports,
+  saveContracts, saveReportClients, saveReports,
 } from '@/lib/store';
 import { requireOwner } from '@/lib/auth';
 
@@ -19,7 +19,7 @@ import { requireOwner } from '@/lib/auth';
 // Users tab same as always.
 const IMPORTABLE = {
   projects: saveProjects, clients: saveClients, messages: saveMessages, settings: saveSettings,
-  invoices: saveInvoices, plans: savePlans, contracts: saveContracts, clauses: saveClauses,
+  invoices: saveInvoices, plans: savePlans, contracts: saveContracts,
   reportClients: saveReportClients, reports: saveReports,
 };
 

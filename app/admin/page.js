@@ -16,7 +16,6 @@ const TAB_TITLES = {
   invoices: 'Invoices',
   plans: 'Plans',
   contracts: 'Contracts',
-  clauses: 'Clause Library',
   reports: 'Reports',
   settings: 'Site Content',
   users: 'Users',
@@ -30,28 +29,22 @@ const TAB_SUB = {
   invoices: 'Branded invoices you can send to clients as a PDF.',
   plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
   contracts: 'Agreements for clients or team members — deliverables, total and terms — saved and exportable as a PDF.',
-  clauses: 'Reusable text blocks — insert them into contracts, plans and invoices with one click instead of retyping.',
   reports: 'Monthly performance reports for retainer clients — enter this month’s numbers, preview the 6-page report and export it as a PDF.',
   settings: 'Edit every piece of text on your homepage, in both languages.',
   users: 'Add people to the admin and control exactly what each of them can see and edit.',
   account: 'Change your own username and password.',
 };
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', clauses: '❝', reports: '◨', settings: '✎', users: '☺', account: '⚿' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', reports: '◨', settings: '✎', users: '☺', account: '⚿' };
 // Every tab except 'overview' is gated by a matching permission key. 'overview'
 // has no key here — it's always shown to any logged-in user. 'users' isn't
 // permission-based at all (owner-only, checked separately from `permissions`).
-// 'clauses' rides on the 'plans' permission (see TAB_PERMISSION_KEY below)
-// rather than getting its own bucket — it's only ever used from inside the
-// Plan/Contract/Invoice modals, so a separate toggle in the Users tab would
-// be a footgun (lib/auth.js's PERMISSIONS array and this file's
-// PERMISSION_LABELS are two independently hand-synced sources of truth).
 const TAB_GROUPS = [
   { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
-  { label: 'Documents', tabs: ['invoices', 'plans', 'contracts', 'clauses'] },
+  { label: 'Documents', tabs: ['invoices', 'plans', 'contracts'] },
   { label: 'Reports', tabs: ['reports'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
-const TAB_PERMISSION_KEY = { clauses: 'plans' };
+const TAB_PERMISSION_KEY = {};
 const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', reports: 'Reports', settings: 'Site Content' };
 const PERMISSIONS = Object.keys(PERMISSION_LABELS);
 const EMPTY_PERMISSIONS = Object.fromEntries(PERMISSIONS.map((p) => [p, false]));
@@ -60,7 +53,6 @@ const EMPTY_INVOICE = { clientId: '', clientName: '', projectName: '', currency:
 const INVOICE_STATUS_LABELS = { draft: 'Draft', sent: 'Sent', paid: 'Paid', overdue: 'Overdue' };
 const EMPTY_PLAN = { name: '', description: '', price: '', currency: 'LE', cycle: '', items: [''] };
 const EMPTY_CONTRACT = { title: '', partyType: 'client', clientId: '', partyName: '', role: '', startDate: '', endDate: '', currency: 'LE', items: [{ label: '', quantity: '', amount: '' }], terms: '', notes: '' };
-const EMPTY_CLAUSE = { name: '', body: '' };
 
 // Preloaded example plans shown in the empty state — one click adds them all
 // as real plans the user can then edit or delete. Not auto-inserted; the user
@@ -160,29 +152,6 @@ function Field({ label, hint, children }) {
   );
 }
 
-// Dropdown that inserts a saved clause's body into whatever field it's placed
-// next to, then resets itself — the field keeps owning its own text/array
-// state, this just appends to it (see the three call sites below).
-function ClauseInsertSelect({ clauses, onInsert, label = 'Insert from library' }) {
-  if (!clauses.length) return null;
-  return (
-    <select
-      className="clause-insert-select"
-      value=""
-      onChange={(e) => {
-        const c = clauses.find((cl) => cl.id === e.target.value);
-        if (c) onInsert(c.body);
-        e.target.value = '';
-      }}
-    >
-      <option value="">{`+ ${label}…`}</option>
-      {clauses.map((c) => (
-        <option key={c.id} value={c.id}>{c.name}</option>
-      ))}
-    </select>
-  );
-}
-
 // Links an invoice/contract to an existing client record. Picking one calls
 // onPick(client); the caller sets clientId + copies the name into its own
 // free-text name field (which stays editable — hand-editing it unlinks again).
@@ -267,11 +236,6 @@ export default function AdminPage() {
   const [proposalClientName, setProposalClientName] = useState('');
   const [downloadingProposal, setDownloadingProposal] = useState(false);
 
-  const [clauses, setClauses] = useState([]);
-  const [clauseModalOpen, setClauseModalOpen] = useState(false);
-  const [editingClauseId, setEditingClauseId] = useState(null);
-  const [clauseForm, setClauseForm] = useState(EMPTY_CLAUSE);
-
   const [contracts, setContracts] = useState([]);
   // which side of the Contracts tab is showing: 'client' or 'team'
   const [contractView, setContractView] = useState('client');
@@ -314,7 +278,7 @@ export default function AdminPage() {
   }
 
   async function loadAll(perms) {
-    const [p, c, m, s, inv, pl, con, cla] = await Promise.all([
+    const [p, c, m, s, inv, pl, con] = await Promise.all([
       perms.projects ? fetchJsonSafe('/api/projects', []) : Promise.resolve([]),
       perms.clients ? fetchJsonSafe('/api/clients', []) : Promise.resolve([]),
       perms.messages ? fetchJsonSafe('/api/messages', []) : Promise.resolve([]),
@@ -322,8 +286,6 @@ export default function AdminPage() {
       perms.invoices ? fetchJsonSafe('/api/invoices', []) : Promise.resolve([]),
       perms.plans ? fetchJsonSafe('/api/plans', []) : Promise.resolve([]),
       perms.contracts ? fetchJsonSafe('/api/contracts', []) : Promise.resolve([]),
-      // clauses ride on the 'plans' permission — see TAB_PERMISSION_KEY
-      perms.plans ? fetchJsonSafe('/api/clauses', []) : Promise.resolve([]),
     ]);
     setProjects(p);
     setClients(c);
@@ -332,7 +294,6 @@ export default function AdminPage() {
     setInvoices(inv);
     setPlans(Array.isArray(pl) ? pl : []);
     setContracts(Array.isArray(con) ? con : []);
-    setClauses(Array.isArray(cla) ? cla : []);
   }
 
   async function loadUsers() {
@@ -923,56 +884,6 @@ export default function AdminPage() {
     } finally {
       setSeedingPlans(false);
     }
-  }
-
-  // ---- clause library ----
-  function openClauseModal(clause) {
-    if (clause) {
-      setEditingClauseId(clause.id);
-      setClauseForm({ name: clause.name || '', body: clause.body || '' });
-    } else {
-      setEditingClauseId(null);
-      setClauseForm(EMPTY_CLAUSE);
-    }
-    setClauseModalOpen(true);
-  }
-  async function saveClause(e) {
-    e.preventDefault();
-    if (!clauseForm.name.trim()) return;
-    if (editingClauseId) {
-      const res = await fetch(`/api/clauses/${editingClauseId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(clauseForm),
-      });
-      const updated = await res.json();
-      setClauses((prev) => prev.map((c) => (c.id === editingClauseId ? updated : c)));
-    } else {
-      const res = await fetch('/api/clauses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(clauseForm),
-      });
-      const created = await res.json();
-      setClauses((prev) => [created, ...prev]);
-    }
-    setClauseModalOpen(false);
-  }
-  async function deleteClause(id) {
-    if (!confirm('Delete this clause? This cannot be undone.')) return;
-    await fetch(`/api/clauses/${id}`, { method: 'DELETE' });
-    setClauses((prev) => prev.filter((c) => c.id !== id));
-  }
-  async function duplicateClause(clause) {
-    const { id: _drop, updated: _u, ...rest } = clause;
-    const payload = { ...rest, name: `${clause.name} (copy)` };
-    const res = await fetch('/api/clauses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const created = await res.json();
-    setClauses((prev) => [created, ...prev]);
   }
 
   // ---- contracts ----
@@ -1642,44 +1553,6 @@ export default function AdminPage() {
             );
           })()}
 
-          {tab === 'clauses' && (
-            <section className="tab-panel active">
-              <div className="panel">
-                <div className="panel-head">
-                  <h3>Clause Library</h3>
-                  <button type="button" className="add-btn" onClick={() => openClauseModal(null)}>+ New Clause</button>
-                </div>
-                {clauses.length === 0 ? (
-                  <div className="empty">
-                    No saved clauses yet — add one (e.g. a payment-terms line or a revisions policy) and it'll show up as an "Insert from library" option inside Contracts, Plans and Invoices.
-                  </div>
-                ) : (
-                  <table>
-                    <thead><tr><th>Name</th><th>Body</th><th>Updated</th><th></th></tr></thead>
-                    <tbody>
-                      {clauses.map((c) => (
-                        <tr key={c.id}>
-                          <td>{c.name}</td>
-                          <td style={{ color: 'var(--text-dim)', fontSize: 12, maxWidth: 420 }}>
-                            {c.body.length > 90 ? `${c.body.slice(0, 90)}…` : c.body}
-                          </td>
-                          <td>{fmtDate(c.updated)}</td>
-                          <td>
-                            <div className="row-actions">
-                              <span onClick={() => openClauseModal(c)}>Edit</span>
-                              <span onClick={() => duplicateClause(c)}>Duplicate</span>
-                              <span className="danger" onClick={() => deleteClause(c.id)}>Delete</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </section>
-          )}
-
           {tab === 'settings' && (
             <section className="tab-panel active">
               <form onSubmit={saveSettings}>
@@ -2103,11 +1976,6 @@ export default function AdminPage() {
                     <input className="neutral-input" style={{ flex: 'none', width: 130 }} value={s.price} onChange={(e) => updateInvoiceSection(i, 'price', e.target.value)} placeholder="Price" />
                     <button type="button" className="repeat-remove" onClick={() => removeInvoiceSection(i)} disabled={invoiceForm.sections.length <= 1}>✕</button>
                   </div>
-                  <ClauseInsertSelect
-                    clauses={clauses}
-                    label="Insert item"
-                    onInsert={(body) => updateInvoiceSectionItems(i, [...s.items.filter((it) => it.trim()), ...body.split('\n').filter((l) => l.trim())].join('\n'))}
-                  />
                   <textarea
                     className="items-textarea"
                     rows={6}
@@ -2171,11 +2039,6 @@ export default function AdminPage() {
                 </Field>
               </div>
               <Field label="What's included" hint="one line per item">
-                <ClauseInsertSelect
-                  clauses={clauses}
-                  label="Insert item"
-                  onInsert={(body) => updatePlanItems([...planForm.items.filter((i) => i.trim()), ...body.split('\n').filter((l) => l.trim())].join('\n'))}
-                />
                 <textarea
                   className="items-textarea"
                   rows={8}
@@ -2277,11 +2140,6 @@ export default function AdminPage() {
               </div>
 
               <Field label="Terms & details" hint="one point per line">
-                <ClauseInsertSelect
-                  clauses={clauses}
-                  label="Insert clause"
-                  onInsert={(body) => setContractForm((f) => ({ ...f, terms: f.terms.trim() ? `${f.terms}\n${body}` : body }))}
-                />
                 <textarea
                   className="items-textarea"
                   rows={7}
@@ -2297,32 +2155,6 @@ export default function AdminPage() {
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setContractModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save contract</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {clauseModalOpen && (
-        <div className="modal-overlay open">
-          <div className="modal-box modal-box-wide">
-            <h3>{editingClauseId ? 'Edit Clause' : 'New Clause'}</h3>
-            <form onSubmit={saveClause}>
-              <Field label="Name" hint="shown in the “Insert from library” dropdown">
-                <input value={clauseForm.name} onChange={(e) => setClauseForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Standard payment terms" />
-              </Field>
-              <Field label="Text" hint="one point per line if it's more than one">
-                <textarea
-                  className="items-textarea"
-                  rows={7}
-                  value={clauseForm.body}
-                  onChange={(e) => setClauseForm((f) => ({ ...f, body: e.target.value }))}
-                  placeholder={'e.g.\nPayment is due within 7 days of invoice date.\nLate payments incur a 2% monthly fee.'}
-                />
-              </Field>
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setClauseModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save clause</button>
               </div>
             </form>
           </div>
