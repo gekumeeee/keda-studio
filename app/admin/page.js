@@ -226,6 +226,9 @@ export default function AdminPage() {
   const [accountPassword, setAccountPassword] = useState('');
   const [accountSaved, setAccountSaved] = useState(false);
   const [accountError, setAccountError] = useState('');
+  const [importBusy, setImportBusy] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [importError, setImportError] = useState('');
 
   const [tab, setTab] = useState('overview');
   const [projects, setProjects] = useState([]);
@@ -533,6 +536,34 @@ export default function AdminPage() {
     setAccountPassword('');
     setAccountSaved(true);
     setTimeout(() => setAccountSaved(false), 3500);
+  }
+
+  // Overwrites this deployment's data with whatever's in the uploaded backup
+  // file (see app/api/admin/import-data/route.js) — a real "are you sure",
+  // not just a disabled-until-confirmed button, since there's no undo.
+  async function handleImportFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // let picking the same file again re-trigger onChange
+    if (!file) return;
+    if (!confirm(`Import "${file.name}"? This replaces every project, client, invoice, contract and report currently on this site — there's no undo.`)) return;
+    setImportBusy(true);
+    setImportError('');
+    setImportResult(null);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const res = await fetch('/api/admin/import-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+      setImportResult(data.imported);
+    } catch (err) {
+      setImportError(err.message || 'Could not read that file');
+    }
+    setImportBusy(false);
   }
 
   function openProjectModal(project) {
@@ -1912,6 +1943,23 @@ export default function AdminPage() {
                   <a className="btn-secondary" style={{ display: 'inline-block', flex: 'none', textDecoration: 'none', textAlign: 'center' }} href="/api/admin/export-data">
                     Download full backup
                   </a>
+
+                  <p className="tab-intro" style={{ marginTop: 26, marginBottom: 14 }}>
+                    Restore from a backup file. On a freshly deployed site (after you've completed its own
+                    first-run setup), this brings everything back except user accounts — sign in with the new
+                    owner login you just created, then use this. On a site that already has content,
+                    <b style={{ color: 'var(--red)' }}> this replaces it — there's no undo.</b>
+                  </p>
+                  <label className="btn-secondary" style={{ display: 'inline-flex', flex: 'none', cursor: importBusy ? 'default' : 'pointer', opacity: importBusy ? 0.6 : 1 }}>
+                    {importBusy ? 'Importing…' : 'Restore from backup file'}
+                    <input type="file" accept="application/json" onChange={handleImportFile} disabled={importBusy} style={{ display: 'none' }} />
+                  </label>
+                  {importResult && (
+                    <p className="field-hint" style={{ color: 'var(--green)', marginTop: 10 }}>
+                      Imported: {Object.entries(importResult).map(([k, n]) => `${k} (${n})`).join(', ')}
+                    </p>
+                  )}
+                  {importError && <p className="field-hint" style={{ color: 'var(--red)', marginTop: 10 }}>{importError}</p>}
                 </div>
               )}
             </section>
