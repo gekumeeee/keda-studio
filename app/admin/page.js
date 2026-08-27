@@ -1900,6 +1900,20 @@ export default function AdminPage() {
                   </div>
                 </form>
               </div>
+
+              {isOwner && (
+                <div className="panel">
+                  <div className="panel-head"><h3>Data</h3></div>
+                  <p className="tab-intro" style={{ marginBottom: 14 }}>
+                    Download every piece of content this app stores — projects, clients, invoices, contracts,
+                    reports and more — as one JSON file. Useful as a backup, or if you ever need to move this
+                    site to a different Vercel account: the file is the same data, just not tied to this one.
+                  </p>
+                  <a className="btn-secondary" style={{ display: 'inline-block', flex: 'none', textDecoration: 'none', textAlign: 'center' }} href="/api/admin/export-data">
+                    Download full backup
+                  </a>
+                </div>
+              )}
             </section>
           )}
         </main>
