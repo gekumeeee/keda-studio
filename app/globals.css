@@ -450,77 +450,133 @@ header nav{
 .admin-video-preview{margin:-6px 0 16px;}
 .admin-video-preview .portfolio-video-wrap{max-width:200px; margin:0 auto; border-radius:12px;}
 
-/* portfolio page — one shared 2-column grid of cards (video on top, text
-   below), mixed clients side by side, like the senu.studio reference. If
-   every visible project belongs to the same client, its name gets a big
-   centered banner above the grid instead of repeating on every card. */
-.portfolio-client-banner{
-  display:flex; align-items:center; justify-content:center; gap:24px;
-  text-align:center; margin-bottom:24px;
+/* ---------------- loading splash — plays once on real page load ------ */
+/* See components/LoadingSplash.js for why this needs no visibility flag:
+   living in the root layout, it only ever mounts on an actual document
+   load, never on a client-side Link navigation. Solid --ink background so
+   it fully masks the real page while up, rather than the splash looking
+   like it's floating over already-visible content. */
+.loading-splash{
+  position:fixed; inset:0; z-index:9999;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--ink); pointer-events:none;
+  animation:splashOut .45s ease forwards; animation-delay:1.1s;
 }
-.portfolio-client-banner h2{font-family:var(--display); font-weight:700; font-size:clamp(38px,6vw,64px); line-height:1.1;}
-/* height-driven, not a forced square box — a wide/rectangular logo forced
-   into a square would shrink to fit its height and float tiny with empty
-   side padding. Width follows the image's own natural aspect ratio instead,
-   staying vertically centered against the name via the row's align-items. */
-.portfolio-client-logo{flex:none; height:clamp(48px,8vw,84px); display:flex; align-items:center;}
-.portfolio-client-logo img{height:100%; width:auto; max-width:220px; object-fit:contain; display:block;}
-@media (max-width:860px){ .portfolio-client-banner h2{font-size:26px;} }
-@media (max-width:600px){ .portfolio-client-banner{flex-direction:column; gap:14px;} }
+@keyframes splashOut{
+  from{opacity:1; visibility:visible;}
+  to{opacity:0; visibility:hidden;}
+}
 
-.work-grid{display:grid; grid-template-columns:1fr 1fr; gap:56px 40px;}
-/* a portrait video sized off a full grid-column width would be enormous —
-   cap the card itself so its height stays reasonable regardless of how wide
-   the column actually renders. Landscape cards are left unconstrained.
-   margin-inline:auto centers the capped card in its (much wider) column —
-   without it, a block element with just a max-width hugs the column's
-   start edge, leaving all the leftover width as dead space on one side. */
-.work-card.is-portrait{max-width:300px; margin-inline:auto;}
-/* staggered "brick" rhythm like the reference — the right-hand column sits
-   a little lower than its row partner. Grid-only (each column's items still
-   line up under each other); skipped on the single-column mobile layout,
-   where every card is already full-width and a stagger would just read as
-   random extra gaps between them. */
-@media (min-width:861px){ .work-card:nth-child(even){margin-top:72px;} }
-/* homepage showcase card — same cap, same reason */
+.loading-splash-icon{
+  position:relative; z-index:1; width:52px; height:auto;
+  opacity:0;
+  animation:
+    splashIconIn .45s cubic-bezier(.2,.8,.2,1) forwards,
+    splashIconPulse 1.1s ease-in-out infinite .45s;
+}
+@keyframes splashIconIn{
+  from{opacity:0; transform:scale(.6);}
+  to{opacity:1; transform:scale(1);}
+}
+@keyframes splashIconPulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.08);}
+}
+
+.loading-splash-shapes{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
+/* Each block starts at its own scattered point (--x/--y, set inline per
+   index in LoadingSplash.js) and animates to the center — the "gathering"
+   effect — staggered via animation-delay so they pop in one after another
+   rather than all at once. */
+.loading-splash-block{
+  position:absolute; width:38px; height:auto;
+  opacity:0; transform:scale(.4) translate(var(--x), var(--y));
+  animation:splashBlockIn .5s cubic-bezier(.2,.8,.2,1) forwards;
+  animation-delay:calc(var(--i) * 90ms);
+}
+@keyframes splashBlockIn{
+  0%{opacity:0; transform:scale(.3) translate(var(--x), var(--y));}
+  60%{opacity:1; transform:scale(1.12) translate(calc(var(--x) * .12), calc(var(--y) * .12));}
+  100%{opacity:1; transform:scale(1) translate(0, 0);}
+}
+
+/* portfolio page — one auto-scrolling strip per client, Pinterest-style
+   (shared row height, card width follows each item's own aspect ratio).
+   Unassigned work (see the grouping logic in PortfolioView.js) lands in one
+   trailing, unlabeled section instead of repeating "no client" text. */
+.client-gallery{margin-top:64px;}
+.client-gallery:first-child{margin-top:0;}
+/* Client logo as a large, faded watermark filling the heading band on its
+   own — NOT spanning down into the strip below, which is nearly wall-to-wall
+   opaque cards and would swallow all but a sliver of it regardless of
+   opacity. The band is sized tall enough (padding-block) that the logo fits
+   entirely inside it at height:100% — no overflow:hidden, no clipped edge,
+   no box: just the logo fading directly into the page's own background. */
+.client-gallery-head{
+  position:relative; z-index:1;
+  display:flex; align-items:center; padding-block:42px; margin-bottom:22px;
+}
+.client-gallery-head h2{position:relative; z-index:1; font-family:var(--display); font-weight:700; font-size:clamp(26px,3.4vw,36px); line-height:1.15;}
+.client-gallery-bg-logo{
+  position:absolute; z-index:0; inset:0; margin:auto;
+  height:100%; width:auto; max-width:420px;
+  object-fit:contain; opacity:.22; pointer-events:none; user-select:none;
+}
+
+/* homepage showcase card — portrait cap, unrelated to the strip below */
 .showcase .portfolio-video-wrap.orient-portrait{width:min(100%,360px); margin-inline:auto;}
-.work-card-media{position:relative; border-radius:18px; overflow:hidden;}
-.work-card-body{margin-top:22px;}
-.work-card-title-row{display:flex; justify-content:space-between; align-items:baseline; gap:12px;}
-.work-card-title-row h3{font-family:var(--display); font-weight:700; font-size:26px; line-height:1.15;}
-.work-card-body .meta{font-size:14px; color:var(--text-dim); margin-top:10px;}
-.work-card-body .meta b{color:var(--text); font-weight:600;}
-.work-card-view-btn{
-  display:inline-flex; align-items:center; gap:6px; flex:none;
-  background:var(--text); color:var(--bg); font-weight:700; font-size:12.5px;
-  padding:10px 18px; border-radius:999px; white-space:nowrap;
+
+/* The strip holds two identical copies of the (already-repeated, see
+   fillGroup in PortfolioView.js) card list, each min-width:100% and slid by
+   exactly -100% of its own width — same mechanism as the brand-block
+   marquee below, so the loop is seamless with no visible seam or gap. */
+/* Always laid out LTR internally, regardless of page language — same fix
+   as .diag-marquee below. A -100% translateX marquee relies on item 1's
+   resting position lining up with the clipped viewport's own edge so the
+   loop hands off seamlessly; RTL's flex reversal anchors that resting
+   position to the opposite edge instead, which breaks the handoff and (with
+   items wider than the viewport) scrolls the whole strip off-screen. */
+.gallery-strip{position:relative; z-index:1; overflow:hidden; direction:ltr;}
+.gallery-track{display:flex; height:clamp(190px,26vw,320px);}
+.gallery-group{
+  flex:none; display:flex; align-items:stretch;
+  gap:20px; padding-inline-end:20px;
+  min-width:100%; justify-content:space-around;
+  animation:scrollGallery 38s linear infinite;
 }
-/* brand rail — always visible (not a hover reveal), hugs the outer edge of
-   the grid: left side on column 1, right side on column 2 */
-.work-card-rail{
-  position:absolute; top:50%; z-index:2;
-  transform:translateY(-50%) rotate(90deg); transform-origin:center;
-  font-family:var(--display); font-weight:700; font-size:13px; letter-spacing:.08em; text-transform:uppercase;
-  color:var(--on-accent); background:var(--orange); padding:8px 16px; border-radius:999px; white-space:nowrap;
+.gallery-group.reverse{animation-direction:reverse;}
+@keyframes scrollGallery{
+  from{transform:translateX(0);}
+  to{transform:translateX(-100%);}
 }
-.work-card-media.rail-start .work-card-rail{inset-inline-start:-4px;}
-.work-card-media.rail-end .work-card-rail{inset-inline-end:-4px;}
-.work-card-img{
-  width:100%; aspect-ratio:16/10; position:relative; overflow:hidden;
-  background-size:cover; background-position:center;
+/* lets a visitor stop the strip to actually read/click a card */
+.gallery-strip:hover .gallery-group{animation-play-state:paused;}
+
+.gallery-card{flex:none; height:100%;}
+.gallery-card .work-card-media{position:relative; height:100%; width:auto; border-radius:14px; overflow:hidden;}
+.gallery-card .portfolio-video-wrap,
+.gallery-card .work-card-img{height:100%; width:auto; position:relative;}
+.gallery-card .work-card-img-el{height:100%; width:auto; display:block;}
+/* Real images get their width from the <img>'s own natural ratio (via the
+   height:100%/width:auto pair above). The tint-only fallback (no image, no
+   video) has no such child to size itself off — give it a fixed ratio of its
+   own so it doesn't collapse to zero width; varying it slightly per card
+   keeps the row from reading as a uniform grid even for placeholder cards. */
+.gallery-card .work-card-img:not(.has-image){aspect-ratio:3/4;}
+.gallery-card:nth-child(3n) .work-card-img:not(.has-image){aspect-ratio:4/5;}
+.gallery-card:nth-child(3n+1) .work-card-img:not(.has-image){aspect-ratio:1/1;}
+.gallery-card .work-card-img .label{
+  position:absolute; top:16px; inset-inline-start:16px; z-index:2; font-family:var(--display); font-weight:800;
+  font-size:16px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.5); pointer-events:none;
 }
-/* Real images drop the forced 16/10 crop — the box just wraps an <img> and
-   takes the height that image's own ratio produces at the column's width. */
-.work-card-img.has-image{aspect-ratio:auto;}
-.work-card-img-el{width:100%; height:auto; display:block;}
-.work-card-img .label{
-  position:absolute; top:20px; inset-inline-start:20px; font-family:var(--display); font-weight:800;
-  font-size:22px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.5);
+.gallery-card-caption{
+  position:absolute; inset-inline:0; bottom:0; z-index:2; padding:14px 16px 12px;
+  background:linear-gradient(transparent, rgba(0,0,0,.72));
+  color:#fff; font-family:var(--display); font-weight:700; font-size:15px; line-height:1.25;
 }
 .portfolio-empty{text-align:center; color:var(--text-dim); font-size:14px; padding:20px 0 40px;}
-@media (max-width:860px){
-  .work-grid{grid-template-columns:1fr; gap:48px;}
-  .work-card-title-row h3{font-size:24px;}
+@media (max-width:600px){
+  .gallery-track{height:clamp(150px,52vw,220px);}
 }
 
 /* our impact — 4 stat cards with circular icons */
@@ -1168,14 +1224,7 @@ body:has(.site){background:var(--ink);}
 .site .cap-card.has-image .cap-content{color:var(--paper);}
 .site .cap-card.has-image p{color:rgba(242,239,230,0.82);}
 
-/* ---------------- selected work — paper base, accent per card ------- */
-/* The one place several accents legitimately coexist: each card is its own
-   block, and the section itself stays paper. */
-.site .work-card-rail{background:var(--ink); color:var(--paper);}
-.site .work-card:nth-child(4n+1) .work-card-rail{background:var(--magenta); color:var(--ink);}
-.site .work-card:nth-child(4n+2) .work-card-rail{background:var(--cobalt); color:#FFFFFF;}
-.site .work-card:nth-child(4n+3) .work-card-rail{background:var(--tangerine); color:var(--ink);}
-.site .work-card:nth-child(4n+4) .work-card-rail{background:var(--aqua); color:var(--ink);}
+/* ---------------- selected work — paper base ------------------------ */
 .site .video-frame{background:var(--ink);}
 .site .video-frame.has-image{background:none;}
 .site .portfolio-video-wrap{background:var(--ink);}
@@ -1340,7 +1389,6 @@ body:has(.site){background:var(--ink);}
 .site .cta-btn,
 .site .nav-cta,
 .site .showcase .view-btn,
-.site .work-card-view-btn,
 .site .contact-form .send-btn,
 .site .filter-pill.active{
   background:var(--paper); color:var(--ink); border-color:var(--paper);
@@ -1350,7 +1398,6 @@ body:has(.site){background:var(--ink);}
 .site .cta-btn:hover,
 .site .nav-cta:hover,
 .site .showcase .view-btn:hover,
-.site .work-card-view-btn:hover,
 .site .contact-form .send-btn:hover,
 .site .filter-pill.active:hover{
   background:var(--cobalt); color:#FFFFFF; border-color:var(--cobalt); opacity:1;

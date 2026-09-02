@@ -1,6 +1,7 @@
 import './globals.css';
 import { cookies } from 'next/headers';
 import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
+import LoadingSplash from '@/components/LoadingSplash';
 
 export const metadata = {
   title: 'Keda Agency',
@@ -24,6 +25,7 @@ export default async function RootLayout({ children }) {
         />
       </head>
       <body>
+        <LoadingSplash />
         <img src="/brand/keda-logomark-white.svg" alt="" aria-hidden="true" className="site-watermark" />
         {children}
       </body>

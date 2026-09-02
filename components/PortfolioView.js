@@ -29,35 +29,51 @@ function isPortraitProject(p) {
   return embed.kind === 'embed' && guessEmbedOrientation(p.video) === 'portrait';
 }
 
+// Each strip repeats its client's items until there's enough of them to read
+// as a full, dense row rather than 2-3 cards floating in empty space — same
+// reasoning as lib/blocks.js's fixed COUNT for the brand-block marquee, just
+// data-driven here since a client's project count varies. Doubles at minimum
+// (matching the two-copy loop below), more for a client with very few pieces.
+function fillGroup(items) {
+  if (items.length === 0) return [];
+  const reps = Math.max(2, Math.ceil(8 / items.length));
+  return Array.from({ length: reps }, () => items).flat();
+}
+
 export default function PortfolioView({ projects, settings, clients = [], lang = 'en' }) {
   const t = UI[lang];
   const [activeFilter, setActiveFilter] = useState('All');
 
   // Preserve the stored array order — that's the order the admin sets with the
   // move up / move down controls, so the first project in the array is the
-  // first one shown here.
+  // first one shown here, and it's also first-seen-wins order for the
+  // sections built below.
   const live = projects.filter((p) => p.status === 'live');
   const pool = live.filter((p) => matchesFilter(p, activeFilter));
 
-  // All matching work sits in one shared grid (mixed clients side by side,
-  // like the reference) — projects saved with no client fall back server-side
-  // to the literal string "Placeholder" (app/api/projects/route.js), which is
-  // a human hint for the admin table, not a real name, so it's never shown.
-  // The one exception: if every visible project belongs to the same real
-  // client, that name gets a big centered banner above the grid instead of
-  // being repeated on every card.
-  const clientKeys = new Set(
-    pool.map((p) => {
-      const name = (p.client || '').trim();
-      const unassigned = !p.clientId && (!name || name === 'Placeholder');
-      return p.clientId || (unassigned ? null : `name:${name}`);
-    })
-  );
-  const soleClientName =
-    clientKeys.size === 1 && !clientKeys.has(null) ? (pool[0].client || '').trim() : null;
-  const soleClientLogo = soleClientName && pool[0].clientId
-    ? clients.find((c) => c.id === pool[0].clientId)?.logo || null
-    : null;
+  // One section per client, each its own auto-scrolling strip — projects
+  // saved with no client fall back server-side to the literal string
+  // "Placeholder" (app/api/projects/route.js), a human hint for the admin
+  // table rather than a real name, so those (and any truly unassigned
+  // project) get bucketed into one trailing, unlabeled section instead.
+  const groupMap = new Map();
+  let unassigned = null;
+  for (const p of pool) {
+    const name = (p.client || '').trim();
+    const isUnassigned = !p.clientId && (!name || name === 'Placeholder');
+    if (isUnassigned) {
+      if (!unassigned) unassigned = { key: 'unassigned', name: null, logo: null, items: [] };
+      unassigned.items.push(p);
+      continue;
+    }
+    const key = p.clientId || `name:${name}`;
+    if (!groupMap.has(key)) {
+      const logo = p.clientId ? clients.find((c) => c.id === p.clientId)?.logo || null : null;
+      groupMap.set(key, { key, name, logo, items: [] });
+    }
+    groupMap.get(key).items.push(p);
+  }
+  const galleries = [...groupMap.values(), ...(unassigned ? [unassigned] : [])];
 
   return (
     <div className="site">
@@ -91,53 +107,50 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
 
       <section className="marketing-section" style={{ paddingTop: 0 }}>
         <div className="wrap">
-          {pool.length > 0 ? (
-            <>
-              {soleClientName ? (
-                <Reveal className="portfolio-client-banner">
-                  {soleClientLogo ? (
-                    <span className="portfolio-client-logo">
-                      <img src={soleClientLogo} alt={soleClientName} />
-                    </span>
-                  ) : null}
-                  <h2>{soleClientName}</h2>
-                </Reveal>
-              ) : null}
-              <div className="work-grid">
-                {pool.map((p, i) => (
-                  <Reveal className={`work-card ${isPortraitProject(p) ? 'is-portrait' : ''}`} key={p.id}>
-                    <div className={`work-card-media ${i % 2 === 1 ? 'rail-end' : 'rail-start'}`}>
-                      {p.video ? (
-                        <PortfolioVideo src={p.video} poster={p.image} label={p.category} orientation={p.orientation} />
-                      ) : p.image ? (
-                        // Real image: shown at its own natural size (plain
-                        // <img>, not a background-image crop box) — the
-                        // category label still overlays it, same as before.
-                        <div className="work-card-img has-image">
-                          <img src={p.image} alt={p.title} className="work-card-img-el" />
-                          <span className="label">{p.category}</span>
-                        </div>
-                      ) : (
-                        <div className="work-card-img" style={{ background: CARD_TINTS[i % CARD_TINTS.length] }}>
-                          <span className="label">{p.category}</span>
-                        </div>
-                      )}
-                      <div className="work-card-rail" aria-hidden="true">keda</div>
-                    </div>
-                    <div className="work-card-body">
-                      <div className="work-card-title-row">
-                        <h3>{p.title}</h3>
-                        <span className="work-card-view-btn">{t.viewProject}</span>
+          {galleries.length > 0 ? (
+            galleries.map((g, gi) => (
+              <Reveal as="section" className="client-gallery" key={g.key}>
+                {g.name ? (
+                  <div className="client-gallery-head">
+                    {g.logo ? (
+                      <img className="client-gallery-bg-logo" src={g.logo} alt="" aria-hidden="true" />
+                    ) : null}
+                    <h2>{g.name}</h2>
+                  </div>
+                ) : null}
+                <div className="gallery-strip">
+                  <div className="gallery-track">
+                    {[0, 1].map((copy) => (
+                      <div className={`gallery-group ${gi % 2 === 1 ? 'reverse' : ''}`} key={copy}>
+                        {fillGroup(g.items).map((p, i) => (
+                          <div className={`gallery-card ${isPortraitProject(p) ? 'is-portrait' : ''}`} key={`${copy}-${i}-${p.id}`}>
+                            <div className="work-card-media">
+                              {p.video ? (
+                                <PortfolioVideo src={p.video} poster={p.image} label={p.category} orientation={p.orientation} />
+                              ) : p.image ? (
+                                // Real image: shown at its own natural size
+                                // (plain <img>, not a background-image crop
+                                // box) — the category label still overlays
+                                // it, same as before.
+                                <div className="work-card-img has-image">
+                                  <img src={p.image} alt={p.title} className="work-card-img-el" />
+                                  <span className="label">{p.category}</span>
+                                </div>
+                              ) : (
+                                <div className="work-card-img" style={{ background: CARD_TINTS[i % CARD_TINTS.length] }}>
+                                  <span className="label">{p.category}</span>
+                                </div>
+                              )}
+                              <div className="gallery-card-caption">{p.title}</div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      {p.client && p.client !== 'Placeholder' ? (
-                        <div className="meta">{t.showcaseClient} <b>{p.client}</b></div>
-                      ) : null}
-                      <div className="meta">{t.showcaseWork} <b>{p.work}</b></div>
-                    </div>
-                  </Reveal>
-                ))}
-              </div>
-            </>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+            ))
           ) : (
             <p className="portfolio-empty">{t.portfolio.empty}</p>
           )}
