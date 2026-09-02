@@ -5,7 +5,7 @@ import { UI } from '@/lib/i18n';
 
 export default function ContactForm({ contactEmail, lang = 'en' }) {
   const t = UI[lang].contact;
-  const [form, setForm] = useState({ name: '', email: '', phone: '', contactMethod: 'whatsapp', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', contactMethod: 'whatsapp', message: '', website: '' });
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
 
   function update(field) {
@@ -23,7 +23,7 @@ export default function ContactForm({ contactEmail, lang = 'en' }) {
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error('failed');
-      setForm({ name: '', email: '', phone: '', contactMethod: 'whatsapp', message: '' });
+      setForm({ name: '', email: '', phone: '', contactMethod: 'whatsapp', message: '', website: '' });
       setStatus('sent');
       setTimeout(() => setStatus('idle'), 5000);
     } catch {
@@ -33,6 +33,23 @@ export default function ContactForm({ contactEmail, lang = 'en' }) {
 
   return (
     <form className="contact-form reveal in" onSubmit={handleSubmit}>
+      {/* Honeypot: bots fill every field they find, people never see this
+          one. Hidden with CSS rather than type="hidden" (which bots skip),
+          and taken out of the tab order and the accessibility tree so a
+          keyboard or screen-reader visitor can't land on it by accident and
+          get their enquiry silently dropped. Submissions arriving with it
+          filled are discarded server-side — see lib/spamGuard.js. */}
+      <div className="hp-field" aria-hidden="true">
+        <label htmlFor="cfWebsite">Website</label>
+        <input
+          id="cfWebsite"
+          name="website"
+          value={form.website}
+          onChange={update('website')}
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
       <div className="contact-grid">
         <div className="field">
           <label htmlFor="cfName">{t.name}</label>

@@ -450,6 +450,16 @@ header nav{
 .admin-video-preview{margin:-6px 0 16px;}
 .admin-video-preview .portfolio-video-wrap{max-width:200px; margin:0 auto; border-radius:12px;}
 
+/* Honeypot field (components/ContactForm.js) — moved off-screen rather
+   than display:none, which the simpler bots know to skip. Nothing here is
+   ever seen or focusable; the input is also aria-hidden and out of the tab
+   order so it can't catch a real visitor. */
+.hp-field{
+  position:absolute; left:-9999px; top:auto;
+  width:1px; height:1px; overflow:hidden; opacity:0;
+  pointer-events:none;
+}
+
 /* ---------------- loading splash — plays once on real page load ------ */
 /* See components/LoadingSplash.js for why this needs no visibility flag:
    living in the root layout, it only ever mounts on an actual document
