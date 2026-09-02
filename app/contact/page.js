@@ -8,11 +8,17 @@ import GlyphStrip from '@/components/GlyphStrip';
 import ContactForm from '@/components/ContactForm';
 import EmailCopy from '@/components/EmailCopy';
 import { UI, pick } from '@/lib/i18n';
+import { pageMetadata } from '@/lib/site';
 
 // See app/page.js for why there's no `force-dynamic` export here.
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
-  return { title: `Contact — ${settings.siteName || 'Keda Agency'}` };
+  return pageMetadata({
+    title: `Contact — ${settings.siteName || 'Keda Agency'}`,
+    description:
+      'Start a project with KEDA. Tell us about your brand and we’ll get back to you — no chatbots, just the agency.',
+    path: '/contact',
+  });
 }
 
 export default async function ContactPage() {

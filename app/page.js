@@ -3,6 +3,7 @@ import { getProjects, getClients, getSettings } from '@/lib/store';
 import { mergeSettings } from '@/lib/defaults';
 import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
 import HomeView from '@/components/HomeView';
+import { pageMetadata } from '@/lib/site';
 
 // No `force-dynamic` here: cookies() below already forces this page to run
 // per request regardless, so that export was redundant. The actual fix for
@@ -12,9 +13,7 @@ import HomeView from '@/components/HomeView';
 // cache instead of hitting Blob each time.
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
-  return {
-    title: settings.siteName || 'Keda Agency',
-  };
+  return pageMetadata({ title: settings.siteName || 'Keda Agency', path: '/' });
 }
 
 export default async function HomePage() {

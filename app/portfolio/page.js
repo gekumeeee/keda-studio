@@ -3,13 +3,19 @@ import { getProjects, getSettings, getClients } from '@/lib/store';
 import { mergeSettings } from '@/lib/defaults';
 import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
 import PortfolioView from '@/components/PortfolioView';
+import { pageMetadata } from '@/lib/site';
 
 // See app/page.js for why there's no `force-dynamic` export here — cookies()
 // below already forces per-request rendering; the Blob-read fix is in
 // lib/store.js's cross-request cache, not at this page's dynamic/static config.
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
-  return { title: `Portfolio — ${settings.siteName || 'Keda Agency'}` };
+  return pageMetadata({
+    title: `Portfolio — ${settings.siteName || 'Keda Agency'}`,
+    description:
+      'Selected branding, video, social and campaign work by KEDA — a brand and creative agency in Cairo.',
+    path: '/portfolio',
+  });
 }
 
 export default async function PortfolioPage() {
