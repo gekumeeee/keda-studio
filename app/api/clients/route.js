@@ -20,6 +20,9 @@ export async function POST(request) {
     id: uid(),
     name: body.name.trim(),
     logo: typeof body.logo === 'string' ? body.logo.trim() : '',
+    // Artwork for the client's card in the homepage fan. Separate from the
+    // logo: the logo is a mark on a bar, this is a full-bleed design.
+    cardImage: typeof body.cardImage === 'string' ? body.cardImage.trim() : '',
     added: new Date().toISOString(),
   };
   clients.unshift(client);

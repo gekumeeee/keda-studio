@@ -5,12 +5,12 @@ import Header from './Header';
 import Footer from './Footer';
 import GlyphStrip from './GlyphStrip';
 import DiagMarquee from './DiagMarquee';
-import Floaters from './Floaters';
 import Reveal from './Reveal';
 import CountUp from './CountUp';
 import StatCounter from './StatCounter';
 import RotatingWord from './RotatingWord';
-import HeroGallery from './HeroGallery';
+import HeroFaces from './HeroFaces';
+import ClientCardFan from './ClientCardFan';
 import GlyphIcon from './GlyphIcon';
 import PortfolioVideo from './PortfolioVideo';
 import { UI, pick } from '@/lib/i18n';
@@ -133,27 +133,35 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
       <Header active="home" settings={settings} lang={lang} />
 
       <section className="hero">
-        <Floaters />
-        <div className="wrap hero-grid">
-          <Reveal>
-            <div className="eyebrow">{pick(settings.heroEyebrow, lang)}</div>
-            {heroHeading ? (
-              <h1>{heroHeading}</h1>
-            ) : (
-              <h1 className="hero-rotating">
-                <span>{pick(settings.heroLine1, lang)}</span>
-                <RotatingWord phrases={heroWords} />
-                <span>{pick(settings.heroLine3, lang)}</span>
-              </h1>
-            )}
-            <p>{pick(settings.heroPara, lang)}</p>
+        <div className="wrap hero-stage">
+          <Reveal className="hero-stage-inner">
+            <div className="eyebrow hero-eyebrow">{pick(settings.heroEyebrow, lang)}</div>
+            {/* The faces share a box with the headline so their percentage
+                positions track the type as it scales. */}
+            <div className="hero-type-wrap">
+              <HeroFaces />
+              {heroHeading ? (
+                <h1 className="hero-type">{heroHeading}</h1>
+              ) : (
+                <h1 className="hero-type hero-rotating">
+                  <span className="hero-line">{pick(settings.heroLine1, lang)}</span>
+                  {/* Its own line, centred, so a longer word grows out from
+                      the middle instead of shunting the line sideways. */}
+                  <span className="hero-line hero-line-rotating">
+                    <RotatingWord phrases={heroWords} />
+                  </span>
+                  <span className="hero-line">{pick(settings.heroLine3, lang)}</span>
+                </h1>
+              )}
+            </div>
+            <p className="hero-sub">{pick(settings.heroPara, lang)}</p>
             <a href="/contact" className="hero-cta magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
               {pick(settings.heroCtaLabel, lang)}
             </a>
           </Reveal>
-          <Reveal>
-            <HeroGallery projects={projects} lang={lang} />
-          </Reveal>
+          {/* Renders nothing until a client has a card design set in the
+              admin, so the hero never shows an empty shelf. */}
+          <ClientCardFan clients={clients} projects={projects} lang={lang} />
         </div>
       </section>
 

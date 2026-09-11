@@ -16,6 +16,7 @@ export async function PUT(request, { params }) {
     ...clients[idx],
     name: body.name?.trim() || clients[idx].name,
     logo: body.logo !== undefined ? String(body.logo).trim() : (clients[idx].logo || ''),
+    cardImage: body.cardImage !== undefined ? String(body.cardImage).trim() : (clients[idx].cardImage || ''),
   };
   await saveClients(clients);
   return NextResponse.json(clients[idx]);

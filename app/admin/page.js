@@ -215,7 +215,7 @@ export default function AdminPage() {
 
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState(null);
-  const [clientForm, setClientForm] = useState({ name: '', logo: '' });
+  const [clientForm, setClientForm] = useState({ name: '', logo: '', cardImage: '' });
   const [clientDetailId, setClientDetailId] = useState(null);
 
   const [invoices, setInvoices] = useState([]);
@@ -618,10 +618,10 @@ export default function AdminPage() {
   function openClientModal(client) {
     if (client) {
       setEditingClientId(client.id);
-      setClientForm({ name: client.name, logo: client.logo || '' });
+      setClientForm({ name: client.name, logo: client.logo || '', cardImage: client.cardImage || '' });
     } else {
       setEditingClientId(null);
-      setClientForm({ name: '', logo: '' });
+      setClientForm({ name: '', logo: '', cardImage: '' });
     }
     setClientModalOpen(true);
   }
@@ -1922,6 +1922,12 @@ export default function AdminPage() {
               </Field>
               {clientForm.logo ? (
                 <div className="logo-preview"><img src={clientForm.logo} alt="logo preview" /></div>
+              ) : null}
+              <Field label="Card design URL (optional — the artwork on the homepage card)" hint="a full design, not a logo — portrait art fills the card best">
+                <input value={clientForm.cardImage} onChange={(e) => setClientForm((f) => ({ ...f, cardImage: e.target.value }))} placeholder="https://…  (leave empty and this client sits out of the card fan)" />
+              </Field>
+              {clientForm.cardImage ? (
+                <div className="card-image-preview"><img src={clientForm.cardImage} alt="card design preview" /></div>
               ) : null}
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setClientModalOpen(false)}>Cancel</button>

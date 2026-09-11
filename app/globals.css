@@ -186,79 +186,209 @@ header nav{
 }
 
 /* ================= hero ================= */
-.hero{padding:70px 0 100px; position:relative;}
-.hero > .wrap{position:relative; z-index:1;}
-.hero-grid{display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center;}
+/* ================= hero — full-bleed type, faces in the sentence =======
+   The headline is the hero: it fills the first screen, and the brand's block
+   characters sit on and between the words so they read as part of the line
+   rather than decoration parked next to it. */
+.hero{
+  position:relative;
+  min-height:calc(100svh - 110px);
+  display:flex; align-items:center;
+  padding:30px 0 0;
+  overflow:hidden;
+}
+.hero > .wrap{position:relative; z-index:1; width:100%;}
+.hero-stage{display:flex; flex-direction:column; align-items:center;}
+.hero-stage-inner{width:100%; text-align:center;}
+
 .eyebrow{
   font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase;
   color:var(--orange-soft); display:flex; align-items:center; gap:10px; margin-bottom:22px;
 }
 .eyebrow::before{content:''; width:20px; height:1px; background:var(--orange-soft);}
-.hero h1{
-  font-family:var(--display); font-weight:700;
-  font-size:clamp(38px, 4.6vw, 62px);
-  line-height:1.04; letter-spacing:-0.01em; text-transform:uppercase;
-}
-.hero h1 .accent{color:var(--green);}
-.hero p{
-  margin-top:24px; font-size:16px; line-height:1.6; color:var(--text-dim); max-width:44ch;
-}
-.hero-cta{
-  margin-top:34px; display:inline-flex; align-items:center; gap:10px;
-  background:var(--orange); color:var(--on-accent); font-weight:700; font-size:14px;
-  padding:16px 30px; border-radius:999px; letter-spacing:.02em;
-  transition:transform .15s ease;
-}
-@media (max-width:900px){
-  .hero-grid{grid-template-columns:1fr;}
-}
+/* centred variant: a rule either side rather than one leading dash */
+.hero-eyebrow{justify-content:center; margin-bottom:18px;}
+.hero-eyebrow::after{content:''; width:20px; height:1px; background:var(--orange-soft);}
 
-/* rotating headline word */
-.hero h1.hero-rotating{display:flex; flex-direction:column; gap:2px;}
+.hero-type-wrap{position:relative;}
+.hero-type{
+  font-family:var(--display); font-weight:800;
+  /* Sized off the viewport so it always fills the screen. The lower bound
+     keeps it readable on a phone; the upper stops it running away on an
+     ultrawide monitor. */
+  font-size:clamp(34px, 6.4vw, 86px);
+  line-height:0.94; letter-spacing:-0.025em; text-transform:uppercase;
+  position:relative; z-index:1;
+}
+.hero-type.hero-rotating{display:flex; flex-direction:column; gap:0;}
+.hero-line{display:block;}
+/* The rotating word is the one line whose width changes. Centred and given a
+   little breathing room so the swap reads as a change of word, not a jump. */
+.hero-line-rotating{display:block;}
 .hero .rotating-word{
   display:inline-block;
   transition:opacity .35s ease, transform .35s ease;
   will-change:opacity, transform;
 }
 
-/* ================= hero vertical scrolling gallery ================= */
-.hero-gallery{
-  display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;
-  height:600px; overflow:hidden;
-  -webkit-mask-image:linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
-  mask-image:linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+/* ---- the faces ---- */
+.hero-faces{position:absolute; inset:0; z-index:2; pointer-events:none;}
+.hero-face{
+  position:absolute; height:auto; display:block;
+  user-select:none;
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.45));
 }
-.hero-col{display:flex; flex-direction:column; gap:14px; will-change:transform;}
-.hero-col.up{animation:galleryUp 34s linear infinite;}
-.hero-col.down{animation:galleryDown 34s linear infinite;}
-@keyframes galleryUp{
-  from{transform:translateY(0);}
-  to{transform:translateY(-50%);}
-}
-@keyframes galleryDown{
-  from{transform:translateY(-50%);}
-  to{transform:translateY(0);}
-}
-/* No padding, no border — a real image fills the rounded-corner card edge to
-   edge with nothing framing it. Only the colour-block placeholder (no image
-   at all, .gcard-placeholder) needs padding, to keep its centred title off
-   the card's edges. */
-.gcard{
-  position:relative; border-radius:16px; overflow:hidden;
-  aspect-ratio:3/4; flex:none;
-  display:flex; align-items:center; justify-content:center;
-}
-.gcard img{width:100%; height:100%; object-fit:cover; display:block;}
-.gcard-placeholder{
-  font-family:var(--display); font-weight:700; font-size:15px; text-align:center; padding:14px;
-}
-.gcard-title{position:relative; z-index:2;}
 
-/* Same 3-column collage at every width — mobile just runs denser (shorter
-   viewport, tighter gaps) rather than switching to a different layout. */
+.hero-sub{
+  margin:18px auto 0; font-size:15px; line-height:1.55; color:var(--text-dim);
+  /* wider measure = one line fewer = one line more of the cards on screen */
+  max-width:64ch;
+}
+.hero-cta{
+  margin-top:22px; display:inline-flex; align-items:center; gap:10px;
+  background:var(--orange); color:var(--on-accent); font-weight:700; font-size:14px;
+  padding:16px 30px; border-radius:999px; letter-spacing:.02em;
+  transition:transform .15s ease;
+}
+
+/* ---- client card fan ----
+   One card per client that has a card design, splayed into an arc. The cards
+   run off the bottom of the section on purpose (the hero clips them), so the
+   fan reads as rising into the page rather than sitting on a shelf. */
+.card-fan{
+  position:relative; z-index:1;
+  margin-top:36px; margin-bottom:-90px;
+  display:flex; align-items:flex-end; justify-content:center;
+  perspective:1200px;
+}
+.fan-card{
+  position:relative; display:block;
+  flex:none; width:clamp(158px, 17.5vw, 236px);
+  margin-inline:-2.2%;
+  color:var(--card-fg);
+  /* deliberately NOT overflow:hidden — the badge below overhangs the corner.
+     The clipping that matters (the artwork) happens on .fan-card-inner. */
+  /* transform is physical, but RTL reverses the cards' visual order — so
+     without mirroring the offsets the arc folds inward instead of fanning
+     out, and each card's name ends up underneath its neighbour. Negating
+     both the shift and the tilt reproduces the identical fan in Arabic. */
+  --dir:1;
+  transform:translate(calc(var(--x) * var(--dir)), var(--y)) rotate(calc(var(--rot) * var(--dir)));
+  transform-origin:50% 100%;
+  transition:transform .38s cubic-bezier(.2,.8,.2,1), opacity .25s ease, filter .25s ease, box-shadow .38s ease;
+  /* No explicit z-index: in document order each card paints over the one
+     before it, so every card is overlapped only on its trailing edge — and
+     the name, which sits on the leading edge, is never buried. Stacking
+     centre-outward looked right but put the middle card on top of both its
+     neighbours' names. */
+}
+.fan-card-inner{
+  border-radius:24px; overflow:hidden;
+  background:var(--card-bg);
+  padding:12px 12px 0;
+  box-shadow:0 22px 50px rgba(0,0,0,.5);
+  transition:box-shadow .38s ease;
+}
+/* Hover and keyboard focus are the same state — the card straightens up,
+   steps forward and gains depth. Pure CSS, so it tracks the pointer exactly
+   and still works with JS off. */
+.fan-card:hover,
+.fan-card:focus-visible{
+  transform:translate(calc(var(--x) * var(--dir)), calc(var(--y) - 36px)) rotate(0deg) scale(1.06);
+  z-index:10;
+}
+.fan-card:hover .fan-card-inner,
+.fan-card:focus-visible .fan-card-inner{box-shadow:0 40px 80px rgba(0,0,0,.62);}
+.fan-card:focus-visible{outline:3px solid var(--paper); outline-offset:4px;}
+html[dir="rtl"] .fan-card{--dir:-1;}
+
+/* Arabic sets taller than Latin caps — ascenders, descenders and marks like
+   the shadda all need room the 0.94 leading doesn't leave, so the lines
+   collide. Looser leading for RTL only; the Latin setting stays tight. */
+html[dir="rtl"] .hero-type{line-height:1.18;}
+/* everything that isn't the one being pointed at steps back */
+.card-fan:has(.fan-card:hover) .fan-card:not(:hover),
+.card-fan:has(.fan-card:focus-visible) .fan-card:not(:focus-visible){
+  opacity:.6; filter:saturate(.7);
+}
+
+/* The artwork sits below the name and runs to the card's bottom edge, which
+   the viewport clips — so the card reads as continuing past the fold instead
+   of being a card with its feet cut off. */
+.fan-card-window{
+  position:relative; overflow:hidden;
+  border-radius:16px 16px 0 0;
+  aspect-ratio:1/1.15; background:rgba(0,0,0,.18);
+}
+.fan-card-art{width:100%; height:100%; object-fit:cover; display:block;}
+
+/* One of the brand characters per card, hung off the card's outer top corner
+   like a sticker someone slapped on. It overhangs by roughly a third of its
+   own width, which is what sells "on top of" rather than "inside". */
+.fan-card-face{
+  position:absolute; z-index:4;
+  /* the overhang is mostly UPWARD rather than sideways: a badge pushed out
+     to the side lands on the neighbouring card and covers its name, since
+     the cards overlap. Over the top edge it has the whole gutter to itself. */
+  top:clamp(-34px, -2.9vw, -18px);
+  width:clamp(48px, 5.6vw, 76px); height:auto;
+  transition:transform .38s cubic-bezier(.2,.8,.2,1);
+  /* two shadows: a tight one that reads as the sticker's own lift, and a
+     soft wide one that separates it from the card underneath */
+  filter:drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 14px 26px rgba(0,0,0,.45));
+  pointer-events:none;
+}
+/* Always the inline-end corner — the opposite end from the name, which sits
+   at inline-start. Putting it on whichever side was "outer" meant it landed
+   on the name half the time and needed padding to compensate; one fixed
+   corner is simpler and never collides. Flips with the language for free. */
+.fan-card-face{
+  inset-inline-end:clamp(-16px, -1.3vw, -8px);
+  transform:rotate(calc(15deg * var(--dir)));
+}
+.fan-card:hover .fan-card-face,
+.fan-card:focus-visible .fan-card-face{transform:rotate(0deg) scale(1.16) translateY(-4px);}
+
+/* Name and work sit on the solid accent, never over the artwork — a light
+   design would swallow white type and a dark one would swallow black. */
+.fan-card-meta{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:8px;
+  padding:2px 4px 11px; text-align:start;
+}
+/* leave the badge's corner free */
+.fan-card-meta{padding-inline-end:clamp(30px, 3vw, 42px);}
+.fan-card-meta-text{min-width:0;}
+.fan-card-arrow{
+  flex:none; font-size:14px; line-height:1; color:var(--card-fg);
+  opacity:0; transform:translate(-4px, 4px);
+  transition:opacity .28s ease, transform .28s ease;
+}
+.fan-card:hover .fan-card-arrow,
+.fan-card:focus-visible .fan-card-arrow{opacity:1; transform:translate(0,0);}
+.fan-card-meta h3{
+  font-family:var(--display); font-weight:800;
+  font-size:clamp(14px, 1.45vw, 18px); line-height:1.15;
+  color:var(--card-fg);
+}
+.fan-card-label{
+  display:block; margin-top:3px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--card-dim);
+}
+
+
 @media (max-width:900px){
-  .hero-gallery{height:420px; gap:10px;}
-  .hero-col{gap:10px;}
+  .hero{min-height:auto; padding:24px 0 50px;}
+  .hero-type{letter-spacing:-0.02em;}
+  /* three of the six faces step aside on a phone — at this width the type
+     needs the room more than the decoration does */
+  .hero-face.is-small{display:none;}
+  /* a five-card arc can't hold its shape at phone width — flatten it and let
+     the outer pair sit out rather than shrinking every card to a stamp */
+  .card-fan{margin-top:34px; margin-bottom:-60px;}
+  .fan-card{width:clamp(116px, 34vw, 150px); margin-inline:-4%;}
+  .fan-card:first-child, .fan-card:last-child{display:none;}
+  .fan-card-cta{display:none;}
 }
 
 /* portfolio mosaic */
@@ -1016,7 +1146,8 @@ html[dir="rtl"] .repeat-label,
 html[dir="rtl"] .sub-block-title,
 html[dir="rtl"] .field label,
 html[dir="rtl"] .section-head .kicker,
-html[dir="rtl"] .placeholder-tag{
+html[dir="rtl"] .placeholder-tag,
+html[dir="rtl"] .fan-card-label{
   letter-spacing:normal;
 }
 /* uppercase does nothing useful for Arabic, and can look off on mixed text */
@@ -1378,7 +1509,6 @@ body:has(.site){background:var(--ink);}
   .site .glyph-strip{height:72px;}
 }
 .site .floaters svg{color:var(--paper); opacity:.12;}
-.site .gcard{background:#1A1A1A; color:var(--paper);}
 
 /* ---------------- header ---------------- */
 .site header nav{border:1px solid rgba(242,239,230,0.22);}
