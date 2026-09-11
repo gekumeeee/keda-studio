@@ -320,7 +320,20 @@ html[dir="rtl"] .hero-type{line-height:1.18;}
   border-radius:16px 16px 0 0;
   aspect-ratio:1/1.15; background:rgba(0,0,0,.18);
 }
-.fan-card-art{width:100%; height:100%; object-fit:cover; display:block;}
+/* The window cycles through the client's project images (FanSlides). They
+   sit stacked; the incoming one fades in over the outgoing one, which stays
+   underneath until it's fully covered, with a slow settle from a slight zoom. */
+.fan-card-art{
+  position:absolute; inset:0;
+  width:100%; height:100%; object-fit:cover; display:block;
+  opacity:0; transform:scale(1.06);
+  transition:opacity .9s ease, transform 3.6s ease-out;
+}
+.fan-card-art.is-prev{opacity:1; transform:scale(1); z-index:1;}
+.fan-card-art.is-active{opacity:1; transform:scale(1); z-index:2;}
+@media (prefers-reduced-motion: reduce){
+  .fan-card-art{transition:none; transform:none;}
+}
 
 /* One of the brand characters per card, hung off the card's outer top corner
    like a sticker someone slapped on. It overhangs by roughly a third of its

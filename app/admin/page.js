@@ -1923,8 +1923,8 @@ export default function AdminPage() {
               {clientForm.logo ? (
                 <div className="logo-preview"><img src={clientForm.logo} alt="logo preview" /></div>
               ) : null}
-              <Field label="Card design URL (optional — the artwork on the homepage card)" hint="a full design, not a logo — portrait art fills the card best">
-                <input value={clientForm.cardImage} onChange={(e) => setClientForm((f) => ({ ...f, cardImage: e.target.value }))} placeholder="https://…  (leave empty and this client sits out of the card fan)" />
+              <Field label="Card cover URL (optional — shown first on this client's homepage card)" hint="the card already cycles through this client's project images; set this only to pin a specific design at the front">
+                <input value={clientForm.cardImage} onChange={(e) => setClientForm((f) => ({ ...f, cardImage: e.target.value }))} placeholder="https://…  (leave empty to use the project images)" />
               </Field>
               {clientForm.cardImage ? (
                 <div className="card-image-preview"><img src={clientForm.cardImage} alt="card design preview" /></div>

@@ -1,14 +1,19 @@
 import { BLOCKS } from '@/lib/blocks';
 import { UI } from '@/lib/i18n';
+import { getVideoEmbed } from '@/lib/videoEmbed';
+import FanSlides from './FanSlides';
 
 // The card fan under the hero headline: one card per client, splayed into an
-// arc with the middle card standing tallest.
+// arc, each card cycling through that client's project images.
 //
-// Only clients with a card design appear — the artwork IS the card, so a
-// client without one would render an empty coloured rectangle rather than a
-// piece of work. Capped at five: past that the arc stops reading as a fan and
-// the outer cards fall off the sides.
+// Built from the portfolio itself, so it fills and updates on its own as work
+// is added — no per-client artwork to maintain. A client's optional card
+// cover (set in the admin) is pinned as the first image. Capped at five: past
+// that the arc stops reading as a fan and the outer cards fall off the sides.
 const MAX_CARDS = 5;
+// Enough to show the range of a client's work without loading a whole
+// portfolio into one card.
+const MAX_SLIDES = 6;
 
 // Fixed geometry per slot rather than something computed: an arc wants the
 // outer cards rotated further AND dropped further, and the relationship isn't
@@ -33,25 +38,82 @@ const SKINS = [
   { bg: 'var(--tangerine)', fg: 'var(--ink)', dim: 'rgba(13,13,13,0.74)', face: BLOCKS[4] },
 ];
 
-// A real label beats a made-up one: the client's most recent live project
-// tells us what we actually did for them, already translated by the same
-// filter labels the portfolio uses.
-function workLabel(client, projects, t) {
-  const theirs = projects
-    .filter((p) => p.status === 'live' && (p.clientId === client.id || p.client === client.name))
+// A project's picture: its own image if it has one, otherwise — for YouTube
+// only — the video's thumbnail, which YouTube serves at a public URL. The
+// other platforms need an API call for a thumbnail, so video-only projects
+// from those are left out rather than shown as a blank.
+function projectImage(p) {
+  if (p.image && p.image.trim()) return p.image.trim();
+  const embed = getVideoEmbed(p.video);
+  const yt = embed.kind === 'embed' && embed.embedUrl.match(/youtube\.com\/embed\/([\w-]{11})/);
+  return yt ? `https://img.youtube.com/vi/${yt[1]}/hqdefault.jpg` : null;
+}
+
+// Groups live work by client the same way the portfolio page does: a linked
+// client record first, then a typed client name, and everything else into one
+// unassigned group. "Placeholder" is what the API stores when no client was
+// given — an admin hint, not a name.
+function groupWork(projects, clients, t) {
+  const groups = new Map();
+  const live = projects
+    .filter((p) => p.status === 'live')
     .sort((a, b) => new Date(b.updated) - new Date(a.updated));
-  const category = theirs[0]?.category;
-  return category ? t.filters?.[category] || category : '';
+
+  for (const p of live) {
+    const name = (p.client || '').trim();
+    const record =
+      clients.find((c) => c.id === p.clientId) || (name ? clients.find((c) => c.name === name) : null);
+    const key = record ? record.id : name && name !== 'Placeholder' ? `name:${name}` : 'unassigned';
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        name: record ? record.name : key === 'unassigned' ? t.nav.portfolio : name,
+        cover: record?.cardImage?.trim() || '',
+        images: [],
+        category: p.category,
+      });
+    }
+    const img = projectImage(p);
+    if (img) groups.get(key).images.push(img);
+  }
+
+  // A client with a cover but no imaged work yet still earns a card.
+  for (const c of clients) {
+    if (c.cardImage?.trim() && !groups.has(c.id)) {
+      groups.set(c.id, { key: c.id, name: c.name, cover: c.cardImage.trim(), images: [], category: '' });
+    }
+  }
+
+  return [...groups.values()]
+    .map((g) => ({ ...g, slides: [...new Set([g.cover, ...g.images].filter(Boolean))].slice(0, MAX_SLIDES) }))
+    .filter((g) => g.slides.length > 0);
+}
+
+// Most work in the middle, less toward the edges: the centre card is the one
+// that stands tallest and gets seen first. Unassigned work goes last in line —
+// it's the portfolio's leftovers, not a client to lead with.
+function arrange(groups) {
+  const ranked = [...groups].sort(
+    (a, b) => (a.key === 'unassigned') - (b.key === 'unassigned') || b.slides.length - a.slides.length
+  );
+  const picked = ranked.slice(0, MAX_CARDS);
+  const n = picked.length;
+  const mid = Math.floor((n - 1) / 2);
+  const order = [mid];
+  for (let d = 1; order.length < n; d++) {
+    if (mid - d >= 0) order.push(mid - d);
+    if (mid + d < n) order.push(mid + d);
+  }
+  const placed = new Array(n);
+  order.forEach((slot, rank) => (placed[slot] = picked[rank]));
+  return placed;
 }
 
 // Hover and focus are handled entirely in CSS (:hover, :focus-visible and
-// :has() for dimming the siblings). Driving it from React state meant a
-// component that re-rendered five cards on every mouse move and could desync
-// from the pointer; the CSS version also survives with JS disabled.
+// :has() for dimming the siblings); only the image cycling needs JS.
 export default function ClientCardFan({ clients = [], projects = [], lang = 'en' }) {
   const t = UI[lang];
-
-  const cards = clients.filter((c) => c.cardImage && c.cardImage.trim()).slice(0, MAX_CARDS);
+  const cards = arrange(groupWork(projects, clients, t));
   if (cards.length === 0) return null;
 
   // With fewer than five, take the middle slots so the arc stays centred
@@ -63,13 +125,13 @@ export default function ClientCardFan({ clients = [], projects = [], lang = 'en'
       {cards.map((c, i) => {
         const slot = LAYOUT[offset + i];
         const skin = SKINS[i % SKINS.length];
-        const label = workLabel(c, projects, t);
+        const label = c.category ? t.filters?.[c.category] || c.category : '';
         return (
           // The whole card is the link, not just the pill that appears on
           // hover — otherwise the only way in is with a mouse. Focus gets the
           // same lift as hover, so tabbing through reads the same way.
           <a
-            key={c.id}
+            key={c.key}
             href="/portfolio"
             className="fan-card"
             style={{
@@ -98,9 +160,7 @@ export default function ClientCardFan({ clients = [], projects = [], lang = 'en'
                 </div>
                 <span className="fan-card-arrow" aria-hidden="true">↗</span>
               </div>
-              <div className="fan-card-window">
-                <img className="fan-card-art" src={c.cardImage} alt="" draggable={false} />
-              </div>
+              <FanSlides slides={c.slides} delay={i * 650} />
             </div>
           </a>
         );
