@@ -11,15 +11,22 @@ export default function RotatingWord({ phrases }) {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
 
+  // Keyed off the COUNT, not the array itself. The parent builds this list
+  // fresh on every render (it maps the admin's words through pick() for the
+  // current language), so depending on the array's identity restarted the
+  // timer on every render — leaving overlapping intervals that kept yanking
+  // the word back to opacity 0, so it cycled but was never actually visible.
+  const count = phrases.length;
+
   useEffect(() => {
-    if (phrases.length <= 1) return;
+    if (count <= 1) return;
     const HOLD = 2000;
     const FADE = 350;
     let fadeTimer;
     const cycle = setInterval(() => {
       setVisible(false);
       fadeTimer = setTimeout(() => {
-        setIndex((i) => (i + 1) % phrases.length);
+        setIndex((i) => (i + 1) % count);
         setVisible(true);
       }, FADE);
     }, HOLD);
@@ -27,9 +34,11 @@ export default function RotatingWord({ phrases }) {
       clearInterval(cycle);
       clearTimeout(fadeTimer);
     };
-  }, [phrases]);
+  }, [count]);
 
-  const current = phrases[index];
+  // Guard the lookup: the word list can shrink from the admin while a higher
+  // index is still held in state.
+  const current = phrases[index % count] || phrases[0];
 
   return (
     <span
