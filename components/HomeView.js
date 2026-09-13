@@ -90,7 +90,7 @@ function getShowcase(filter, projects, lang) {
 // glyph shapes used inside the impact circles
 const IMPACT_GLYPHS = ['circle', 'triangle', 'square', 'cross', 'eye'];
 
-export default function HomeView({ projects, clients, settings, lang = 'en' }) {
+export default function HomeView({ projects, clients, settings, lang = 'en', fanCards = [] }) {
   const t = UI[lang];
   const [activeFilter, setActiveFilter] = useState('All');
   const [shownFilter, setShownFilter] = useState('All');
@@ -159,9 +159,9 @@ export default function HomeView({ projects, clients, settings, lang = 'en' }) {
               {pick(settings.heroCtaLabel, lang)}
             </a>
           </Reveal>
-          {/* Renders nothing until a client has a card design set in the
-              admin, so the hero never shows an empty shelf. */}
-          <ClientCardFan clients={clients} projects={projects} lang={lang} />
+          {/* Built in app/page.js, where each image's colours are read so its
+              character matches it. Renders nothing when no work has an image. */}
+          <ClientCardFan cards={fanCards} />
         </div>
       </section>
 

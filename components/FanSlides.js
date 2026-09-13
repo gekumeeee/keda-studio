@@ -2,15 +2,22 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-// The artwork window of one hero card, cycling through that client's project
-// images. The only client-side piece of the fan — the cards themselves, their
-// hover lift and the dimming of their neighbours are all plain CSS.
+// One hero card's picture and its character, cycling through the client's
+// project images. Each slide is { src, face }: the face was chosen on the
+// server to match that image's colours (lib/cardFan.js), so it changes along
+// with the picture.
 const HOLD = 3200;
 
 export default function FanSlides({ slides, delay = 0 }) {
   const [index, setIndex] = useState(0);
+  // Images that failed to load drop out of the rotation. A broken link in the
+  // admin would otherwise turn up every few seconds as an empty card, and the
+  // whole point of the card is the picture.
+  const [failed, setFailed] = useState(() => new Set());
   const ref = useRef(null);
-  const count = slides.length;
+
+  const list = slides.filter((s) => !failed.has(s.src));
+  const count = list.length;
 
   useEffect(() => {
     if (count <= 1) return;
@@ -24,8 +31,8 @@ export default function FanSlides({ slides, delay = 0 }) {
       setIndex((i) => (i + 1) % count);
     };
 
-    // Each card starts at its own offset, so the flips ripple across the fan
-    // instead of all five changing on the same beat.
+    // Each card starts at its own offset, so the changes ripple across the
+    // fan instead of all five changing on the same beat.
     let cycle;
     const start = setTimeout(() => {
       tick();
@@ -37,34 +44,48 @@ export default function FanSlides({ slides, delay = 0 }) {
     };
   }, [count, delay]);
 
+  // Every image failed: render nothing, and the card hides itself (see
+  // .fan-card:not(:has(.fan-card-window)) in globals.css).
+  if (count === 0) return null;
+
   // Only three images are ever mounted: the one showing, the one it just
-  // replaced (kept underneath so the crossfade never shows the fill through a
+  // replaced (kept underneath so the crossfade never shows through a
   // half-transparent picture), and the next one, which gets a full HOLD to
-  // load before it's needed. Mounting every slide would mean five cards times
-  // however many projects all downloading at once, above the fold.
-  const prev = (index - 1 + count) % count;
-  const next = (index + 1) % count;
+  // load before it's needed. `current` is clamped because the list can shrink
+  // when an image fails.
+  const current = index % count;
+  const prev = (current - 1 + count) % count;
+  const next = (current + 1) % count;
+  const face = list[current].face;
 
   return (
-    <div className="fan-card-window" ref={ref}>
-      {slides.map((s, i) => {
-        if (i !== index && i !== prev && i !== next) return null;
-        const state = i === index ? 'is-active' : i === prev ? 'is-prev' : '';
-        return (
-          <img
-            key={i}
-            className={`fan-card-art ${state}`}
-            src={s}
-            alt=""
-            // Costs nothing on a visible card — the hero is in view, so these
-            // load straight away — but the two outer cards are display:none on
-            // phones, and without this their images would still download.
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-          />
-        );
-      })}
-    </div>
+    <>
+      {/* Outside the window, which clips, so the character can overhang the
+          corner. Keyed by the character itself: it only re-mounts — and
+          plays its pop — when the new picture actually calls for a
+          different one. */}
+      <img key={face} className="fan-card-face" src={face} alt="" aria-hidden="true" draggable={false} />
+      <div className="fan-card-window" ref={ref}>
+        {list.map((s, i) => {
+          if (i !== current && i !== prev && i !== next) return null;
+          const state = i === current ? 'is-active' : i === prev ? 'is-prev' : '';
+          return (
+            <img
+              key={s.src}
+              className={`fan-card-art ${state}`}
+              src={s.src}
+              alt=""
+              // Costs nothing on a visible card — the hero is in view, so these
+              // load straight away — but the two outer cards are display:none on
+              // phones, and without this their images would still download.
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              onError={() => setFailed((prevFailed) => new Set(prevFailed).add(s.src))}
+            />
+          );
+        })}
+      </div>
+    </>
   );
 }
