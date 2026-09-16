@@ -141,19 +141,31 @@ header nav{
      (different logo/CTA/lang-toggle widths than English). justify-self:
      start/end respect the grid's direction, so this self-corrects in RTL too. */
   display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
-  background:rgba(21,20,18,0.58);
+  /* At rest the bar itself is invisible: the mark, the links pill and the
+     CTA float separately on the hero, which is what gives the top of the
+     page its air. HeaderScrollShell fades this ground (and the hairline)
+     in as the page scrolls, so the bar earns a background only once there
+     is content passing underneath it. */
+  background:rgba(13,13,13,0);
   backdrop-filter:blur(15px) saturate(140%);
-  border:1px solid var(--line);
+  border:1px solid transparent;
   border-radius:999px;
   padding-block:12px;
   padding-inline-start:26px;
   padding-inline-end:14px;
-  transition: padding-block .2s ease, background .2s ease;
+  transition: padding-block .2s ease, background .2s ease, border-color .2s ease;
 }
 .logo{font-family:var(--display); font-weight:600; font-size:22px; display:flex; align-items:center; flex:none; line-height:1; justify-self:start;}
 .logo .placeholder-tag{font-family:var(--mono); font-size:9px; color:var(--text-dim); text-transform:uppercase; display:block; margin-top:-2px; letter-spacing:.06em;}
 .logo-img{height:46px; width:auto; display:block; transition:height .2s ease;}
-.nav-links{display:flex; gap:36px; align-items:center; height:46px; justify-self:center;}
+.nav-links{
+  display:flex; gap:30px; align-items:center; height:46px; justify-self:center;
+  /* its own pill, separate from the mark and the CTA */
+  padding-inline:28px; border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(13,13,13,0.45);
+  backdrop-filter:blur(15px) saturate(140%);
+}
 .nav-links a{font-size:12.5px; font-weight:500; line-height:1; color:var(--text-dim); transition:color .25s ease; text-transform:uppercase; letter-spacing:.03em;}
 .nav-links a:hover, .nav-links a.active{color:var(--gold);}
 .nav-right{display:flex; align-items:center; gap:16px; height:46px; justify-self:end;}
@@ -197,6 +209,22 @@ header nav{
   padding:30px 0 0;
   overflow:hidden;
 }
+/* Rings spreading out from behind the headline — the ground the type and the
+   characters sit on. Drawn with a repeating gradient rather than an image so
+   it costs nothing and scales to any viewport, and faded out at the edges by
+   a mask so it never reads as a hard-edged circle. */
+.hero::before{
+  content:'';
+  position:absolute; inset:-30% -12% -10%;
+  background:repeating-radial-gradient(
+    circle at 50% 46%,
+    transparent 0 52px,
+    rgba(242,239,230,.055) 52px 53px
+  );
+  -webkit-mask-image:radial-gradient(circle at 50% 46%, #000 12%, rgba(0,0,0,.55) 46%, transparent 74%);
+  mask-image:radial-gradient(circle at 50% 46%, #000 12%, rgba(0,0,0,.55) 46%, transparent 74%);
+  pointer-events:none; z-index:0;
+}
 .hero > .wrap{position:relative; z-index:1; width:100%;}
 .hero-stage{display:flex; flex-direction:column; align-items:center;}
 .hero-stage-inner{width:100%; text-align:center;}
@@ -210,14 +238,18 @@ header nav{
 .hero-eyebrow{justify-content:center; margin-bottom:18px;}
 .hero-eyebrow::after{content:''; width:20px; height:1px; background:var(--orange-soft);}
 
-.hero-type-wrap{position:relative;}
+/* The headline is held to a column rather than the full page width: it
+   stacks into short, stacked lines instead of one long banner, and — since
+   the characters are positioned in percentages of THIS box — it pulls them
+   in tight around the type at the same time. */
+.hero-type-wrap{position:relative; max-width:min(1040px, 76vw); margin-inline:auto;}
 .hero-type{
   font-family:var(--display); font-weight:800;
   /* Sized off the viewport so it always fills the screen. The lower bound
      keeps it readable on a phone; the upper stops it running away on an
      ultrawide monitor. */
-  font-size:clamp(34px, 6.4vw, 86px);
-  line-height:0.94; letter-spacing:-0.025em; text-transform:uppercase;
+  font-size:clamp(36px, 7vw, 96px);
+  line-height:0.92; letter-spacing:-0.03em; text-transform:uppercase;
   position:relative; z-index:1;
 }
 .hero-type.hero-rotating{display:flex; flex-direction:column; gap:0;}
@@ -234,18 +266,40 @@ header nav{
 /* ---- the faces ---- */
 .hero-faces{position:absolute; inset:0; z-index:2; pointer-events:none;}
 .hero-face{
-  position:absolute; height:auto; display:block;
+  position:absolute; width:var(--w); height:auto; display:block;
   user-select:none;
   filter:drop-shadow(0 10px 22px rgba(0,0,0,.45));
+  /* `translate`, not a transform: the rotation is set per character as an
+     inline transform, and animating the separate property composes with it
+     instead of overwriting it. Each one gets its own duration and delay
+     (set inline) so the group never drifts in unison. */
+  animation:heroFaceDrift var(--float, 7s) ease-in-out infinite;
+  animation-delay:var(--delay, 0s);
+}
+@keyframes heroFaceDrift{
+  0%,100%{translate:0 0;}
+  50%{translate:0 -14px;}
+}
+@media (prefers-reduced-motion: reduce){
+  .hero-face{animation:none;}
 }
 
+/* A hand-drawn rule between the headline and the paragraph — the same
+   gesture as the block characters, and it stops the two blocks of type from
+   reading as one stack. */
+.hero-wave{
+  display:block; margin:18px auto 0;
+  width:clamp(140px, 17vw, 220px); height:auto;
+  color:var(--paper); opacity:.5;
+}
 .hero-sub{
-  margin:18px auto 0; font-size:15px; line-height:1.55; color:var(--text-dim);
-  /* wider measure = one line fewer = one line more of the cards on screen */
-  max-width:64ch;
+  margin:18px auto 0; font-size:15px; line-height:1.6; color:var(--text-dim);
+  /* a short measure keeps it centred under the headline column rather than
+     spanning wider than the type it belongs to */
+  max-width:52ch;
 }
 .hero-cta{
-  margin-top:22px; display:inline-flex; align-items:center; gap:10px;
+  margin-top:24px; display:inline-flex; align-items:center; gap:10px;
   background:var(--orange); color:var(--on-accent); font-weight:700; font-size:14px;
   padding:16px 30px; border-radius:999px; letter-spacing:.02em;
   transition:transform .15s ease;
@@ -257,7 +311,7 @@ header nav{
    read as rising into the page, not so much that the pictures get cut off. */
 .card-fan{
   position:relative; z-index:1;
-  margin-top:36px; margin-bottom:-28px;
+  margin-top:30px; margin-bottom:-28px;
   display:flex; align-items:flex-end; justify-content:center;
   perspective:1200px;
 }
@@ -380,6 +434,12 @@ html[dir="rtl"] .hero-type{line-height:1.18;}
   /* three of the six faces step aside on a phone — at this width the type
      needs the room more than the decoration does */
   .hero-face.is-small{display:none;}
+  /* and the three that stay are scaled down and spread apart: at phone width
+     the gutter either side of the headline is only a thumb wide, so at their
+     desktop size they crowd the type and each other. */
+  .hero-face{--w:clamp(34px, 12vw, 46px);}
+  .hero-face:nth-child(4){top:18%; inset-inline-start:96%;}
+  .hero-face:nth-child(6){top:64%; inset-inline-start:90%;}
   /* a five-card arc can't hold its shape at phone width — flatten it and let
      the outer pair sit out rather than shrinking every card to a stamp */
   .card-fan{margin-top:34px; margin-bottom:-22px;}
@@ -476,24 +536,11 @@ html[dir="rtl"] .hero-type{line-height:1.18;}
 }
 .cap-card:hover::before{opacity:1;}
 .cap-card:hover{transform:translateY(-6px); border-color:rgba(245,241,232,0.22);}
-.cap-card:hover .cap-bg{transform:scale(1.06);}
 .cap-card .top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
 .cap-card h4{font-family:var(--sans); font-weight:600; font-size:15px;}
 .cap-card .arrow{width:26px; height:26px; flex:none; border-radius:50%; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:12px;}
 .cap-card .cap-stat{font-family:var(--display); font-weight:800; font-size:56px; line-height:1; direction:ltr; unicode-bidi:isolate;}
 .cap-card p{font-size:13px; color:var(--text-dim); line-height:1.5; margin-top:8px; max-width:26ch;}
-.cap-bg{
-  position:absolute; inset:0; z-index:0;
-  background-size:cover; background-position:center;
-  transition:transform .4s ease;
-}
-.cap-card.has-image{background:#1b1a17;}
-.cap-card.has-image .cap-bg::after{
-  content:''; position:absolute; inset:0;
-  background:linear-gradient(180deg, rgba(10,10,10,.35) 0%, rgba(10,10,10,.85) 100%);
-}
-.cap-card.has-image .cap-content{color:#fff;}
-.cap-card.has-image p{color:rgba(245,241,232,0.8);}
 .cc1{background:linear-gradient(160deg,#3a2a20,#1b1a17);}
 .cc2{background:linear-gradient(160deg,#241d14,#1b1a17);}
 .cc3{background:linear-gradient(160deg,#16261d,#1b1a17);}
@@ -1355,13 +1402,6 @@ body:has(.site){background:var(--ink);}
 .site .sec-acid .cap-card::before{display:none;}
 .site .sec-acid .cap-card:hover{border-color:var(--ink); transform:translateY(-6px);}
 .site .cap-card .arrow{border-color:var(--ink);}
-.site .cap-card.has-image{background:var(--ink);}
-.site .cap-card.has-image .cap-bg::after{
-  content:''; position:absolute; inset:0;
-  background:rgba(13,13,13,0.55);
-}
-.site .cap-card.has-image .cap-content{color:var(--paper);}
-.site .cap-card.has-image p{color:rgba(242,239,230,0.82);}
 
 /* ---------------- selected work — paper base ------------------------ */
 .site .video-frame{background:var(--ink);}
@@ -1509,7 +1549,7 @@ body:has(.site){background:var(--ink);}
 .site .floaters svg{color:var(--paper); opacity:.12;}
 
 /* ---------------- header ---------------- */
-.site header nav{border:1px solid rgba(242,239,230,0.22);}
+.site .nav-links{border-color:rgba(242,239,230,0.22);}
 .site .nav-links a{color:rgba(242,239,230,0.66);}
 .site .nav-links a:hover,
 .site .nav-links a.active{color:var(--paper); text-decoration:underline; text-underline-offset:4px;}
@@ -1576,3 +1616,128 @@ body:has(.site){background:var(--ink);}
 .site .cap-card{transition:transform .3s ease, border-color .3s ease;}
 .site .impact-card{transition:transform .3s ease, border-color .3s ease;}
 .site .mosaic .tile:hover{box-shadow:none;}
+
+/* ================= services — the paper panel =================
+   The section under the hero is a single paper surface lifted out of the ink,
+   with a colour lip showing above its top edge, and the brand accents placed
+   ON it as cards rather than flooding the section. The panel keeps the page's
+   paper-to-colour balance while giving the fold after the hero a clear break
+   from the dark ground. */
+.site .services-section{padding:70px 0 100px;}
+.site .services-panel{
+  position:relative; z-index:1;
+  background:var(--paper); color:var(--ink);
+  border-radius:clamp(26px, 3vw, 44px);
+  padding:clamp(26px, 3.4vw, 54px);
+}
+/* The lip: a rounded block the panel sits on, showing only where it pokes out
+   above. It hangs off the panel's PARENT rather than the panel itself — as a
+   negative-z pseudo inside the panel it would paint under the page's ink
+   ground (in-flow backgrounds are painted after negative-z children) and
+   never be seen. Both are positioned instead, and the panel's z-index puts
+   its paper fill over the lip's lower half. */
+.site .services-section .wrap{position:relative;}
+.site .services-section .wrap::before{
+  content:'';
+  position:absolute; z-index:0;
+  inset-inline:calc(32px + clamp(16px, 2.2vw, 40px));
+  top:calc(-1 * clamp(14px, 1.8vw, 28px));
+  height:clamp(60px, 8vw, 120px);
+  background:var(--magenta);
+  border-radius:clamp(26px, 3vw, 44px);
+}
+
+/* heading: the sentence solid, the section's own name outlined beside it */
+.site .services-head{
+  display:flex; flex-wrap:wrap; align-items:baseline;
+  gap:clamp(10px, 1.4vw, 24px);
+  margin-bottom:clamp(24px, 3vw, 40px);
+}
+.site .services-title{
+  font-family:var(--display); font-weight:800;
+  font-size:clamp(26px, 4vw, 52px); line-height:1.02; letter-spacing:-0.02em;
+  text-transform:uppercase; color:var(--ink);
+}
+.site .services-tag{
+  display:inline-flex; align-items:center; gap:.3em;
+  font-family:var(--display); font-weight:800;
+  font-size:clamp(22px, 3.4vw, 46px); line-height:1.02; letter-spacing:-0.02em;
+  text-transform:uppercase;
+  color:transparent; -webkit-text-stroke:2px var(--ink);
+}
+/* without text-stroke the word would render invisible — fill it instead */
+@supports not (-webkit-text-stroke: 1px black){
+  .site .services-tag{color:var(--ink);}
+}
+.site .sparkle{width:clamp(15px, 1.7vw, 26px); height:auto; flex:none; color:var(--magenta);}
+
+/* the cards: one accent each, ink or paper type depending on the fill */
+.site .services-panel .cap-grid{
+  grid-template-columns:repeat(2, 1fr);
+  gap:clamp(14px, 1.6vw, 22px);
+}
+.site .services-panel .cap-card{
+  border:none; border-radius:clamp(18px, 2vw, 28px);
+  min-height:clamp(230px, 24vw, 300px);
+  color:var(--on-card);
+}
+/* The first card leads the section, and a lone card at the end would sit in
+   half a row with a hole beside it — both run the full width instead. */
+.site .services-panel .cap-card:first-child,
+.site .services-panel .cap-card:last-child:nth-child(even){grid-column:1 / -1;}
+.site .services-panel .cap-card:first-child{min-height:clamp(200px, 20vw, 260px);}
+.site .services-panel .cc1{background:var(--acid);    --on-card:var(--ink);   --card-rings:rgba(13,13,13,.08);}
+.site .services-panel .cc2{background:var(--violet);  --on-card:var(--paper); --card-rings:rgba(242,239,230,.13);}
+.site .services-panel .cc3{background:var(--magenta); --on-card:var(--paper); --card-rings:rgba(242,239,230,.13);}
+.site .services-panel .cc4{background:var(--aqua);    --on-card:var(--ink);   --card-rings:rgba(13,13,13,.08);}
+/* the hero's rings again, tucked into a corner of each card */
+.site .services-panel .cap-card::after{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:repeating-radial-gradient(
+    circle at 100% 0%,
+    transparent 0 34px,
+    var(--card-rings) 34px 35px
+  );
+}
+html[dir="rtl"] .site .services-panel .cap-card::after{
+  background:repeating-radial-gradient(
+    circle at 0% 0%,
+    transparent 0 34px,
+    var(--card-rings) 34px 35px
+  );
+}
+.site .services-panel .cap-card h4{color:var(--on-card); font-size:clamp(15px, 1.4vw, 19px); font-weight:700;}
+.site .services-panel .cap-card .cap-stat{color:var(--on-card);}
+.site .services-panel .cap-card p{color:color-mix(in srgb, var(--on-card) 76%, transparent); font-size:13.5px;}
+.site .services-panel .cap-card .arrow{border-color:color-mix(in srgb, var(--on-card) 45%, transparent); color:var(--on-card);}
+.site .services-panel .cap-card:hover{transform:translateY(-6px);}
+.site .services-panel .cap-card::before{display:none;}
+
+/* a picture on a card is framed and tilted, like one taped on */
+.site .cap-photo{
+  position:relative; z-index:2;
+  background:var(--paper); padding:clamp(7px, .8vw, 11px);
+  border-radius:16px; rotate:-1.6deg;
+  box-shadow:0 16px 34px rgba(13,13,13,.3);
+}
+.site .cap-photo img{border-radius:9px; width:100%; aspect-ratio:4/3; object-fit:cover;}
+/* on the full-width card the picture sits beside the copy instead of above it */
+.site .services-panel .cap-card:first-child.has-photo{
+  display:grid; grid-template-columns:1.05fr 1fr; align-items:center;
+  gap:clamp(14px, 2vw, 34px); padding:clamp(14px, 1.6vw, 22px);
+}
+.site .services-panel .cap-card.has-photo .cap-content{padding:clamp(16px, 1.8vw, 24px);}
+
+@media (max-width:760px){
+  .site .services-panel .cap-grid{grid-template-columns:1fr;}
+  .site .services-panel .cap-card:first-child.has-photo{grid-template-columns:1fr;}
+  .site .services-section{padding:50px 0 70px;}
+}
+/* beside a picture the copy reads as one block, so it centres against the
+   photo instead of pushing the title and the number to opposite edges */
+.site .services-panel .cap-card:first-child.has-photo .cap-content{
+  justify-content:center; gap:clamp(12px, 1.4vw, 20px);
+}
+/* the number is set LTR (digits and a trailing +), which also left-aligns it
+   inside the card — in Arabic it has to sit with the copy, on the right */
+html[dir="rtl"] .site .services-panel .cap-stat{text-align:right;}

@@ -26,8 +26,12 @@ export default function HeaderScrollShell({ children }) {
       el.style.paddingBlock = `${26 - 12 * p}px`;
       if (nav) {
         nav.style.paddingBlock = `${12 - 4 * p}px`;
-        // --ink, the site's ground, deepening as the header shrinks
-        nav.style.background = `rgba(13,13,13,${(0.62 + 0.28 * p).toFixed(3)})`;
+        // At the top of the page the bar is invisible and only the mark, the
+        // links pill and the CTA show. Scrolling fades in --ink (the site's
+        // ground) and a hairline under it, so the bar separates from whatever
+        // is passing beneath.
+        nav.style.background = `rgba(13,13,13,${(0.78 * p).toFixed(3)})`;
+        nav.style.borderColor = `rgba(242,239,230,${(0.16 * p).toFixed(3)})`;
       }
       if (logo) logo.style.height = `${46 - 10 * p}px`;
     }

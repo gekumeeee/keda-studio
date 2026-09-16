@@ -87,6 +87,16 @@ function getShowcase(filter, projects, lang) {
   };
 }
 
+// The four-point burst beside the section name — the same drawn-by-hand
+// register as the hero's wave, taking its colour from the text beside it.
+function Sparkle() {
+  return (
+    <svg className="sparkle" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 0 L14.4 9.6 L24 12 L14.4 14.4 L12 24 L9.6 14.4 L0 12 L9.6 9.6 Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 // glyph shapes used inside the impact circles
 const IMPACT_GLYPHS = ['circle', 'triangle', 'square', 'cross', 'eye'];
 
@@ -154,6 +164,23 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
                 </h1>
               )}
             </div>
+            {/* Drawn inline rather than loaded as a file: two paths, and it
+                takes the paper colour from CSS like any other type. */}
+            <svg className="hero-wave" viewBox="0 0 180 26" fill="none" aria-hidden="true">
+              <path
+                d="M4 10 q 12 -9 24 0 t 24 0 t 24 0 t 24 0 t 24 0 t 24 0"
+                stroke="currentColor"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+              />
+              <path
+                d="M4 20 q 12 -9 24 0 t 24 0 t 24 0 t 24 0 t 24 0 t 24 0"
+                stroke="currentColor"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                opacity=".55"
+              />
+            </svg>
             <p className="hero-sub">{pick(settings.heroPara, lang)}</p>
             <a href="/contact" className="hero-cta magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
               {pick(settings.heroCtaLabel, lang)}
@@ -195,38 +222,46 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
         </div>
       </section>
 
-      {/* services — acid. The heading stays on the ink ground and only the
-          card row carries the fill, which is what keeps the page near the
-          75/25 ratio instead of flooding a whole screenful with colour. */}
-      <section className="marketing-section" id="work">
+      {/* services — a paper panel rising out of the ink, with a colour lip
+          showing above its top edge. The cards inside carry the accents, one
+          each, so the section still reads as one paper surface with colour
+          placed on it rather than a screenful of fill. */}
+      <section className="marketing-section services-section" id="work">
         <div className="wrap">
-          <Reveal className="section-head center-head">
-            <div className="eyebrow center-eyebrow">{pick(settings.servicesEyebrow, lang)}</div>
-            <h2 className="big-heading">{pick(settings.servicesHeading, lang).replace(/\n/g, ' ')}</h2>
-          </Reveal>
-        </div>
-        <div className="accent-band sec-acid">
-          <div className="wrap">
-          <div className="cap-grid">
-            {settings.services.map((svc, i) => (
-              <Reveal
-                as="div"
-                className={`cap-card ${svc.image ? 'has-image' : CAP_CLASSES[i % CAP_CLASSES.length]}`}
-                key={i}
-                delay={i * 80}
-                onMouseMove={handleCapSpotlight}
-              >
-                {svc.image && <div className="cap-bg" style={{ backgroundImage: `url(${svc.image})` }} />}
-                <div className="cap-content">
-                  <div className="top"><h4>{pick(svc.title, lang)}</h4><div className="arrow">↗</div></div>
-                  <div>
-                    {svc.stat && <StatCounter value={svc.stat} className="cap-stat" />}
-                    <p>{pick(svc.desc, lang)}</p>
+          <div className="services-panel">
+            <Reveal className="services-head">
+            <h2 className="services-title">{pick(settings.servicesHeading, lang).replace(/\n/g, ' ')}</h2>
+              <span className="services-tag">
+                <Sparkle />
+                {pick(settings.servicesEyebrow, lang)}
+              </span>
+            </Reveal>
+            <div className="cap-grid">
+              {settings.services.map((svc, i) => (
+                <Reveal
+                  as="div"
+                  className={`cap-card ${CAP_CLASSES[i % CAP_CLASSES.length]}${svc.image ? ' has-photo' : ''}`}
+                  key={i}
+                  delay={i * 80}
+                  onMouseMove={handleCapSpotlight}
+                >
+                  {/* framed like a photo taped to the card rather than bled to
+                      its edges — the picture is an object sitting on it. */}
+                  {svc.image && (
+                    <div className="cap-photo">
+                      <img src={svc.image} alt="" draggable={false} />
+                    </div>
+                  )}
+                  <div className="cap-content">
+                    <div className="top"><h4>{pick(svc.title, lang)}</h4><div className="arrow">↗</div></div>
+                    <div>
+                      {svc.stat && <StatCounter value={svc.stat} className="cap-stat" />}
+                      <p>{pick(svc.desc, lang)}</p>
+                    </div>
                   </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
         </div>
       </section>
