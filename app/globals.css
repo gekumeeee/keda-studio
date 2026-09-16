@@ -492,14 +492,16 @@ html[dir="rtl"] .hero-type{line-height:1.18;}
 .section-head .clients-kicker{font-family:var(--display); font-weight:700; font-size:clamp(40px,6vw,72px); line-height:1.02; color:var(--text);}
 .section-head .clients-kicker b{color:var(--gold); font-weight:700;}
 
+/* No box: the logos sit straight on the ink, with a KEDA mark at either end
+   of the line (see AccentGlyph) instead of a frame around it. */
 .clients-bar{
-  background:var(--bg-soft); border:1px solid var(--line); border-radius:24px;
-  padding:22px 30px; display:flex; align-items:center; gap:30px; overflow:hidden;
+  background:none; border:none; border-radius:0;
+  padding:10px 0; display:flex; align-items:center;
+  gap:clamp(16px, 2.2vw, 32px); overflow:hidden;
 }
 .clients-bar .add{
   font-family:var(--display); font-weight:800; color:var(--gold);
   font-size:clamp(22px,3vw,34px); white-space:nowrap; flex:none;
-  padding-inline-end:30px; border-inline-end:1px solid var(--line);
 }
 .clients-marquee{flex:1; overflow:hidden; position:relative;
   direction:ltr; unicode-bidi:isolate;
@@ -509,12 +511,14 @@ html[dir="rtl"] .hero-type{line-height:1.18;}
 .clients-track{display:flex; align-items:center; gap:56px; width:max-content; animation:scrollClients 36s linear infinite;}
 @keyframes scrollClients{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
 .client-item{flex:none; display:flex; align-items:center; justify-content:center; height:56px;}
-.client-item img{max-height:56px; max-width:130px; width:auto; object-fit:contain; opacity:.75; transition:opacity .25s ease;}
+.client-item img{max-height:56px; max-width:130px; width:auto; object-fit:contain; opacity:.9; transition:opacity .25s ease;}
 .client-item:hover img{opacity:1;}
 .client-item span{color:var(--text-dim); font-size:17px; white-space:nowrap; font-weight:500;}
 @media (max-width:600px){
-  .clients-bar{flex-direction:column; align-items:stretch; gap:18px;}
-  .clients-bar .add{border-inline-end:none; padding-inline-end:0; text-align:center;}
+  /* the call to action takes its own line; the marks stay either side of the
+     logos, which is the whole point of them */
+  .clients-bar{flex-wrap:wrap; gap:14px;}
+  .clients-bar .add{flex:1 0 100%; text-align:center;}
 }
 
 /* capability cards — big number + optional background image (senu style) */
@@ -1524,7 +1528,15 @@ body:has(.site){background:var(--ink);}
    scrolling in opposite directions, not from the tilt.
    The vw terms in the offsets and the container height reserve room for that
    same drift, so the rotated corners never clip against the container. */
-.site .diag-marquee{height:calc(196px + 5vw); margin:26px 0 64px;}
+/* Pulled up so the bars sit ON the hero cards, overlapping their bottom edge
+   — the cards look tucked behind them rather than parked above a gap. The
+   z-index is what puts the bars over the cards: the fan is a positioned
+   layer inside the hero, so without it the bars would pass underneath. */
+.site .diag-marquee{
+  height:calc(196px + 5vw);
+  margin:clamp(-76px, -5vw, -40px) 0 64px;
+  position:relative; z-index:2;
+}
 .site .diag-row{
   height:86px; background:var(--paper); box-shadow:none; overflow:hidden;
 }
@@ -1649,7 +1661,7 @@ body:has(.site){background:var(--ink);}
 
 /* heading: the sentence solid, the section's own name outlined beside it */
 .site .services-head{
-  display:flex; flex-wrap:wrap; align-items:baseline;
+  display:flex; flex-wrap:wrap; align-items:center;
   gap:clamp(10px, 1.4vw, 24px);
   margin-bottom:clamp(24px, 3vw, 40px);
 }
@@ -1658,18 +1670,19 @@ body:has(.site){background:var(--ink);}
   font-size:clamp(26px, 4vw, 52px); line-height:1.02; letter-spacing:-0.02em;
   text-transform:uppercase; color:var(--ink);
 }
+/* The section's own name, set as a chip pinned beside the heading: ink fill,
+   paper type. Outlined display type read as a mistake at this size — hollow
+   letters against a busy panel — and Arabic in particular lost its joins. */
 .site .services-tag{
-  display:inline-flex; align-items:center; gap:.3em;
+  display:inline-flex; align-items:center; gap:.5em;
   font-family:var(--display); font-weight:800;
-  font-size:clamp(22px, 3.4vw, 46px); line-height:1.02; letter-spacing:-0.02em;
-  text-transform:uppercase;
-  color:transparent; -webkit-text-stroke:2px var(--ink);
+  font-size:clamp(13px, 1.25vw, 17px); line-height:1;
+  letter-spacing:.06em; text-transform:uppercase;
+  color:var(--paper); background:var(--ink);
+  padding:.65em 1.1em; border-radius:999px;
+  white-space:nowrap;
 }
-/* without text-stroke the word would render invisible — fill it instead */
-@supports not (-webkit-text-stroke: 1px black){
-  .site .services-tag{color:var(--ink);}
-}
-.site .sparkle{width:clamp(15px, 1.7vw, 26px); height:auto; flex:none; color:var(--magenta);}
+.site .sparkle{width:1.15em; height:auto; flex:none; color:var(--acid);}
 
 /* the cards: one accent each, ink or paper type depending on the fill */
 .site .services-panel .cap-grid{
@@ -1741,3 +1754,24 @@ html[dir="rtl"] .site .services-panel .cap-card::after{
 /* the number is set LTR (digits and a trailing +), which also left-aligns it
    inside the card — in Arabic it has to sit with the copy, on the right */
 html[dir="rtl"] .site .services-panel .cap-stat{text-align:right;}
+
+/* ---- the mark at each end of the clients row ----
+   Its shape and its colour both change on a timer (AccentGlyph): the shape
+   re-mounts and flips in, while the colour slides from one accent to the next
+   underneath it. */
+.accent-glyph{
+  flex:none; width:clamp(30px, 3.6vw, 58px); height:auto;
+  transition:color .5s ease;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.55));
+}
+.accent-glyph g{
+  transform-box:fill-box; transform-origin:center;
+  animation:glyphFlip .55s cubic-bezier(.2,.9,.25,1.2) both;
+}
+@keyframes glyphFlip{
+  from{transform:rotateY(85deg) scale(.7); opacity:0;}
+  to{transform:rotateY(0deg) scale(1); opacity:1;}
+}
+@media (prefers-reduced-motion: reduce){
+  .accent-glyph g{animation:none;}
+}

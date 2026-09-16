@@ -11,6 +11,7 @@ import StatCounter from './StatCounter';
 import RotatingWord from './RotatingWord';
 import HeroFaces from './HeroFaces';
 import ClientCardFan from './ClientCardFan';
+import AccentGlyph from './AccentGlyph';
 import GlyphIcon from './GlyphIcon';
 import PortfolioVideo from './PortfolioVideo';
 import { UI, pick } from '@/lib/i18n';
@@ -205,6 +206,8 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
           </Reveal>
           <Reveal className="clients-bar">
             <a href="/contact" className="add">{t.clientsAdd}</a>
+            {/* a KEDA mark at each end of the row of other people's logos */}
+            <AccentGlyph />
             <div className="clients-marquee">
               <div className="clients-track">
                 {clientMarquee.map((c, i) => (
@@ -218,6 +221,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
                 ))}
               </div>
             </div>
+            <AccentGlyph delay={1200} />
           </Reveal>
         </div>
       </section>
