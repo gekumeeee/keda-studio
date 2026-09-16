@@ -19,22 +19,6 @@ import { UI, pick } from '@/lib/i18n';
 const FILTERS = ['All', 'Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
 const CAP_CLASSES = ['cc1', 'cc2', 'cc3', 'cc4'];
 
-// Renders a heading where the first line is dim and remaining lines are bold —
-// the two-tone stacked "kicker" look. Split on newlines in the admin.
-function TwoTone({ text }) {
-  const lines = String(text).split('\n');
-  return (
-    <div className="kicker">
-      {lines.map((line, i) => (
-        <span key={i}>
-          {i === 0 ? line : <b>{line}</b>}
-          {i < lines.length - 1 && <br />}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 const PLACEHOLDER_SHOWCASE = {
   en: {
     All: { title: 'Your First Case Study Goes Here', client: 'Placeholder', work: 'Branding, Motion, Social', label: 'Case 01' },
@@ -86,6 +70,23 @@ function getShowcase(filter, projects, lang) {
     video: p.video || '',
     orientation: p.orientation || 'auto',
   };
+}
+
+// Every section is introduced the same way: the sentence, then the section's
+// own name in a chip beside it. `center` is for the one section whose content
+// is a centred grid rather than a row.
+function SectionHead({ title, tag, center = false }) {
+  return (
+    <Reveal className={`head-row${center ? ' is-center' : ''}`}>
+      <h2 className="head-title">{String(title).replace(/\n/g, ' ')}</h2>
+      {tag ? (
+        <span className="head-tag">
+          <Sparkle />
+          {tag}
+        </span>
+      ) : null}
+    </Reveal>
+  );
 }
 
 // The four-point burst beside the section name — the same drawn-by-hand
@@ -197,13 +198,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
 
       <section className="marketing-section" id="clients">
         <div className="wrap">
-          <Reveal className="section-head">
-            <div className="kicker clients-kicker">
-              {pick(settings.clientsHeading, lang).split('\n').map((line, i) => (
-                <span key={i}>{i === 0 ? line : <b>{line}</b>}{i === 0 && <br />}</span>
-              ))}
-            </div>
-          </Reveal>
+          <SectionHead title={pick(settings.clientsHeading, lang)} tag={t.clientsTag} />
           <Reveal className="clients-bar">
             <a href="/contact" className="add">{t.clientsAdd}</a>
             {/* a KEDA mark at each end of the row of other people's logos */}
@@ -230,16 +225,10 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
           showing above its top edge. The cards inside carry the accents, one
           each, so the section still reads as one paper surface with colour
           placed on it rather than a screenful of fill. */}
-      <section className="marketing-section services-section" id="work">
+      <section className="marketing-section sheet-section services-section" id="work">
         <div className="wrap">
-          <div className="services-panel">
-            <Reveal className="services-head">
-            <h2 className="services-title">{pick(settings.servicesHeading, lang).replace(/\n/g, ' ')}</h2>
-              <span className="services-tag">
-                <Sparkle />
-                {pick(settings.servicesEyebrow, lang)}
-              </span>
-            </Reveal>
+          <div className="sheet">
+            <SectionHead title={pick(settings.servicesHeading, lang)} tag={pick(settings.servicesEyebrow, lang)} />
             <div className="cap-grid">
               {settings.services.map((svc, i) => (
                 <Reveal
@@ -270,60 +259,58 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
         </div>
       </section>
 
-      <section className="marketing-section">
+      {/* selected work — the same paper panel as services, in the other
+          accent: one block for what we do, one for what it produced. */}
+      <section className="marketing-section sheet-section work-section">
         <div className="wrap">
-          <Reveal className="section-head center-head">
-            <h2 className="big-heading">{pick(settings.workHeading, lang).replace(/\n/g, ' ')}</h2>
-          </Reveal>
-          <Reveal className="filters center-filters">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                className={`filter-pill ${activeFilter === f ? 'active' : ''}`}
-                onClick={() => selectFilter(f)}
-              >
-                {t.filters[f]}
-              </button>
-            ))}
-          </Reveal>
-          <Reveal className="showcase" style={{ opacity: fading ? 0 : 1 }}>
-            <div>
-              <h3>{showcase.title}</h3>
-              {showcase.client && showcase.client !== 'Placeholder' ? (
-                <div className="meta">{t.showcaseClient} <b>{showcase.client}</b></div>
-              ) : null}
-              <div className="meta">{t.showcaseWork} <b>{showcase.work}</b></div>
-              <a href="#" className="view-btn">{t.viewProject}</a>
-            </div>
-            {showcase.video ? (
-              <PortfolioVideo src={showcase.video} poster={showcase.image} label={showcase.label} orientation={showcase.orientation} />
-            ) : showcase.image ? (
-              // A real image: shown at its own natural size (no forced crop,
-              // no label/play overlay) — this is the one spot on the site
-              // that's a plain <img>, not a background-image box, precisely
-              // so it isn't cropped into a fixed frame.
-              <div className="video-frame has-image">
-                <img src={showcase.image} alt={showcase.title} className="video-frame-img" />
+          <div className="sheet">
+            <SectionHead title={pick(settings.workHeading, lang)} tag={pick(settings.workEyebrow, lang)} />
+            <Reveal className="filters">
+              {FILTERS.map((f) => (
+                <button
+                  key={f}
+                  className={`filter-pill ${activeFilter === f ? 'active' : ''}`}
+                  onClick={() => selectFilter(f)}
+                >
+                  {t.filters[f]}
+                </button>
+              ))}
+            </Reveal>
+            <Reveal className="showcase" style={{ opacity: fading ? 0 : 1 }}>
+              <div className="showcase-copy">
+                <h3>{showcase.title}</h3>
+                {showcase.client && showcase.client !== 'Placeholder' ? (
+                  <div className="meta">{t.showcaseClient} <b>{showcase.client}</b></div>
+                ) : null}
+                <div className="meta">{t.showcaseWork} <b>{showcase.work}</b></div>
+                <a href="/portfolio" className="view-btn">{t.viewProject}</a>
               </div>
-            ) : (
-              // No image at all yet — the gradient placeholder still needs
-              // the label/play cue since there's nothing else to show.
-              <div className="video-frame">
-                <div className="label">{showcase.label}</div>
-                <div className="play"></div>
-              </div>
-            )}
-          </Reveal>
+              {showcase.video ? (
+                <PortfolioVideo src={showcase.video} poster={showcase.image} label={showcase.label} orientation={showcase.orientation} />
+              ) : showcase.image ? (
+                // A real image: its own proportions are kept (no forced crop),
+                // but capped in height so a portrait shot can't stretch the row
+                // into a column of empty space beside it.
+                <div className="video-frame has-image">
+                  <img src={showcase.image} alt={showcase.title} className="video-frame-img" />
+                </div>
+              ) : (
+                // No image at all yet — the gradient placeholder still needs
+                // the label/play cue since there's nothing else to show.
+                <div className="video-frame">
+                  <div className="label">{showcase.label}</div>
+                  <div className="play"></div>
+                </div>
+              )}
+            </Reveal>
+          </div>
         </div>
       </section>
 
       {/* about — violet; the body copy sits on an ink block inside the band */}
       <section className="marketing-section" id="about">
         <div className="wrap">
-          <Reveal className="section-head">
-            <div className="eyebrow">{pick(settings.aboutEyebrow, lang)}</div>
-            <TwoTone text={pick(settings.aboutHeading, lang)} />
-          </Reveal>
+          <SectionHead title={pick(settings.aboutHeading, lang)} tag={pick(settings.aboutEyebrow, lang)} />
         </div>
         <div className="accent-band sec-violet">
           <div className="wrap">
@@ -346,10 +333,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
 
       <section className="marketing-section" id="impact">
         <div className="wrap">
-          <Reveal className="section-head center-head">
-            <div className="eyebrow center-eyebrow">{pick(settings.impactEyebrow, lang)}</div>
-            <h2 className="big-heading">{pick(settings.impactHeading, lang).replace(/\n/g, ' ')}</h2>
-          </Reveal>
+          <SectionHead title={pick(settings.impactHeading, lang)} tag={pick(settings.impactEyebrow, lang)} />
           <div className="impact-grid">
             {settings.impact.map((it, i) => (
               <Reveal as="div" className="impact-card" key={i} delay={i * 80}>

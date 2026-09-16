@@ -444,7 +444,10 @@ html[dir="rtl"] .hero-type{line-height:1.18;}
      the outer pair sit out rather than shrinking every card to a stamp */
   .card-fan{margin-top:34px; margin-bottom:-22px;}
   .fan-card{width:clamp(116px, 34vw, 150px); margin-inline:-2.5%;}
-  .fan-card:first-child, .fan-card:last-child{display:none;}
+  /* only from four cards up, though: dropping the outer pair from three
+     leaves one card standing alone where the fan should be */
+  .card-fan:has(> .fan-card:nth-child(4)) > .fan-card:first-child,
+  .card-fan:has(> .fan-card:nth-child(4)) > .fan-card:last-child{display:none;}
   /* phone cards are small, so a full-size character sitting low would cover
      much of the picture — smaller, and lifted further above the edge */
   .fan-card-face{width:44px; top:-24px;}
@@ -1629,14 +1632,15 @@ body:has(.site){background:var(--ink);}
 .site .impact-card{transition:transform .3s ease, border-color .3s ease;}
 .site .mosaic .tile:hover{box-shadow:none;}
 
-/* ================= services — the paper panel =================
-   The section under the hero is a single paper surface lifted out of the ink,
-   with a colour lip showing above its top edge, and the brand accents placed
-   ON it as cards rather than flooding the section. The panel keeps the page's
-   paper-to-colour balance while giving the fold after the hero a clear break
-   from the dark ground. */
-.site .services-section{padding:70px 0 100px;}
-.site .services-panel{
+/* ================= the paper panels =================
+   Services and selected work are each a single paper surface lifted out of
+   the ink, with a colour lip showing above the top edge and the brand accents
+   placed ON the surface rather than flooding the section. Same block twice,
+   one accent each, so the two read as a pair rather than two designs. */
+.site .sheet-section{padding:70px 0 100px;}
+.site .services-section{--lip:var(--magenta);}
+.site .work-section{--lip:var(--cobalt);}
+.site .sheet{
   position:relative; z-index:1;
   background:var(--paper); color:var(--ink);
   border-radius:clamp(26px, 3vw, 44px);
@@ -1648,63 +1652,71 @@ body:has(.site){background:var(--ink);}
    ground (in-flow backgrounds are painted after negative-z children) and
    never be seen. Both are positioned instead, and the panel's z-index puts
    its paper fill over the lip's lower half. */
-.site .services-section .wrap{position:relative;}
-.site .services-section .wrap::before{
+.site .sheet-section .wrap{position:relative;}
+.site .sheet-section .wrap::before{
   content:'';
   position:absolute; z-index:0;
   inset-inline:calc(32px + clamp(16px, 2.2vw, 40px));
   top:calc(-1 * clamp(14px, 1.8vw, 28px));
   height:clamp(60px, 8vw, 120px);
-  background:var(--magenta);
+  background:var(--lip);
   border-radius:clamp(26px, 3vw, 44px);
 }
 
 /* heading: the sentence solid, the section's own name outlined beside it */
-.site .services-head{
+/* One heading pattern for every section on the page: the sentence solid, the
+   section's own name in a chip beside it. Colours flip by context — paper
+   type and a paper chip on the ink ground, ink type and an ink chip on a
+   paper sheet — but the shape stays the same the whole way down. */
+.site .head-row{
   display:flex; flex-wrap:wrap; align-items:center;
   gap:clamp(10px, 1.4vw, 24px);
   margin-bottom:clamp(24px, 3vw, 40px);
 }
-.site .services-title{
+.site .head-row.is-center{justify-content:center; text-align:center;}
+.site .head-title{
   font-family:var(--display); font-weight:800;
   font-size:clamp(26px, 4vw, 52px); line-height:1.02; letter-spacing:-0.02em;
-  text-transform:uppercase; color:var(--ink);
+  text-transform:uppercase; color:var(--paper);
 }
+.site .sheet .head-title{color:var(--ink);}
 /* The section's own name, set as a chip pinned beside the heading: ink fill,
    paper type. Outlined display type read as a mistake at this size — hollow
    letters against a busy panel — and Arabic in particular lost its joins. */
-.site .services-tag{
+.site .head-tag{
   display:inline-flex; align-items:center; gap:.5em;
   font-family:var(--display); font-weight:800;
   font-size:clamp(13px, 1.25vw, 17px); line-height:1;
   letter-spacing:.06em; text-transform:uppercase;
-  color:var(--paper); background:var(--ink);
+  color:var(--ink); background:var(--paper);
   padding:.65em 1.1em; border-radius:999px;
   white-space:nowrap;
 }
-.site .sparkle{width:1.15em; height:auto; flex:none; color:var(--acid);}
+.site .sheet .head-tag{color:var(--paper); background:var(--ink);}
+.site .sparkle{width:1.15em; height:auto; flex:none; color:var(--magenta);}
+.site .sheet .sparkle{color:var(--acid);}
 
 /* the cards: one accent each, ink or paper type depending on the fill */
-.site .services-panel .cap-grid{
+.site .sheet .cap-grid{
   grid-template-columns:repeat(2, 1fr);
   gap:clamp(14px, 1.6vw, 22px);
 }
-.site .services-panel .cap-card{
+.site .sheet .cap-card{
   border:none; border-radius:clamp(18px, 2vw, 28px);
   min-height:clamp(230px, 24vw, 300px);
   color:var(--on-card);
 }
 /* The first card leads the section, and a lone card at the end would sit in
    half a row with a hole beside it — both run the full width instead. */
-.site .services-panel .cap-card:first-child,
-.site .services-panel .cap-card:last-child:nth-child(even){grid-column:1 / -1;}
-.site .services-panel .cap-card:first-child{min-height:clamp(200px, 20vw, 260px);}
-.site .services-panel .cc1{background:var(--acid);    --on-card:var(--ink);   --card-rings:rgba(13,13,13,.08);}
-.site .services-panel .cc2{background:var(--violet);  --on-card:var(--paper); --card-rings:rgba(242,239,230,.13);}
-.site .services-panel .cc3{background:var(--magenta); --on-card:var(--paper); --card-rings:rgba(242,239,230,.13);}
-.site .services-panel .cc4{background:var(--aqua);    --on-card:var(--ink);   --card-rings:rgba(13,13,13,.08);}
+.site .sheet .cap-card:first-child,
+.site .sheet .cap-card:last-child:nth-child(even){grid-column:1 / -1;}
+.site .sheet .cap-card:first-child{min-height:clamp(200px, 20vw, 260px);}
+.site .sheet .cc1{background:var(--acid);    --on-card:var(--ink);   --card-rings:rgba(13,13,13,.08);}
+.site .sheet .cc2{background:var(--violet);  --on-card:var(--paper); --card-rings:rgba(242,239,230,.13);}
+.site .sheet .cc3{background:var(--magenta); --on-card:var(--paper); --card-rings:rgba(242,239,230,.13);}
+.site .sheet .cc4{background:var(--aqua);    --on-card:var(--ink);   --card-rings:rgba(13,13,13,.08);}
 /* the hero's rings again, tucked into a corner of each card */
-.site .services-panel .cap-card::after{
+.site .sheet .cap-card::after{
   content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
   background:repeating-radial-gradient(
     circle at 100% 0%,
@@ -1712,19 +1724,19 @@ body:has(.site){background:var(--ink);}
     var(--card-rings) 34px 35px
   );
 }
-html[dir="rtl"] .site .services-panel .cap-card::after{
+html[dir="rtl"] .site .sheet .cap-card::after{
   background:repeating-radial-gradient(
     circle at 0% 0%,
     transparent 0 34px,
     var(--card-rings) 34px 35px
   );
 }
-.site .services-panel .cap-card h4{color:var(--on-card); font-size:clamp(15px, 1.4vw, 19px); font-weight:700;}
-.site .services-panel .cap-card .cap-stat{color:var(--on-card);}
-.site .services-panel .cap-card p{color:color-mix(in srgb, var(--on-card) 76%, transparent); font-size:13.5px;}
-.site .services-panel .cap-card .arrow{border-color:color-mix(in srgb, var(--on-card) 45%, transparent); color:var(--on-card);}
-.site .services-panel .cap-card:hover{transform:translateY(-6px);}
-.site .services-panel .cap-card::before{display:none;}
+.site .sheet .cap-card h4{color:var(--on-card); font-size:clamp(15px, 1.4vw, 19px); font-weight:700;}
+.site .sheet .cap-card .cap-stat{color:var(--on-card);}
+.site .sheet .cap-card p{color:color-mix(in srgb, var(--on-card) 76%, transparent); font-size:13.5px;}
+.site .sheet .cap-card .arrow{border-color:color-mix(in srgb, var(--on-card) 45%, transparent); color:var(--on-card);}
+.site .sheet .cap-card:hover{transform:translateY(-6px);}
+.site .sheet .cap-card::before{display:none;}
 
 /* a picture on a card is framed and tilted, like one taped on */
 .site .cap-photo{
@@ -1735,25 +1747,25 @@ html[dir="rtl"] .site .services-panel .cap-card::after{
 }
 .site .cap-photo img{border-radius:9px; width:100%; aspect-ratio:4/3; object-fit:cover;}
 /* on the full-width card the picture sits beside the copy instead of above it */
-.site .services-panel .cap-card:first-child.has-photo{
+.site .sheet .cap-card:first-child.has-photo{
   display:grid; grid-template-columns:1.05fr 1fr; align-items:center;
   gap:clamp(14px, 2vw, 34px); padding:clamp(14px, 1.6vw, 22px);
 }
-.site .services-panel .cap-card.has-photo .cap-content{padding:clamp(16px, 1.8vw, 24px);}
+.site .sheet .cap-card.has-photo .cap-content{padding:clamp(16px, 1.8vw, 24px);}
 
 @media (max-width:760px){
-  .site .services-panel .cap-grid{grid-template-columns:1fr;}
-  .site .services-panel .cap-card:first-child.has-photo{grid-template-columns:1fr;}
+  .site .sheet .cap-grid{grid-template-columns:1fr;}
+  .site .sheet .cap-card:first-child.has-photo{grid-template-columns:1fr;}
   .site .services-section{padding:50px 0 70px;}
 }
 /* beside a picture the copy reads as one block, so it centres against the
    photo instead of pushing the title and the number to opposite edges */
-.site .services-panel .cap-card:first-child.has-photo .cap-content{
+.site .sheet .cap-card:first-child.has-photo .cap-content{
   justify-content:center; gap:clamp(12px, 1.4vw, 20px);
 }
 /* the number is set LTR (digits and a trailing +), which also left-aligns it
    inside the card — in Arabic it has to sit with the copy, on the right */
-html[dir="rtl"] .site .services-panel .cap-stat{text-align:right;}
+html[dir="rtl"] .site .sheet .cap-stat{text-align:right;}
 
 /* ---- the mark at each end of the clients row ----
    Its shape and its colour both change on a timer (AccentGlyph): the shape
@@ -1774,4 +1786,85 @@ html[dir="rtl"] .site .services-panel .cap-stat{text-align:right;}
 }
 @media (prefers-reduced-motion: reduce){
   .accent-glyph g{animation:none;}
+}
+
+/* ---- selected work, inside the panel ----
+   Everything here is the paper version of controls that were designed for the
+   ink ground: ink outlines and ink fills rather than paper ones. */
+.site .sheet .filters{margin-bottom:clamp(26px, 3vw, 42px);}
+.site .sheet .filter-pill{
+  background:transparent; border:1px solid rgba(13,13,13,0.25); color:rgba(13,13,13,0.7);
+}
+.site .sheet .filter-pill:hover{border-color:var(--ink); color:var(--ink); background:transparent;}
+.site .sheet .filter-pill.active{background:var(--ink); border-color:var(--ink); color:var(--paper);}
+.site .sheet .filter-pill.active:hover{background:var(--cobalt); border-color:var(--cobalt); color:#FFFFFF;}
+
+.site .sheet .showcase{
+  display:flex; flex-wrap:wrap; align-items:center;
+  gap:clamp(24px, 3vw, 48px);
+}
+.site .sheet .showcase .showcase-copy{flex:1 1 300px; min-width:min(100%, 300px); max-width:52ch;}
+.site .sheet .showcase .video-frame,
+.site .sheet .showcase .portfolio-video-wrap{flex:0 1 auto; margin-inline-start:auto; max-width:100%;}
+.site .sheet .showcase h3{color:var(--ink); font-size:clamp(24px, 2.6vw, 34px);}
+.site .sheet .showcase .meta{color:rgba(13,13,13,0.62);}
+.site .sheet .showcase .meta b{color:var(--ink);}
+.site .sheet .showcase .view-btn{background:var(--ink); color:var(--paper);}
+.site .sheet .showcase .view-btn:hover{background:var(--cobalt); color:#FFFFFF;}
+/* The picture keeps its own proportions, but a portrait one is capped so it
+   can't run to twice the height of the copy beside it and leave the row
+   half empty — which is exactly what an uncapped natural-size image did. */
+.site .sheet .showcase .video-frame.has-image{display:flex; justify-content:center;}
+.site .sheet .showcase .video-frame-img{
+  width:auto; max-width:100%;
+  max-height:clamp(300px, 46vh, 520px);
+  border-radius:18px;
+}
+.site .sheet .showcase .portfolio-video-wrap{border-radius:18px;}
+
+@media (max-width:860px){
+  /* the work leads on a phone; the copy about it follows */
+  .site .sheet .showcase{grid-template-columns:1fr; gap:22px;}
+  .site .sheet .showcase .showcase-copy{order:2;}
+  .site .sheet .showcase .video-frame,
+  .site .sheet .showcase .portfolio-video-wrap{order:1;}
+  .site .sheet .showcase .video-frame-img{max-height:56vh;}
+}
+
+/* ---- the accent blocks line up with the paper sheets ----
+   Services and selected work are rounded blocks held to the page's column;
+   the about and closing-CTA fills were full-bleed bars, which read as a
+   different design language two scrolls apart. Same width, same radius, so
+   the page is one stack of blocks all the way down. Only the home page's own
+   two (and the same closing CTA on About) — a page-hero band elsewhere is
+   still meant to run edge to edge. */
+.site #about .accent-band,
+.site .big-cta .accent-band{
+  width:min(1256px, 100% - 64px);
+  margin-inline:auto;
+  border-radius:clamp(26px, 3vw, 44px);
+}
+@media (max-width:700px){
+  .site #about .accent-band,
+  .site .big-cta .accent-band{width:calc(100% - 32px);}
+}
+
+/* ---- phone rhythm ----
+   The desktop section padding (100px top and bottom, plus each sheet's own)
+   stacks up to most of a phone screen of empty ground between two blocks.
+   Same layout below, breathing at phone scale. */
+@media (max-width:760px){
+  .site .marketing-section{padding:56px 0;}
+  .site .sheet-section{padding:40px 0 56px;}
+  .site .big-cta{padding:44px 0;}
+  .site .big-cta .accent-band{padding:56px 0;}
+  .site .head-row{margin-bottom:22px;}
+  /* two-up rather than one: four full-width cards is a lot of scrolling for
+     four numbers */
+  .site .impact-grid{grid-template-columns:repeat(2, 1fr); gap:12px;}
+  .site .impact-card{padding:20px 16px;}
+  .site .impact-value{font-size:34px;}
+  .site .impact-label{font-size:14px; margin-top:10px;}
+  .site .impact-sub{font-size:12px;}
+  .site .clients-bar{padding:4px 0;}
 }
