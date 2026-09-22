@@ -284,16 +284,8 @@ header nav{
   .hero-face{animation:none;}
 }
 
-/* A hand-drawn rule between the headline and the paragraph — the same
-   gesture as the block characters, and it stops the two blocks of type from
-   reading as one stack. */
-.hero-wave{
-  display:block; margin:18px auto 0;
-  width:clamp(140px, 17vw, 220px); height:auto;
-  color:var(--paper); opacity:.5;
-}
 .hero-sub{
-  margin:18px auto 0; font-size:15px; line-height:1.6; color:var(--text-dim);
+  margin:24px auto 0; font-size:15px; line-height:1.6; color:var(--text-dim);
   /* a short measure keeps it centred under the headline column rather than
      spanning wider than the type it belongs to */
   max-width:52ch;
@@ -1199,6 +1191,8 @@ html[dir="rtl"] .repeat-label,
 html[dir="rtl"] .sub-block-title,
 html[dir="rtl"] .field label,
 html[dir="rtl"] .section-head .kicker,
+html[dir="rtl"] .head-title,
+html[dir="rtl"] .head-tag,
 html[dir="rtl"] .placeholder-tag{
   letter-spacing:normal;
 }
@@ -1207,9 +1201,6 @@ html[dir="rtl"] .hero h1,
 html[dir="rtl"] .big-cta h2{
   text-transform:none;
 }
-/* the eyebrow leading rule flips to the right side automatically via flex,
-   but keep the hero paragraph readable width in RTL */
-html[dir="rtl"] .hero p{margin-left:0; margin-right:0;}
 /* the CTA/hero arrows are written as ← in Arabic strings already */
 
 /* ================================================================ */

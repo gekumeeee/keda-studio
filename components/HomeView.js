@@ -166,23 +166,6 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
                 </h1>
               )}
             </div>
-            {/* Drawn inline rather than loaded as a file: two paths, and it
-                takes the paper colour from CSS like any other type. */}
-            <svg className="hero-wave" viewBox="0 0 180 26" fill="none" aria-hidden="true">
-              <path
-                d="M4 10 q 12 -9 24 0 t 24 0 t 24 0 t 24 0 t 24 0 t 24 0"
-                stroke="currentColor"
-                strokeWidth="2.6"
-                strokeLinecap="round"
-              />
-              <path
-                d="M4 20 q 12 -9 24 0 t 24 0 t 24 0 t 24 0 t 24 0 t 24 0"
-                stroke="currentColor"
-                strokeWidth="2.6"
-                strokeLinecap="round"
-                opacity=".55"
-              />
-            </svg>
             <p className="hero-sub">{pick(settings.heroPara, lang)}</p>
             <a href="/contact" className="hero-cta magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
               {pick(settings.heroCtaLabel, lang)}
