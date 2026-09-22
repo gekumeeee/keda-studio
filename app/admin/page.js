@@ -5,6 +5,7 @@ import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
 import PortfolioVideo from '@/components/PortfolioVideo';
 import { formatAmount, invoiceTotals, contractTotal } from '@/lib/invoiceMath';
 import ReportsTab from '@/components/admin/ReportsTab';
+import ImageUpload from '@/components/admin/ImageUpload';
 
 const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
 const METHOD_LABELS = { whatsapp: 'WhatsApp', email: 'Email', call: 'Phone call' };
@@ -1864,8 +1865,8 @@ export default function AdminPage() {
               <Field label="Work included">
                 <input value={projectForm.work} onChange={(e) => setProjectForm((f) => ({ ...f, work: e.target.value }))} placeholder="e.g. Logo, Guidelines, Naming" />
               </Field>
-              <Field label="Thumbnail image URL (optional)">
-                <input value={projectForm.image} onChange={(e) => setProjectForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://…  (shows in the hero gallery, used as video poster)" />
+              <Field label="Photo (optional)" hint="shows in the hero cards and the showcase, and is the video's poster">
+                <ImageUpload value={projectForm.image} onChange={(url) => setProjectForm((f) => ({ ...f, image: url }))} />
               </Field>
               <Field label="Video URL (optional)" hint="direct .mp4 or a Facebook / YouTube / Instagram / TikTok / Vimeo link">
                 <input
