@@ -1,7 +1,9 @@
+import Link from 'next/link';
 import Header from './Header';
 import Footer from './Footer';
 import DiagMarquee from './DiagMarquee';
 import Reveal from './Reveal';
+import SectionHead from './SectionHead';
 import CountUp from './CountUp';
 import { UI, pick } from '@/lib/i18n';
 
@@ -14,10 +16,7 @@ export default function AboutView({ projectCount, clientCount, settings, lang = 
 
       <section className="marketing-section" style={{ paddingBottom: 40 }}>
         <div className="wrap">
-          <Reveal className="section-head center-head">
-            <div className="eyebrow center-eyebrow">{pick(settings.aboutEyebrow, lang)}</div>
-            <h1 className="big-heading">{pick(settings.aboutHeading, lang).replace(/\n/g, ' ')}</h1>
-          </Reveal>
+          <SectionHead level={1} title={pick(settings.aboutHeading, lang)} tag={pick(settings.aboutEyebrow, lang)} />
         </div>
       </section>
 
@@ -33,8 +32,10 @@ export default function AboutView({ projectCount, clientCount, settings, lang = 
               {settings.aboutImage ? (
                 <img src={settings.aboutImage} alt={pick(settings.aboutPanelHeading, lang)} />
               ) : (
+                // no photo set in the admin yet: the brand mark holds the
+                // space rather than the word "KEDA" typed in grey
                 <div className="about-panel-media-fallback" aria-hidden="true">
-                  <span>KEDA</span>
+                  <img src="/brand/keda-logomark-white.svg" alt="" />
                 </div>
               )}
             </div>
@@ -62,7 +63,7 @@ export default function AboutView({ projectCount, clientCount, settings, lang = 
               <span className="line1">{pick(settings.ctaLine1, lang)}</span>
               <span className="line2">{pick(settings.ctaLine2, lang)}</span>
             </h2>
-            <a href="/contact" className="cta-btn">{pick(settings.ctaButton, lang)}</a>
+            <Link href="/contact" className="cta-btn">{pick(settings.ctaButton, lang)}</Link>
           </Reveal>
         </div>
       </section>

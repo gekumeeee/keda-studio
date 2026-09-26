@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { BLOCKS } from '@/lib/blocks';
+import { SPLASH_COOKIE } from '@/lib/site';
 
 // A handful of the brand blocks, not the whole set — this is a one-shot
 // flourish, not the marquee. Picked for colour variety rather than any
@@ -21,28 +22,22 @@ const OFFSETS = [
   [50, 87],
 ];
 
-// Lives in the root layout, not any one page — see app/layout.js. Nav links
-// in this site (Header.js) are plain <a> tags, not next/link, so every click
-// between pages is a full document reload — the layout genuinely remounts
-// every time, not just on first open. sessionStorage is what actually limits
-// this to once per browser session rather than once per click.
+// Lives in the root layout (app/layout.js), which only renders it on the
+// first page of a browser session: the layout checks for the `keda_splash`
+// cookie, and this component sets that cookie once it has mounted. A session
+// cookie rather than sessionStorage, because the server can read it — so the
+// splash is part of the very first HTML, covering the page from the first
+// paint, and a returning view gets no splash markup at all. Reading
+// sessionStorage instead meant starting hidden and switching on after mount,
+// which let the real page flash up for a frame before being covered.
 //
-// Starts at not-visible (matching the server render, which can't read
-// sessionStorage) and only flips on in an effect after mount — the one
-// unavoidable trade-off is a single frame where the real page is visible
-// before the splash covers it, rather than a hydration mismatch.
+// No state here: the fade-out is a CSS animation (splashOut in globals.css)
+// that ends at visibility:hidden, and navigation between pages is client-side
+// (next/link), so the layout — and this — never remounts mid-session.
 export default function LoadingSplash() {
-  const [visible, setVisible] = useState(false);
-
   useEffect(() => {
-    if (sessionStorage.getItem('keda-splash-seen')) return;
-    sessionStorage.setItem('keda-splash-seen', '1');
-    setVisible(true);
-    const timer = setTimeout(() => setVisible(false), 1700);
-    return () => clearTimeout(timer);
+    document.cookie = `${SPLASH_COOKIE}=1; path=/; SameSite=Lax`;
   }, []);
-
-  if (!visible) return null;
 
   return (
     <div className="loading-splash" aria-hidden="true">

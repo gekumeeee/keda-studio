@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import Header from './Header';
 import Footer from './Footer';
 import GlyphStrip from './GlyphStrip';
@@ -11,6 +12,7 @@ import StatCounter from './StatCounter';
 import RotatingWord from './RotatingWord';
 import HeroFaces from './HeroFaces';
 import ClientCardFan from './ClientCardFan';
+import SectionHead from './SectionHead';
 import AccentGlyph from './AccentGlyph';
 import GlyphIcon from './GlyphIcon';
 import PortfolioVideo from './PortfolioVideo';
@@ -70,33 +72,6 @@ function getShowcase(filter, projects, lang) {
     video: p.video || '',
     orientation: p.orientation || 'auto',
   };
-}
-
-// Every section is introduced the same way: the sentence, then the section's
-// own name in a chip beside it. `center` is for the one section whose content
-// is a centred grid rather than a row.
-function SectionHead({ title, tag, center = false }) {
-  return (
-    <Reveal className={`head-row${center ? ' is-center' : ''}`}>
-      <h2 className="head-title">{String(title).replace(/\n/g, ' ')}</h2>
-      {tag ? (
-        <span className="head-tag">
-          <Sparkle />
-          {tag}
-        </span>
-      ) : null}
-    </Reveal>
-  );
-}
-
-// The four-point burst beside the section name — the same drawn-by-hand
-// register as the hero's wave, taking its colour from the text beside it.
-function Sparkle() {
-  return (
-    <svg className="sparkle" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 0 L14.4 9.6 L24 12 L14.4 14.4 L12 24 L9.6 14.4 L0 12 L9.6 9.6 Z" fill="currentColor" />
-    </svg>
-  );
 }
 
 // glyph shapes used inside the impact circles
@@ -167,9 +142,9 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
               )}
             </div>
             <p className="hero-sub">{pick(settings.heroPara, lang)}</p>
-            <a href="/contact" className="hero-cta magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
+            <Link href="/contact" className="hero-cta magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
               {pick(settings.heroCtaLabel, lang)}
-            </a>
+            </Link>
           </Reveal>
           {/* Built in app/page.js, where each image's colours are read so its
               character matches it. Renders nothing when no work has an image. */}
@@ -183,7 +158,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
         <div className="wrap">
           <SectionHead title={pick(settings.clientsHeading, lang)} tag={t.clientsTag} />
           <Reveal className="clients-bar">
-            <a href="/contact" className="add">{t.clientsAdd}</a>
+            <Link href="/contact" className="add">{t.clientsAdd}</Link>
             {/* a KEDA mark at each end of the row of other people's logos */}
             <AccentGlyph />
             <div className="clients-marquee">
@@ -266,7 +241,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
                   <div className="meta">{t.showcaseClient} <b>{showcase.client}</b></div>
                 ) : null}
                 <div className="meta">{t.showcaseWork} <b>{showcase.work}</b></div>
-                <a href="/portfolio" className="view-btn">{t.viewProject}</a>
+                <Link href="/portfolio" className="view-btn">{t.viewProject}</Link>
               </div>
               {showcase.video ? (
                 <PortfolioVideo src={showcase.video} poster={showcase.image} label={showcase.label} orientation={showcase.orientation} />
@@ -342,9 +317,9 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
               <span className="line1">{pick(settings.ctaLine1, lang)}</span>
               <span className="line2">{pick(settings.ctaLine2, lang)}</span>
             </h2>
-            <a href="/contact" className="cta-btn magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
+            <Link href="/contact" className="cta-btn magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
               {pick(settings.ctaButton, lang)}
-            </a>
+            </Link>
           </Reveal>
         </div>
       </section>

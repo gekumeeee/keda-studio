@@ -245,10 +245,6 @@ export default function AdminPage() {
   const [contractForm, setContractForm] = useState(EMPTY_CONTRACT);
   const [downloadingContractId, setDownloadingContractId] = useState(null);
 
-  useEffect(() => {
-    checkSession();
-  }, []);
-
   async function fetchJsonSafe(url, fallback) {
     try {
       const res = await fetch(url);
@@ -261,7 +257,12 @@ export default function AdminPage() {
 
   async function checkSession() {
     const res = await fetch('/api/auth/me');
-    const data = await res.json();
+    await applySession(await res.json());
+  }
+
+  // Split from checkSession so the first load can set state from a promise
+  // callback (below) rather than from the effect body itself.
+  async function applySession(data) {
     if (data.needsSetup) {
       setAuthStatus('needsSetup');
       return;
@@ -301,6 +302,26 @@ export default function AdminPage() {
     const list = await fetchJsonSafe('/api/users', []);
     setUsers(Array.isArray(list) ? list : []);
   }
+
+  // The first session check on mount. Kept after every function it reaches
+  // (checkSession → loadAll/loadUsers), and it only touches state once the
+  // request has come back, never synchronously inside the effect.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) applySession(data);
+      })
+      .catch(() => {
+        if (!cancelled) setAuthStatus('loggedOut');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // mount-only: re-checking the session on every render would log people out mid-edit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---- settings field setters ----
   const locVal = (key) => settingsForm[key]?.[editLang] ?? '';
@@ -980,7 +1001,7 @@ export default function AdminPage() {
         <div className="login-box">
           <div className="login-brand"><img src="/keda-white.png" alt="KEDA" /></div>
           <div className="logo">Set up your admin account</div>
-          <div className="sub">You're the first person here — choose the username and password you'll sign in with. You can add more people (with their own permissions) once you're in.</div>
+          <div className="sub">You&apos;re the first person here — choose the username and password you&apos;ll sign in with. You can add more people (with their own permissions) once you&apos;re in.</div>
           <form onSubmit={doSetup}>
             <Field label="Username">
               <input value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} placeholder="e.g. keda" autoComplete="username" />
@@ -1690,7 +1711,7 @@ export default function AdminPage() {
 
                   <div className="panel">
                     <div className="panel-head"><h3>About page</h3><span className="panel-tag">Mixed</span></div>
-                    <p className="field-hint" style={{ marginBottom: 14 }}>The full <b>/about</b> page — reuses the "About section" eyebrow, heading and body above for its top heading and panel text.</p>
+                    <p className="field-hint" style={{ marginBottom: 14 }}>The full <b>/about</b> page — reuses the &quot;About section&quot; eyebrow, heading and body above for its top heading and panel text.</p>
                     <Field label={`Panel heading (${isAr ? 'عربي' : 'English'})`}>
                       <input value={locVal('aboutPanelHeading')} onChange={setLoc('aboutPanelHeading')} placeholder="Who are we?" />
                     </Field>
@@ -1819,10 +1840,10 @@ export default function AdminPage() {
                   </a>
 
                   <p className="tab-intro" style={{ marginTop: 26, marginBottom: 14 }}>
-                    Restore from a backup file. On a freshly deployed site (after you've completed its own
+                    Restore from a backup file. On a freshly deployed site (after you&apos;ve completed its own
                     first-run setup), this brings everything back except user accounts — sign in with the new
                     owner login you just created, then use this. On a site that already has content,
-                    <b style={{ color: 'var(--red)' }}> this replaces it — there's no undo.</b>
+                    <b style={{ color: 'var(--red)' }}> this replaces it — there&apos;s no undo.</b>
                   </p>
                   <label className="btn-secondary" style={{ display: 'inline-flex', flex: 'none', cursor: importBusy ? 'default' : 'pointer', opacity: importBusy ? 0.6 : 1 }}>
                     {importBusy ? 'Importing…' : 'Restore from backup file'}

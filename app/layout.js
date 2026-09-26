@@ -1,7 +1,7 @@
 import './globals.css';
 import { cookies } from 'next/headers';
 import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
-import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from '@/lib/site';
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SPLASH_COOKIE } from '@/lib/site';
 import LoadingSplash from '@/components/LoadingSplash';
 
 // Defaults every page inherits and can override. metadataBase is what makes
@@ -46,6 +46,8 @@ export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
   const lang = normalizeLang(cookieStore.get(LANG_COOKIE)?.value);
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  // first page of the browser session only — see components/LoadingSplash.js
+  const showSplash = !cookieStore.has(SPLASH_COOKIE);
 
   return (
     <html lang={lang} dir={dir}>
@@ -58,7 +60,7 @@ export default async function RootLayout({ children }) {
         />
       </head>
       <body>
-        <LoadingSplash />
+        {showSplash ? <LoadingSplash /> : null}
         <img src="/brand/keda-logomark-white.svg" alt="" aria-hidden="true" className="site-watermark" />
         {children}
       </body>

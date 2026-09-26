@@ -5,6 +5,7 @@ import Header from './Header';
 import Footer from './Footer';
 import DiagMarquee from './DiagMarquee';
 import Reveal from './Reveal';
+import SectionHead from './SectionHead';
 import PortfolioVideo from './PortfolioVideo';
 import { getVideoEmbed, guessEmbedOrientation } from '@/lib/videoEmbed';
 import { UI, pick } from '@/lib/i18n';
@@ -81,15 +82,8 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
 
       <section className="marketing-section" style={{ paddingBottom: 0 }}>
         <div className="wrap">
-          <Reveal className="section-head center-head">
-            <div className="eyebrow center-eyebrow">{pick(settings.portfolioEyebrow, lang)}</div>
-            <div className="big-heading two-tone-center">
-              {pick(settings.portfolioHeading, lang).split('\n').map((line, i) => (
-                <span key={i}>{i === 0 ? line : <b>{line}</b>}{i === 0 ? ' ' : ''}</span>
-              ))}
-            </div>
-          </Reveal>
-          <Reveal className="filters center-filters">
+          <SectionHead level={1} title={pick(settings.portfolioHeading, lang)} tag={pick(settings.portfolioEyebrow, lang)} />
+          <Reveal className="filters">
             {FILTERS.map((f) => (
               <button
                 key={f}

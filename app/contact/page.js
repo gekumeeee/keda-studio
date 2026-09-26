@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import GlyphStrip from '@/components/GlyphStrip';
 import ContactForm from '@/components/ContactForm';
 import EmailCopy from '@/components/EmailCopy';
+import SectionHead from '@/components/SectionHead';
 import { UI, pick } from '@/lib/i18n';
 import { pageMetadata } from '@/lib/site';
 
@@ -31,16 +32,16 @@ export default async function ContactPage() {
     <div className="site">
       <Header active="contact" settings={settings} lang={lang} />
 
-      {/* contact → cobalt. The band carries the heading only; the form below
+      {/* contact → cobalt. The block carries the heading only; the form below
           stays on the ink ground so its fields keep full contrast. */}
       <section className="page-hero">
         <div className="accent-band sec-cobalt">
-          <div className="wrap reveal in">
-            <div className="eyebrow">{t.contact.eyebrow}</div>
-            <h1 className="contact-big-heading">
-              <span>{pick(settings.contactHeadingLine1, lang)}</span>
-              <b>{pick(settings.contactHeadingLine2, lang)}</b>
-            </h1>
+          <div className="wrap">
+            <SectionHead
+              level={1}
+              title={`${pick(settings.contactHeadingLine1, lang)} ${pick(settings.contactHeadingLine2, lang)}`}
+              tag={t.contact.eyebrow}
+            />
           </div>
         </div>
       </section>
