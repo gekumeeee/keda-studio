@@ -16,7 +16,7 @@ export async function PUT(request, { params }) {
   if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
-  const contracts = await getContracts();
+  const contracts = await getContracts({ fresh: true });
   const idx = contracts.findIndex((c) => c.id === id);
   if (idx === -1) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -45,7 +45,7 @@ export async function DELETE(request, { params }) {
   const gate = await requirePermission('contracts');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const contracts = await getContracts();
+  const contracts = await getContracts({ fresh: true });
   await saveContracts(contracts.filter((c) => c.id !== id));
   return NextResponse.json({ ok: true });
 }

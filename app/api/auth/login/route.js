@@ -7,7 +7,7 @@ export async function POST(request) {
   const body = await request.json();
   const username = (body.username || '').trim();
   const password = body.password || '';
-  const users = await getUsers();
+  const users = await getUsers({ fresh: true });
   const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
 
   // Same generic error whether the username doesn't exist or the password is

@@ -14,7 +14,7 @@ function cleanLoc(v) {
 export async function GET() {
   const gate = await requirePermission('settings');
   if (gate.error) return gate.error;
-  const saved = await getSettings();
+  const saved = await getSettings({ fresh: true });
   return NextResponse.json(mergeSettings(saved));
 }
 

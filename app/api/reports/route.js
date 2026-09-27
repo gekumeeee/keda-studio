@@ -9,7 +9,7 @@ export async function GET(request) {
   const gate = await requirePermission('reports');
   if (gate.error) return gate.error;
   const clientId = new URL(request.url).searchParams.get('clientId');
-  const reports = await getReports();
+  const reports = await getReports({ fresh: true });
   const filtered = clientId ? reports.filter((r) => r.clientId === clientId) : reports;
   return NextResponse.json([...filtered].sort((a, b) => b.month.localeCompare(a.month)));
 }
@@ -21,7 +21,7 @@ export async function POST(request) {
   if (!body.clientId || !body.month) {
     return NextResponse.json({ error: 'clientId and month are required' }, { status: 400 });
   }
-  const reports = await getReports();
+  const reports = await getReports({ fresh: true });
   if (reports.some((r) => r.clientId === body.clientId && r.month === body.month)) {
     return NextResponse.json({ error: 'A report already exists for this client and month' }, { status: 409 });
   }

@@ -7,7 +7,7 @@ import { hashPassword, createSessionToken, SESSION_COOKIE_NAME, SESSION_TTL_SECO
 // after that, new users can only be created by the owner from inside the
 // admin panel (POST /api/users), never through this endpoint again.
 export async function POST(request) {
-  const users = await getUsers();
+  const users = await getUsers({ fresh: true });
   if (users.length > 0) {
     return NextResponse.json({ error: 'Setup already completed' }, { status: 403 });
   }

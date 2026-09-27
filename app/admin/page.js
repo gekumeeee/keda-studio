@@ -246,6 +246,8 @@ export default function AdminPage() {
   // folder that's open (a client id, or 'unassigned').
   const [projectFolder, setProjectFolder] = useState(null);
   const [bulkCategory, setBulkCategory] = useState('Branding');
+  // ids ticked in the open folder, for "Delete selected"
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [projectForm, setProjectForm] = useState({ title: '', category: 'Branding', clientId: '', client: '', work: '', image: '', video: '', orientation: 'auto', status: 'live' });
   const [fetchingTitle, setFetchingTitle] = useState(false);
   const [titleFetchError, setTitleFetchError] = useState(false);
@@ -680,8 +682,15 @@ export default function AdminPage() {
 
   async function deleteProject(id) {
     if (!confirm('Delete this project? This cannot be undone.')) return;
-    await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    // only take it off the list once the server has actually removed it —
+    // otherwise it would vanish here and quietly still be on the site
+    if (!res.ok) {
+      alert('Deleting failed — the project is still there. Try again.');
+      return;
+    }
     setProjects((prev) => prev.filter((p) => p.id !== id));
+    setSelectedProjectIds((prev) => prev.filter((x) => x !== id));
   }
 
   // Which client folder a project belongs to — the same rule the site uses to
@@ -713,6 +722,32 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: next.map((p) => p.id) }),
     });
+  }
+
+  function openProjectFolder(key) {
+    setProjectFolder(key);
+    setSelectedProjectIds([]);
+  }
+  function toggleProjectSelected(id) {
+    setSelectedProjectIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+  // Several at once goes to the server as ONE request (DELETE /api/projects
+  // with the ids), so the deletions can't overwrite each other.
+  async function deleteSelectedProjects() {
+    const ids = selectedProjectIds;
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} project${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    const res = await fetch('/api/projects', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) {
+      alert('Deleting failed — nothing was removed. Try again.');
+      return;
+    }
+    setProjects((prev) => prev.filter((p) => !ids.includes(p.id)));
+    setSelectedProjectIds([]);
   }
 
   // One uploaded photo becomes one untitled project of the open folder's client.
@@ -1160,7 +1195,7 @@ export default function AdminPage() {
               <div className="side-group" key={group.label}>
                 <div className="side-group-label">{group.label}</div>
                 {group.tabs.map((key) => (
-                  <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setClientDetailId(null); setProjectFolder(null); }}>
+                  <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setClientDetailId(null); openProjectFolder(null); }}>
                     <span className="side-icon">{TAB_ICONS[key]}</span>
                     {TAB_TITLES[key]}
                     {key === 'messages' && messages.length > 0 && <span className="side-badge">{messages.length}</span>}
@@ -1359,7 +1394,7 @@ export default function AdminPage() {
                           const cover = f.items.find((p) => p.image)?.image || f.client?.cardImage || '';
                           const drafts = f.items.filter((p) => p.status !== 'live').length;
                           return (
-                            <button type="button" className="folder-card" key={f.key} onClick={() => setProjectFolder(f.key)}>
+                            <button type="button" className="folder-card" key={f.key} onClick={() => openProjectFolder(f.key)}>
                               <div className="folder-cover">
                                 {cover ? <img src={cover} alt="" /> : <span className="folder-cover-empty">{f.items.length ? '▶' : '+'}</span>}
                               </div>
@@ -1385,7 +1420,7 @@ export default function AdminPage() {
 
             return (
               <section className="tab-panel active">
-                <button type="button" className="folder-back" onClick={() => setProjectFolder(null)}>← All clients</button>
+                <button type="button" className="folder-back" onClick={() => openProjectFolder(null)}>← All clients</button>
                 <div className="panel">
                   <div className="panel-head">
                     <div className="folder-title">
@@ -1406,15 +1441,42 @@ export default function AdminPage() {
                     </label>
                     <BulkPhotoUpload onUploaded={createPhotoProject} label={`Upload photos to ${open.name}`} />
                   </div>
+                  {selectedProjectIds.length > 0 ? (
+                    <div className="selection-bar">
+                      <span>{selectedProjectIds.length} selected</span>
+                      <button type="button" className="panel-head-link" onClick={() => setSelectedProjectIds([])}>Clear</button>
+                      <button type="button" className="danger-btn" onClick={deleteSelectedProjects}>Delete selected</button>
+                    </div>
+                  ) : null}
                   <p className="field-hint" style={{ margin: '14px 0' }}>Photos uploaded here go live with no name on them; add a title from Edit if you want one shown. The ↑ / ↓ arrows set the order on the portfolio page.</p>
                   <table>
-                    <thead><tr><th>Order</th><th>Project</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th className="check-cell">
+                          <input
+                            type="checkbox"
+                            aria-label="Select all"
+                            checked={open.items.length > 0 && open.items.every((p) => selectedProjectIds.includes(p.id))}
+                            onChange={(e) => setSelectedProjectIds(e.target.checked ? open.items.map((p) => p.id) : [])}
+                          />
+                        </th>
+                        <th>Order</th><th>Project</th><th>Category</th><th>Status</th><th>Updated</th><th></th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {open.items.length === 0 ? (
-                        <tr><td colSpan={6}><div className="empty">Nothing here yet — upload this client&apos;s photos above.</div></td></tr>
+                        <tr><td colSpan={7}><div className="empty">Nothing here yet — upload this client&apos;s photos above.</div></td></tr>
                       ) : (
                         open.items.map((p, idx) => (
-                          <tr key={p.id}>
+                          <tr key={p.id} className={selectedProjectIds.includes(p.id) ? 'is-selected' : ''}>
+                            <td className="check-cell">
+                              <input
+                                type="checkbox"
+                                aria-label={`Select ${p.title || 'photo'}`}
+                                checked={selectedProjectIds.includes(p.id)}
+                                onChange={() => toggleProjectSelected(p.id)}
+                              />
+                            </td>
                             <td>
                               <div className="order-controls">
                                 <button type="button" className="order-btn" onClick={() => moveProjectInFolder(p.id, -1)} disabled={idx === 0} aria-label="Move up">↑</button>

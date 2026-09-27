@@ -3,7 +3,7 @@ import { getUsers } from '@/lib/store';
 import { getSessionUser, userPermissions } from '@/lib/auth';
 
 export async function GET() {
-  const users = await getUsers();
+  const users = await getUsers({ fresh: true });
   if (users.length === 0) {
     return NextResponse.json({ needsSetup: true, user: null, permissions: null });
   }

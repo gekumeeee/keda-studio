@@ -30,7 +30,7 @@ function normalizeContract(body, base = {}) {
 export async function GET() {
   const gate = await requirePermission('contracts');
   if (gate.error) return gate.error;
-  return NextResponse.json(await getContracts());
+  return NextResponse.json(await getContracts({ fresh: true }));
 }
 
 export async function POST(request) {
@@ -40,7 +40,7 @@ export async function POST(request) {
   if (!body.title?.trim()) {
     return NextResponse.json({ error: 'Contract title is required' }, { status: 400 });
   }
-  const contracts = await getContracts();
+  const contracts = await getContracts({ fresh: true });
   const contract = {
     id: uid(),
     ...normalizeContract(body),

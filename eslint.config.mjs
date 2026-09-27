@@ -17,12 +17,6 @@ const eslintConfig = defineConfig([
       "@next/next/no-page-custom-font": "off",
     },
   },
-  {
-    // These are @react-pdf/renderer <Image> elements, drawn into a PDF, not
-    // HTML — they have no alt attribute to give.
-    files: ["lib/pdfTemplates.js"],
-    rules: { "jsx-a11y/alt-text": "off" },
-  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

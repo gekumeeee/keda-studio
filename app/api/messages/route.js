@@ -7,7 +7,7 @@ import { clientIp, isBot, isRateLimited, validateMessage } from '@/lib/spamGuard
 export async function GET() {
   const gate = await requirePermission('messages');
   if (gate.error) return gate.error;
-  return NextResponse.json(await getMessages());
+  return NextResponse.json(await getMessages({ fresh: true }));
 }
 
 // Intentionally NOT gated — this is the public contact form's submit
@@ -38,7 +38,7 @@ export async function POST(request) {
   const { error, data } = validateMessage(body);
   if (error) return NextResponse.json({ error }, { status: 400 });
 
-  const messages = await getMessages();
+  const messages = await getMessages({ fresh: true });
   const message = {
     id: uid(),
     name: data.name,
@@ -59,7 +59,7 @@ export async function POST(request) {
   // cut the request off mid-flight; lib/notify.js caps how long that wait
   // can be.
   try {
-    const status = await notifyNewMessage(message, await getSettings());
+    const status = await notifyNewMessage(message, await getSettings({ fresh: true }));
     if (status !== 'sent') console.warn(`[contact] notification ${status}`);
   } catch (err) {
     console.error('[contact] notification failed — message is still saved:', err);

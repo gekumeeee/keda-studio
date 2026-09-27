@@ -5,7 +5,7 @@ import { requirePermission } from '@/lib/auth';
 export async function GET() {
   const gate = await requirePermission('clients');
   if (gate.error) return gate.error;
-  return NextResponse.json(await getClients());
+  return NextResponse.json(await getClients({ fresh: true }));
 }
 
 export async function POST(request) {
@@ -15,7 +15,7 @@ export async function POST(request) {
   if (!body.name || !body.name.trim()) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
-  const clients = await getClients();
+  const clients = await getClients({ fresh: true });
   const client = {
     id: uid(),
     name: body.name.trim(),

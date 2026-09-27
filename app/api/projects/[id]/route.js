@@ -7,7 +7,7 @@ export async function PUT(request, { params }) {
   if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
-  const projects = await getProjects();
+  const projects = await getProjects({ fresh: true });
   const idx = projects.findIndex((p) => p.id === id);
   if (idx === -1) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -35,7 +35,7 @@ export async function DELETE(request, { params }) {
   const gate = await requirePermission('projects');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const projects = await getProjects();
+  const projects = await getProjects({ fresh: true });
   await saveProjects(projects.filter((p) => p.id !== id));
   return NextResponse.json({ ok: true });
 }

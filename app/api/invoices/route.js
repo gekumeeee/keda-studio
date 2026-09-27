@@ -14,7 +14,7 @@ function normalizeSections(sections) {
 export async function GET() {
   const gate = await requirePermission('invoices');
   if (gate.error) return gate.error;
-  return NextResponse.json(await getInvoices());
+  return NextResponse.json(await getInvoices({ fresh: true }));
 }
 
 export async function POST(request) {
@@ -24,7 +24,7 @@ export async function POST(request) {
   if (!body.projectName?.trim()) {
     return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
   }
-  const invoices = await getInvoices();
+  const invoices = await getInvoices({ fresh: true });
   const status = ['draft', 'sent', 'paid'].includes(body.status) ? body.status : 'draft';
   const invoice = {
     id: uid(),

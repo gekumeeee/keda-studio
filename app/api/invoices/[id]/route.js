@@ -16,7 +16,7 @@ export async function PUT(request, { params }) {
   if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
-  const invoices = await getInvoices();
+  const invoices = await getInvoices({ fresh: true });
   const idx = invoices.findIndex((i) => i.id === id);
   if (idx === -1) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -50,7 +50,7 @@ export async function DELETE(request, { params }) {
   const gate = await requirePermission('invoices');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const invoices = await getInvoices();
+  const invoices = await getInvoices({ fresh: true });
   await saveInvoices(invoices.filter((i) => i.id !== id));
   return NextResponse.json({ ok: true });
 }

@@ -12,7 +12,7 @@ export async function PUT(request, { params }) {
   if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
-  const plans = await getPlans();
+  const plans = await getPlans({ fresh: true });
   const idx = plans.findIndex((p) => p.id === id);
   if (idx === -1) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -35,7 +35,7 @@ export async function DELETE(request, { params }) {
   const gate = await requirePermission('plans');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const plans = await getPlans();
+  const plans = await getPlans({ fresh: true });
   await savePlans(plans.filter((p) => p.id !== id));
   return NextResponse.json({ ok: true });
 }

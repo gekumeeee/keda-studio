@@ -10,7 +10,7 @@ function normalizeItems(items) {
 export async function GET() {
   const gate = await requirePermission('plans');
   if (gate.error) return gate.error;
-  return NextResponse.json(await getPlans());
+  return NextResponse.json(await getPlans({ fresh: true }));
 }
 
 export async function POST(request) {
@@ -20,7 +20,7 @@ export async function POST(request) {
   if (!body.name?.trim()) {
     return NextResponse.json({ error: 'Plan name is required' }, { status: 400 });
   }
-  const plans = await getPlans();
+  const plans = await getPlans({ fresh: true });
   const plan = {
     id: uid(),
     name: body.name.trim(),

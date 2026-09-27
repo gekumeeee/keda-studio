@@ -22,8 +22,8 @@ export async function GET() {
     projects, clients, messages, settings, invoices, plans,
     contracts, reportClients, reports, users,
   ] = await Promise.all([
-    getProjects(), getClients(), getMessages(), getSettings(), getInvoices(), getPlans(),
-    getContracts(), getReportClients(), getReports(), getUsers(),
+    getProjects({ fresh: true }), getClients({ fresh: true }), getMessages({ fresh: true }), getSettings({ fresh: true }), getInvoices({ fresh: true }), getPlans({ fresh: true }),
+    getContracts({ fresh: true }), getReportClients({ fresh: true }), getReports({ fresh: true }), getUsers({ fresh: true }),
   ]);
 
   const backup = {

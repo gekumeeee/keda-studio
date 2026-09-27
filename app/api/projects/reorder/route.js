@@ -14,7 +14,7 @@ export async function POST(request) {
   if (!ids) {
     return NextResponse.json({ error: 'ids array required' }, { status: 400 });
   }
-  const projects = await getProjects();
+  const projects = await getProjects({ fresh: true });
   const byId = new Map(projects.map((p) => [p.id, p]));
   const ordered = ids.map((id) => byId.get(id)).filter(Boolean);
   // Safety: append any stored projects that weren't in the incoming list so

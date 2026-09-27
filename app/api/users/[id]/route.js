@@ -28,7 +28,7 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const users = await getUsers();
+  const users = await getUsers({ fresh: true });
   const idx = users.findIndex((u) => u.id === id);
   if (idx === -1) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -71,7 +71,7 @@ export async function DELETE(request, { params }) {
   if (gate.user.role !== 'owner') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const users = await getUsers();
+  const users = await getUsers({ fresh: true });
   const target = users.find((u) => u.id === id);
   if (target?.role === 'owner') {
     return NextResponse.json({ error: 'The owner account cannot be deleted' }, { status: 400 });

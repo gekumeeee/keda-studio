@@ -19,7 +19,7 @@ function normalizePermissions(input) {
 export async function GET() {
   const gate = await requireOwner();
   if (gate.error) return gate.error;
-  const users = await getUsers();
+  const users = await getUsers({ fresh: true });
   return NextResponse.json(users.map(stripHash));
 }
 
@@ -37,7 +37,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
   }
 
-  const users = await getUsers();
+  const users = await getUsers({ fresh: true });
   if (users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
     return NextResponse.json({ error: 'That username is already taken' }, { status: 409 });
   }

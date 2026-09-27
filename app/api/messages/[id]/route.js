@@ -6,7 +6,7 @@ export async function DELETE(request, { params }) {
   const gate = await requirePermission('messages');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const messages = await getMessages();
+  const messages = await getMessages({ fresh: true });
   await saveMessages(messages.filter((m) => m.id !== id));
   return NextResponse.json({ ok: true });
 }

@@ -2072,3 +2072,19 @@ html[dir="rtl"] .site .client-gallery-head h2{letter-spacing:normal;}
 }
 .bulk-upload{display:flex; flex-direction:column; gap:8px;}
 .bulk-upload .add-btn:disabled{opacity:.7; cursor:progress;}
+
+/* ---- admin: selecting projects to delete together ---- */
+.check-cell{width:34px;}
+.check-cell input{width:16px; height:16px; accent-color:var(--orange); cursor:pointer;}
+#dashboard tr.is-selected td{background:rgba(245,241,232,0.04);}
+.selection-bar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin-top:14px; padding:10px 14px; border-radius:10px;
+  background:rgba(224,101,74,0.08); border:1px solid rgba(224,101,74,0.35); font-size:13px;
+}
+.selection-bar span{margin-inline-end:auto; font-weight:600;}
+.danger-btn{
+  cursor:pointer; font:inherit; font-size:12px; font-weight:700;
+  color:#fff; background:var(--red); border:0; border-radius:999px; padding:7px 16px;
+}
+.danger-btn:hover, .danger-btn:focus-visible{filter:brightness(1.1);}

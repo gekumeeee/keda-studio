@@ -11,7 +11,7 @@ export async function GET(request, { params }) {
   const gate = await requirePermission('reports');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const reports = await getReports();
+  const reports = await getReports({ fresh: true });
   const report = reports.find((r) => r.id === id);
   if (!report) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(report);
@@ -28,7 +28,7 @@ export async function PUT(request, { params }) {
   if (gate.error) return gate.error;
   const { id } = await params;
   const body = await request.json();
-  const reports = await getReports();
+  const reports = await getReports({ fresh: true });
   const idx = reports.findIndex((r) => r.id === id);
   if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const cur = reports[idx];
@@ -46,7 +46,7 @@ export async function DELETE(request, { params }) {
   const gate = await requirePermission('reports');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const reports = await getReports();
+  const reports = await getReports({ fresh: true });
   await saveReports(reports.filter((r) => r.id !== id));
   return NextResponse.json({ ok: true });
 }
