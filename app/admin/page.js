@@ -6,6 +6,7 @@ import PortfolioVideo from '@/components/PortfolioVideo';
 import { formatAmount, invoiceTotals, contractTotal } from '@/lib/invoiceMath';
 import ReportsTab from '@/components/admin/ReportsTab';
 import ImageUpload from '@/components/admin/ImageUpload';
+import BulkPhotoUpload from '@/components/admin/BulkPhotoUpload';
 
 const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
 const METHOD_LABELS = { whatsapp: 'WhatsApp', email: 'Email', call: 'Phone call' };
@@ -241,6 +242,10 @@ export default function AdminPage() {
 
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState(null);
+  // Projects tab: null = the grid of client folders; otherwise the key of the
+  // folder that's open (a client id, or 'unassigned').
+  const [projectFolder, setProjectFolder] = useState(null);
+  const [bulkCategory, setBulkCategory] = useState('Branding');
   const [projectForm, setProjectForm] = useState({ title: '', category: 'Branding', clientId: '', client: '', work: '', image: '', video: '', orientation: 'auto', status: 'live' });
   const [fetchingTitle, setFetchingTitle] = useState(false);
   const [titleFetchError, setTitleFetchError] = useState(false);
@@ -603,7 +608,7 @@ export default function AdminPage() {
     setImportBusy(false);
   }
 
-  function openProjectModal(project) {
+  function openProjectModal(project, presetClient = null) {
     if (project) {
       setEditingProjectId(project.id);
       setProjectForm({
@@ -619,7 +624,11 @@ export default function AdminPage() {
       });
     } else {
       setEditingProjectId(null);
-      setProjectForm({ title: '', category: 'Branding', clientId: '', client: '', work: '', image: '', video: '', orientation: 'auto', status: 'live' });
+      setProjectForm({
+        title: '', category: 'Branding',
+        clientId: presetClient?.id || '', client: presetClient?.name || '',
+        work: '', image: '', video: '', orientation: 'auto', status: 'live',
+      });
     }
     setTitleFetchError(false);
     setProjectModalOpen(true);
@@ -627,7 +636,6 @@ export default function AdminPage() {
 
   async function saveProject(e) {
     e.preventDefault();
-    if (!projectForm.title.trim()) return;
     if (editingProjectId) {
       const res = await fetch(`/api/projects/${editingProjectId}`, {
         method: 'PUT',
@@ -676,11 +684,27 @@ export default function AdminPage() {
     setProjects((prev) => prev.filter((p) => p.id !== id));
   }
 
-  // Move a project up or down in the list. The array order is what decides the
-  // order on the /portfolio page, so this sets which project shows first.
-  function moveProject(index, dir) {
-    const target = index + dir;
-    if (target < 0 || target >= projects.length) return;
+  // Which client folder a project belongs to — the same rule the site uses to
+  // group work: its linked client, else a client whose name it carries, else
+  // "unassigned".
+  function projectFolderKey(p) {
+    if (p.clientId && clients.some((c) => c.id === p.clientId)) return p.clientId;
+    const byName = p.client && clients.find((c) => c.name === p.client);
+    return byName ? byName.id : 'unassigned';
+  }
+
+  // Up/down inside a folder: swaps the project with the next one of the SAME
+  // client in the overall order, which is what the portfolio page reads.
+  function moveProjectInFolder(id, dir) {
+    const inFolder = projects.filter((p) => projectFolderKey(p) === projectFolder);
+    const pos = inFolder.findIndex((p) => p.id === id);
+    const other = inFolder[pos + dir];
+    if (!other) return;
+    const a = projects.findIndex((p) => p.id === id);
+    const b = projects.findIndex((p) => p.id === other.id);
+    moveProjectTo(a, b);
+  }
+  function moveProjectTo(index, target) {
     const next = [...projects];
     [next[index], next[target]] = [next[target], next[index]];
     setProjects(next);
@@ -689,6 +713,22 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: next.map((p) => p.id) }),
     });
+  }
+
+  // One uploaded photo becomes one untitled project of the open folder's client.
+  async function createPhotoProject(url) {
+    const client = clients.find((c) => c.id === projectFolder) || null;
+    const res = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '', category: bulkCategory, clientId: client?.id || '', client: client?.name || '',
+        image: url, status: 'live',
+      }),
+    });
+    if (!res.ok) throw new Error('saving the project failed');
+    const created = await res.json();
+    setProjects((prev) => [created, ...prev]);
   }
 
   function openClientModal(client) {
@@ -1120,7 +1160,7 @@ export default function AdminPage() {
               <div className="side-group" key={group.label}>
                 <div className="side-group-label">{group.label}</div>
                 {group.tabs.map((key) => (
-                  <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setClientDetailId(null); }}>
+                  <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setClientDetailId(null); setProjectFolder(null); }}>
                     <span className="side-icon">{TAB_ICONS[key]}</span>
                     {TAB_TITLES[key]}
                     {key === 'messages' && messages.length > 0 && <span className="side-badge">{messages.length}</span>}
@@ -1285,58 +1325,130 @@ export default function AdminPage() {
             </section>
           )}
 
-          {tab === 'projects' && (
-            <section className="tab-panel active">
-              <div className="panel">
-                <div className="panel-head">
-                  <h3>Projects</h3>
-                  <button type="button" className="add-btn" onClick={() => openProjectModal(null)}>+ Add Project</button>
-                </div>
-                <p className="field-hint" style={{ marginBottom: 14 }}>Use the ↑ / ↓ arrows to set the order — the topmost project shows first on the portfolio page.</p>
-                <table>
-                  <thead><tr><th>Order</th><th>Project</th><th>Client</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
-                  <tbody>
-                    {projects.length === 0 ? (
-                      <tr><td colSpan={7}><div className="empty">No projects yet — add your first case study to show it here and on the homepage.</div></td></tr>
+          {tab === 'projects' && (() => {
+            // One folder per client, in the Clients tab's order, then
+            // "No client" for work that has none. The site groups work the
+            // same way, so a folder here is a strip on the portfolio page.
+            const folders = [
+              ...clients.map((c) => ({ key: c.id, name: c.name, logo: c.logo, client: c })),
+              { key: 'unassigned', name: 'No client', logo: '', client: null },
+            ]
+              .map((f) => ({ ...f, items: projects.filter((p) => projectFolderKey(p) === f.key) }))
+              .filter((f) => f.key !== 'unassigned' || f.items.length > 0);
+            const open = folders.find((f) => f.key === projectFolder);
+
+            if (!open) {
+              return (
+                <section className="tab-panel active">
+                  <div className="panel">
+                    <div className="panel-head">
+                      <h3>Clients</h3>
+                      <div className="panel-head-actions">
+                        {permissions.clients ? (
+                          <button type="button" className="panel-head-link" onClick={() => openClientModal(null)}>+ New client</button>
+                        ) : null}
+                        <button type="button" className="add-btn" onClick={() => openProjectModal(null)}>+ Add Project</button>
+                      </div>
+                    </div>
+                    <p className="field-hint" style={{ marginBottom: 16 }}>Open a client to add its work — upload many photos at once, and each one becomes a project.</p>
+                    {folders.length === 0 ? (
+                      <div className="empty">No clients yet — add one in Clients, then open it here to upload its work.</div>
                     ) : (
-                      projects.map((p, idx) => (
-                        <tr key={p.id}>
-                          <td>
-                            <div className="order-controls">
-                              <button type="button" className="order-btn" onClick={() => moveProject(idx, -1)} disabled={idx === 0} aria-label="Move up">↑</button>
-                              <button type="button" className="order-btn" onClick={() => moveProject(idx, 1)} disabled={idx === projects.length - 1} aria-label="Move down">↓</button>
-                            </div>
-                          </td>
-                          <td>
-                            {/* the picture is what you recognise a project by —
-                                a list of titles alone is hard to scan */}
-                            <div className="project-cell">
-                              {p.image ? (
-                                <img className="project-thumb" src={p.image} alt="" />
-                              ) : (
-                                <span className="project-thumb project-thumb-empty" aria-hidden="true">{p.video ? '▶' : '—'}</span>
-                              )}
-                              <span>{p.title}</span>
-                            </div>
-                          </td>
-                          <td className="muted-cell">{p.client && p.client !== 'Placeholder' ? p.client : '—'}</td>
-                          <td>{p.category}</td>
-                          <td><span className={`status ${p.status}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span></td>
-                          <td className="nowrap">{fmtDate(p.updated)}</td>
-                          <td>
-                            <div className="row-actions">
-                              <button type="button" onClick={() => openProjectModal(p)}>Edit</button>
-                              <button type="button" className="danger" onClick={() => deleteProject(p.id)}>Delete</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      <div className="folder-grid">
+                        {folders.map((f) => {
+                          const cover = f.items.find((p) => p.image)?.image || f.client?.cardImage || '';
+                          const drafts = f.items.filter((p) => p.status !== 'live').length;
+                          return (
+                            <button type="button" className="folder-card" key={f.key} onClick={() => setProjectFolder(f.key)}>
+                              <div className="folder-cover">
+                                {cover ? <img src={cover} alt="" /> : <span className="folder-cover-empty">{f.items.length ? '▶' : '+'}</span>}
+                              </div>
+                              <div className="folder-meta">
+                                {f.logo ? <img className="folder-logo" src={f.logo} alt="" /> : null}
+                                <div>
+                                  <div className="folder-name">{f.name}</div>
+                                  <div className="folder-count">
+                                    {f.items.length} project{f.items.length === 1 ? '' : 's'}
+                                    {drafts ? ` · ${drafts} draft${drafts === 1 ? '' : 's'}` : ''}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
+                  </div>
+                </section>
+              );
+            }
+
+            return (
+              <section className="tab-panel active">
+                <button type="button" className="folder-back" onClick={() => setProjectFolder(null)}>← All clients</button>
+                <div className="panel">
+                  <div className="panel-head">
+                    <div className="folder-title">
+                      {open.logo ? <img className="folder-logo" src={open.logo} alt="" /> : null}
+                      <h3>{open.name}</h3>
+                    </div>
+                    <div className="panel-head-actions">
+                      <button type="button" className="panel-head-link" onClick={() => openProjectModal(null, open.client)}>+ Add project</button>
+                    </div>
+                  </div>
+                  {/* the fast way in: pick every photo for this client at once */}
+                  <div className="bulk-bar">
+                    <label className="bulk-bar-label">
+                      Category for new photos
+                      <select value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)}>
+                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </label>
+                    <BulkPhotoUpload onUploaded={createPhotoProject} label={`Upload photos to ${open.name}`} />
+                  </div>
+                  <p className="field-hint" style={{ margin: '14px 0' }}>Photos uploaded here go live with no name on them; add a title from Edit if you want one shown. The ↑ / ↓ arrows set the order on the portfolio page.</p>
+                  <table>
+                    <thead><tr><th>Order</th><th>Project</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                    <tbody>
+                      {open.items.length === 0 ? (
+                        <tr><td colSpan={6}><div className="empty">Nothing here yet — upload this client&apos;s photos above.</div></td></tr>
+                      ) : (
+                        open.items.map((p, idx) => (
+                          <tr key={p.id}>
+                            <td>
+                              <div className="order-controls">
+                                <button type="button" className="order-btn" onClick={() => moveProjectInFolder(p.id, -1)} disabled={idx === 0} aria-label="Move up">↑</button>
+                                <button type="button" className="order-btn" onClick={() => moveProjectInFolder(p.id, 1)} disabled={idx === open.items.length - 1} aria-label="Move down">↓</button>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="project-cell">
+                                {p.image ? (
+                                  <img className="project-thumb" src={p.image} alt="" />
+                                ) : (
+                                  <span className="project-thumb project-thumb-empty" aria-hidden="true">{p.video ? '▶' : '—'}</span>
+                                )}
+                                {p.title ? <span>{p.title}</span> : <span className="muted-cell">Untitled — photo only</span>}
+                              </div>
+                            </td>
+                            <td>{p.category}</td>
+                            <td><span className={`status ${p.status}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span></td>
+                            <td className="nowrap">{fmtDate(p.updated)}</td>
+                            <td>
+                              <div className="row-actions">
+                                <button type="button" onClick={() => openProjectModal(p)}>Edit</button>
+                                <button type="button" className="danger" onClick={() => deleteProject(p.id)}>Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            );
+          })()}
 
           {tab === 'clients' && (() => {
             const detailClient = clientDetailId ? clients.find((c) => c.id === clientDetailId) : null;
@@ -1981,7 +2093,7 @@ export default function AdminPage() {
           <div className="modal-box">
             <h3>{editingProjectId ? 'Edit Project' : 'Add Project'}</h3>
             <form onSubmit={saveProject}>
-              <Field label="Title">
+              <Field label="Title (optional)" hint="leave it empty and the photo shows on the site on its own — no name on it">
                 <input value={projectForm.title} onChange={(e) => setProjectForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Sunset Coffee — Brand Identity" />
               </Field>
               <Field label="Category">

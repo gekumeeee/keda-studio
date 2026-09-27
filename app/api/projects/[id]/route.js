@@ -14,11 +14,13 @@ export async function PUT(request, { params }) {
   }
   projects[idx] = {
     ...projects[idx],
-    title: body.title?.trim() || projects[idx].title,
+    // title and work can be cleared on purpose — an untitled project shows
+    // its picture alone — so an empty string is kept, not read as "no change"
+    title: body.title !== undefined ? String(body.title).trim() : projects[idx].title,
     category: body.category || projects[idx].category,
     clientId: body.clientId !== undefined ? body.clientId.trim() : (projects[idx].clientId || ''),
     client: body.client?.trim() || projects[idx].client,
-    work: body.work?.trim() || projects[idx].work,
+    work: body.work !== undefined ? String(body.work).trim() : projects[idx].work,
     image: body.image !== undefined ? body.image.trim() : projects[idx].image,
     video: body.video !== undefined ? body.video.trim() : projects[idx].video,
     orientation: ['auto', 'landscape', 'portrait'].includes(body.orientation) ? body.orientation : (projects[idx].orientation || 'auto'),

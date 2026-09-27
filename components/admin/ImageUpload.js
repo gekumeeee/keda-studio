@@ -10,7 +10,7 @@ import { useRef, useState } from 'react';
 
 const MAX_EDGE = 2000;
 
-async function shrink(file) {
+export async function shrink(file) {
   // Formats the browser can't decode (HEIC on most desktops) go up as they
   // are; the server decodes those itself.
   let bitmap;
@@ -31,6 +31,17 @@ async function shrink(file) {
   return blob && blob.size < file.size ? blob : file;
 }
 
+// Shrinks and uploads one photo; resolves to its public URL or throws with a
+// message fit to show. Shared with BulkPhotoUpload.
+export async function uploadPhoto(file) {
+  const body = new FormData();
+  body.append('file', await shrink(file), file.name);
+  const res = await fetch('/api/admin/upload-image', { method: 'POST', body });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed — try again.');
+  return data.url;
+}
+
 export default function ImageUpload({ value, onChange, label = 'Upload photo' }) {
   const input = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -43,12 +54,7 @@ export default function ImageUpload({ value, onChange, label = 'Upload photo' })
     setError('');
     setBusy(true);
     try {
-      const body = new FormData();
-      body.append('file', await shrink(file), file.name);
-      const res = await fetch('/api/admin/upload-image', { method: 'POST', body });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed — try again.');
-      onChange(data.url);
+      onChange(await uploadPhoto(file));
     } catch (err) {
       setError(err.message || 'Upload failed — try again.');
     } finally {

@@ -13,17 +13,16 @@ export async function POST(request) {
   const gate = await requirePermission('projects');
   if (gate.error) return gate.error;
   const body = await request.json();
-  if (!body.title || !body.title.trim()) {
-    return NextResponse.json({ error: 'Title is required' }, { status: 400 });
-  }
+  // Title is optional: a project saved without one shows as the picture on
+  // its own on the site, with no caption over it.
   const projects = await getProjects();
   const project = {
     id: uid(),
-    title: body.title.trim(),
+    title: (body.title || '').trim(),
     category: body.category || 'Branding',
     clientId: (body.clientId || '').trim(),
     client: (body.client || '').trim() || 'Placeholder',
-    work: (body.work || '').trim() || 'Details coming soon',
+    work: (body.work || '').trim(),
     image: (body.image || '').trim(),
     video: (body.video || '').trim(),
     orientation: ['landscape', 'portrait'].includes(body.orientation) ? body.orientation : 'auto',

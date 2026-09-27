@@ -124,18 +124,18 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
                               ) : p.image ? (
                                 // Real image: shown at its own natural size
                                 // (plain <img>, not a background-image crop
-                                // box) — the category label still overlays
-                                // it, same as before.
+                                // box). A project saved without a title is
+                                // just the picture — no label or caption on it.
                                 <div className="work-card-img has-image">
-                                  <img src={p.image} alt={p.title} className="work-card-img-el" />
-                                  <span className="label">{p.category}</span>
+                                  <img src={p.image} alt={p.title || ''} className="work-card-img-el" />
+                                  {p.title ? <span className="label">{p.category}</span> : null}
                                 </div>
                               ) : (
                                 <div className="work-card-img" style={{ background: CARD_TINTS[i % CARD_TINTS.length] }}>
                                   <span className="label">{p.category}</span>
                                 </div>
                               )}
-                              <div className="gallery-card-caption">{p.title}</div>
+                              {p.title ? <div className="gallery-card-caption">{p.title}</div> : null}
                             </div>
                           </div>
                         ))}

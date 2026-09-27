@@ -236,11 +236,15 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
             </Reveal>
             <Reveal className="showcase" style={{ opacity: fading ? 0 : 1 }}>
               <div className="showcase-copy">
-                <h3>{showcase.title}</h3>
-                {showcase.client && showcase.client !== 'Placeholder' ? (
+                {/* an untitled project is led by its client's name instead;
+                    with neither, the copy starts at the meta lines */}
+                {showcase.title || (showcase.client && showcase.client !== 'Placeholder') ? (
+                  <h3>{showcase.title || showcase.client}</h3>
+                ) : null}
+                {showcase.title && showcase.client && showcase.client !== 'Placeholder' ? (
                   <div className="meta">{t.showcaseClient} <b>{showcase.client}</b></div>
                 ) : null}
-                <div className="meta">{t.showcaseWork} <b>{showcase.work}</b></div>
+                {showcase.work ? <div className="meta">{t.showcaseWork} <b>{showcase.work}</b></div> : null}
                 <Link href="/portfolio" className="view-btn">{t.viewProject}</Link>
               </div>
               {showcase.video ? (
@@ -250,7 +254,7 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
                 // but capped in height so a portrait shot can't stretch the row
                 // into a column of empty space beside it.
                 <div className="video-frame has-image">
-                  <img src={showcase.image} alt={showcase.title} className="video-frame-img" />
+                  <img src={showcase.image} alt={showcase.title || ''} className="video-frame-img" />
                 </div>
               ) : (
                 // No image at all yet — the gradient placeholder still needs
