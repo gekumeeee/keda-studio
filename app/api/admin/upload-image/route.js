@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requirePermission } from '@/lib/auth';
+import { requireUser, hasPermission } from '@/lib/auth';
 import { mediaUploadsConfigured, uploadImage } from '@/lib/githubMedia';
 
 // Takes one image from the admin, normalises it, and stores it in the GitHub
@@ -18,8 +18,13 @@ const MAX_EDGE = 2000;
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif'];
 
 export async function POST(request) {
-  const gate = await requirePermission('projects');
-  if (gate.error) return gate.error;
+  // Photos go into projects, client logos and covers, and site content — so
+  // anyone who can edit any of those can upload.
+  const { user, error } = await requireUser();
+  if (error) return error;
+  if (!['projects', 'clients', 'settings'].some((section) => hasPermission(user, section))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   if (!mediaUploadsConfigured()) {
     return NextResponse.json(

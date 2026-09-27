@@ -36,6 +36,15 @@ export default function ReportsTab() {
   const [creatingMonth, setCreatingMonth] = useState(false);
   const [monthError, setMonthError] = useState('');
 
+  // Escape closes the client form, like every other form in the admin
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') setClientModalOpen(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   useEffect(() => {
     loadClients();
   }, []);
@@ -163,8 +172,8 @@ export default function ReportsTab() {
                     <td>{fmtDate(r.updated)}</td>
                     <td>
                       <div className="row-actions">
-                        <span onClick={() => setSelectedReportId(r.id)}>Open</span>
-                        <span className="danger" onClick={() => deleteReport(r.id)}>Delete</span>
+                        <button type="button" onClick={() => setSelectedReportId(r.id)}>Open</button>
+                        <button type="button" className="danger" onClick={() => deleteReport(r.id)}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -208,9 +217,9 @@ export default function ReportsTab() {
                     </td>
                     <td>
                       <div className="row-actions">
-                        <span onClick={() => openClient(c.id)}>View</span>
-                        <span onClick={() => openClientModal(c)}>Edit</span>
-                        <span className="danger" onClick={() => deleteClient(c.id)}>Delete</span>
+                        <button type="button" onClick={() => openClient(c.id)}>View</button>
+                        <button type="button" onClick={() => openClientModal(c)}>Edit</button>
+                        <button type="button" className="danger" onClick={() => deleteClient(c.id)}>Delete</button>
                       </div>
                     </td>
                   </tr>

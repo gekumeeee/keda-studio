@@ -25,7 +25,7 @@ const TAB_TITLES = {
 const TAB_SUB = {
   overview: 'A quick look at your site at a glance.',
   projects: 'Case studies shown in the hero gallery and portfolio.',
-  clients: 'Client names shown in the “Selected Clients” bar.',
+  clients: 'The brands in the homepage clients bar — each one groups its projects on the site.',
   messages: 'Messages sent from your contact form.',
   invoices: 'Branded invoices you can send to clients as a PDF.',
   plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
@@ -35,6 +35,37 @@ const TAB_SUB = {
   users: 'Add people to the admin and control exactly what each of them can see and edit.',
   account: 'Change your own username and password.',
 };
+// Site Content's panels, as [chip label, start of the panel's own heading].
+// Matched on the heading text so the panels themselves need no ids.
+const CONTENT_SECTIONS = [
+  ['Brand', 'Brand'],
+  ['Hero', 'Hero'],
+  ['Services', 'Services'],
+  ['Headings', 'Sections headings'],
+  ['Portfolio', 'Portfolio page'],
+  ['Impact', 'Our Impact'],
+  ['About', 'About section'],
+  ['About page', 'About page'],
+  ['Contact page', 'Contact page'],
+  ['Call to action', 'Call to action'],
+  ['Footer', 'Footer'],
+  ['Social', 'Contact & social'],
+];
+function jumpToContentSection(heading) {
+  const h = [...document.querySelectorAll('.content-editor .panel-head h3')].find((el) => el.textContent.trim().startsWith(heading));
+  h?.closest('.panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// wa.me wants the number in international form with digits only. Numbers
+// typed the local Egyptian way (01xxxxxxxxx) get the 20 country code; one
+// already written with a + or a country code is left as it is.
+function whatsappNumber(phone) {
+  const digits = String(phone).replace(/[^0-9]/g, '');
+  if (digits.startsWith('00')) return digits.slice(2);
+  if (digits.startsWith('0')) return `20${digits.slice(1)}`;
+  return digits;
+}
+
 const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', reports: '◨', settings: '✎', users: '☺', account: '⚿' };
 // Every tab except 'overview' is gated by a matching permission key. 'overview'
 // has no key here — it's always shown to any logged-in user. 'users' isn't
@@ -302,6 +333,29 @@ export default function AdminPage() {
     const list = await fetchJsonSafe('/api/users', []);
     setUsers(Array.isArray(list) ? list : []);
   }
+
+  // Escape closes whichever form is open — the same as its Cancel button
+  // (nothing is saved). Only one of these is ever open at a time.
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key !== 'Escape') return;
+      setUserModalOpen(false);
+      setProjectModalOpen(false);
+      setClientModalOpen(false);
+      setInvoiceModalOpen(false);
+      setPlanModalOpen(false);
+      setProposalModalOpen(false);
+      setContractModalOpen(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // On a phone the sections sit in one sideways-scrolling row (globals.css),
+  // so the current one can be off-screen — bring it into view on change.
+  useEffect(() => {
+    document.querySelector('.side-links .side-link.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [tab]);
 
   // The first session check on mount. Kept after every function it reaches
   // (checkSession → loadAll/loadUsers), and it only touches state once the
@@ -1066,21 +1120,21 @@ export default function AdminPage() {
               <div className="side-group" key={group.label}>
                 <div className="side-group-label">{group.label}</div>
                 {group.tabs.map((key) => (
-                  <a key={key} className={tab === key ? 'active' : ''} onClick={() => { setTab(key); setClientDetailId(null); }}>
+                  <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setClientDetailId(null); }}>
                     <span className="side-icon">{TAB_ICONS[key]}</span>
                     {TAB_TITLES[key]}
                     {key === 'messages' && messages.length > 0 && <span className="side-badge">{messages.length}</span>}
-                  </a>
+                  </button>
                 ))}
               </div>
             ))}
             <div className="side-group">
               <div className="side-group-label">Account</div>
               {configureExtras.map((key) => (
-                <a key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+                <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
                   <span className="side-icon">{TAB_ICONS[key]}</span>
                   {TAB_TITLES[key]}
-                </a>
+                </button>
               ))}
             </div>
           </nav>
@@ -1088,7 +1142,7 @@ export default function AdminPage() {
             <div className="side-account-name">{currentUser?.username}</div>
             <div className="side-account-role">{isOwner ? 'Owner' : 'Member'}</div>
           </div>
-          <div className="logout" onClick={doLogout}>↩ Log out</div>
+          <button type="button" className="logout" onClick={doLogout}>↩ Log out</button>
         </aside>
 
         <main className="main">
@@ -1181,8 +1235,36 @@ export default function AdminPage() {
                 })()}
               </div>
 
+              {/* The money row above is all an owner saw of the website itself —
+                  how much is live, what's still a draft, who's listed. Each card
+                  opens the section it counts. Only shown alongside the money
+                  row: without billing access the cards above already are these. */}
+              {permissions.invoices ? (
+                <div className="stat-grid stat-grid-site">
+                  {[
+                    { label: 'Live projects', value: liveCount, delta: 'On the homepage & portfolio', to: 'projects', perm: 'projects' },
+                    { label: 'Drafts', value: projects.length - liveCount, delta: 'Hidden until set live', to: 'projects', perm: 'projects' },
+                    { label: 'Clients', value: clients.length, delta: 'In the clients bar', to: 'clients', perm: 'clients' },
+                    { label: 'Messages', value: messages.length, delta: 'From the contact form', to: 'messages', perm: 'messages' },
+                  ]
+                    .filter((c) => permissions[c.perm])
+                    .map((c) => (
+                      <button type="button" className="stat-card stat-card-link" key={c.label} onClick={() => setTab(c.to)}>
+                        <div className="label">{c.label}</div>
+                        <div className="value">{c.value}</div>
+                        <div className="delta">{c.delta} →</div>
+                      </button>
+                    ))}
+                </div>
+              ) : null}
+
               <div className="panel">
-                <div className="panel-head"><h3>Recent Messages</h3></div>
+                <div className="panel-head">
+                  <h3>Recent Messages</h3>
+                  {permissions.messages && messages.length > 0 ? (
+                    <button type="button" className="panel-head-link" onClick={() => setTab('messages')}>View all →</button>
+                  ) : null}
+                </div>
                 <table>
                   <thead><tr><th>From</th><th>Message</th><th>Received</th></tr></thead>
                   <tbody>
@@ -1212,10 +1294,10 @@ export default function AdminPage() {
                 </div>
                 <p className="field-hint" style={{ marginBottom: 14 }}>Use the ↑ / ↓ arrows to set the order — the topmost project shows first on the portfolio page.</p>
                 <table>
-                  <thead><tr><th>Order</th><th>Title</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                  <thead><tr><th>Order</th><th>Project</th><th>Client</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
                   <tbody>
                     {projects.length === 0 ? (
-                      <tr><td colSpan={6}><div className="empty">No projects yet — add your first case study to show it here and on the homepage.</div></td></tr>
+                      <tr><td colSpan={7}><div className="empty">No projects yet — add your first case study to show it here and on the homepage.</div></td></tr>
                     ) : (
                       projects.map((p, idx) => (
                         <tr key={p.id}>
@@ -1225,14 +1307,26 @@ export default function AdminPage() {
                               <button type="button" className="order-btn" onClick={() => moveProject(idx, 1)} disabled={idx === projects.length - 1} aria-label="Move down">↓</button>
                             </div>
                           </td>
-                          <td>{p.title}</td>
+                          <td>
+                            {/* the picture is what you recognise a project by —
+                                a list of titles alone is hard to scan */}
+                            <div className="project-cell">
+                              {p.image ? (
+                                <img className="project-thumb" src={p.image} alt="" />
+                              ) : (
+                                <span className="project-thumb project-thumb-empty" aria-hidden="true">{p.video ? '▶' : '—'}</span>
+                              )}
+                              <span>{p.title}</span>
+                            </div>
+                          </td>
+                          <td className="muted-cell">{p.client && p.client !== 'Placeholder' ? p.client : '—'}</td>
                           <td>{p.category}</td>
                           <td><span className={`status ${p.status}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span></td>
-                          <td>{fmtDate(p.updated)}</td>
+                          <td className="nowrap">{fmtDate(p.updated)}</td>
                           <td>
                             <div className="row-actions">
-                              <span onClick={() => openProjectModal(p)}>Edit</span>
-                              <span className="danger" onClick={() => deleteProject(p.id)}>Delete</span>
+                              <button type="button" onClick={() => openProjectModal(p)}>Edit</button>
+                              <button type="button" className="danger" onClick={() => deleteProject(p.id)}>Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -1278,7 +1372,7 @@ export default function AdminPage() {
                               <td>{p.title}</td>
                               <td>{p.category}</td>
                               <td><span className={`status ${p.status}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span></td>
-                              <td><div className="row-actions"><span onClick={() => openProjectModal(p)}>Edit</span></div></td>
+                              <td><div className="row-actions"><button type="button" onClick={() => openProjectModal(p)}>Edit</button></div></td>
                             </tr>
                           ))}
                         </tbody>
@@ -1301,7 +1395,7 @@ export default function AdminPage() {
                                 <td>{formatAmount(invoiceTotals(inv).total)} {inv.currency}</td>
                                 <td><span className={`inv-status ${st}`}>{INVOICE_STATUS_LABELS[st]}</span></td>
                                 <td>{fmtDate(inv.updated)}</td>
-                                <td><div className="row-actions"><span onClick={() => openInvoiceModal(inv)}>Edit</span></div></td>
+                                <td><div className="row-actions"><button type="button" onClick={() => openInvoiceModal(inv)}>Edit</button></div></td>
                               </tr>
                             );
                           })}
@@ -1326,7 +1420,7 @@ export default function AdminPage() {
                                 <td style={{ color: 'var(--text-dim)', fontSize: 12 }}>
                                   {c.startDate || c.endDate ? `${c.startDate ? fmtDate(c.startDate) : '—'} → ${c.endDate ? fmtDate(c.endDate) : 'open'}` : '—'}
                                 </td>
-                                <td><div className="row-actions"><span onClick={() => openContractModal(c)}>Edit</span></div></td>
+                                <td><div className="row-actions"><button type="button" onClick={() => openContractModal(c)}>Edit</button></div></td>
                               </tr>
                             );
                           })}
@@ -1341,25 +1435,26 @@ export default function AdminPage() {
               <section className="tab-panel active">
                 <div className="panel">
                   <div className="panel-head">
-                    <h3>Client Logos</h3>
+                    <h3>Clients</h3>
                     <button type="button" className="add-btn" onClick={() => openClientModal(null)}>+ Add Client</button>
                   </div>
                   <table>
-                    <thead><tr><th>Logo</th><th>Name</th><th>Added</th><th></th></tr></thead>
+                    <thead><tr><th>Logo</th><th>Name</th><th>Projects</th><th>Added</th><th></th></tr></thead>
                     <tbody>
                       {clients.length === 0 ? (
-                        <tr><td colSpan={4}><div className="empty">No clients added yet.</div></td></tr>
+                        <tr><td colSpan={5}><div className="empty">No clients added yet.</div></td></tr>
                       ) : (
                         clients.map((c) => (
                           <tr key={c.id}>
                             <td>{c.logo ? <img src={c.logo} alt={c.name} className="client-logo-thumb" /> : <span className="no-logo">—</span>}</td>
                             <td>{c.name}</td>
-                            <td>{fmtDate(c.added)}</td>
+                            <td className="muted-cell">{projects.filter((p) => p.clientId === c.id).length || '—'}</td>
+                            <td className="nowrap">{fmtDate(c.added)}</td>
                             <td>
                               <div className="row-actions">
-                                <span onClick={() => setClientDetailId(c.id)}>View</span>
-                                <span onClick={() => openClientModal(c)}>Edit</span>
-                                <span className="danger" onClick={() => deleteClient(c.id)}>Delete</span>
+                                <button type="button" onClick={() => setClientDetailId(c.id)}>View</button>
+                                <button type="button" onClick={() => openClientModal(c)}>Edit</button>
+                                <button type="button" className="danger" onClick={() => deleteClient(c.id)}>Delete</button>
                               </div>
                             </td>
                           </tr>
@@ -1390,8 +1485,17 @@ export default function AdminPage() {
                             {METHOD_LABELS[m.contactMethod] || 'WhatsApp'}
                             {m.phone && <><br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{m.phone}</span></>}
                           </td>
-                          <td>{fmtDate(m.received)}</td>
-                          <td><div className="row-actions"><span className="danger" onClick={() => deleteMessage(m.id)}>Delete</span></div></td>
+                          <td className="nowrap">{fmtDate(m.received)}</td>
+                          <td>
+                            <div className="row-actions">
+                              {m.phone ? (
+                                <a href={`https://wa.me/${whatsappNumber(m.phone)}`} target="_blank" rel="noreferrer">WhatsApp</a>
+                              ) : null}
+                              {m.email ? <a href={`mailto:${m.email}`}>Email</a> : null}
+                              {m.phone ? <a href={`tel:${m.phone}`}>Call</a> : null}
+                              <button type="button" className="danger" onClick={() => deleteMessage(m.id)}>Delete</button>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -1421,16 +1525,16 @@ export default function AdminPage() {
                           <tr key={inv.id}>
                             <td>{inv.projectName}</td>
                             <td>{inv.clientName || '—'}</td>
-                            <td>{formatAmount(total)} {inv.currency}</td>
+                            <td className="nowrap">{formatAmount(total)} {inv.currency}</td>
                             <td><span className={`inv-status ${st}`}>{INVOICE_STATUS_LABELS[st]}</span></td>
-                            <td>{fmtDate(inv.updated)}</td>
+                            <td className="nowrap">{fmtDate(inv.updated)}</td>
                             <td>
                               <div className="row-actions">
-                                {inv.status !== 'paid' && <span onClick={() => markInvoicePaid(inv)}>Mark paid</span>}
-                                <span onClick={() => newMonthInvoice(inv)}>New month</span>
-                                <span onClick={() => downloadInvoice(inv)}>{downloadingInvoiceId === inv.id ? 'Preparing…' : 'Download PDF'}</span>
-                                <span onClick={() => openInvoiceModal(inv)}>Edit</span>
-                                <span className="danger" onClick={() => deleteInvoice(inv.id)}>Delete</span>
+                                {inv.status !== 'paid' && <button type="button" onClick={() => markInvoicePaid(inv)}>Mark paid</button>}
+                                <button type="button" onClick={() => newMonthInvoice(inv)}>New month</button>
+                                <button type="button" onClick={() => downloadInvoice(inv)}>{downloadingInvoiceId === inv.id ? 'Preparing…' : 'Download PDF'}</button>
+                                <button type="button" onClick={() => openInvoiceModal(inv)}>Edit</button>
+                                <button type="button" className="danger" onClick={() => deleteInvoice(inv.id)}>Delete</button>
                               </div>
                             </td>
                           </tr>
@@ -1479,11 +1583,11 @@ export default function AdminPage() {
                           <td>{fmtDate(p.updated)}</td>
                           <td>
                             <div className="row-actions">
-                              <span onClick={() => downloadPlan(p)}>{downloadingPlanId === p.id ? 'Preparing…' : 'Download PDF'}</span>
-                              <span onClick={() => openProposalModal(p)}>Send as Proposal</span>
-                              <span onClick={() => openPlanModal(p)}>Edit</span>
-                              <span onClick={() => duplicatePlan(p)}>Duplicate</span>
-                              <span className="danger" onClick={() => deletePlan(p.id)}>Delete</span>
+                              <button type="button" onClick={() => downloadPlan(p)}>{downloadingPlanId === p.id ? 'Preparing…' : 'Download PDF'}</button>
+                              <button type="button" onClick={() => openProposalModal(p)}>Send as Proposal</button>
+                              <button type="button" onClick={() => openPlanModal(p)}>Edit</button>
+                              <button type="button" onClick={() => duplicatePlan(p)}>Duplicate</button>
+                              <button type="button" className="danger" onClick={() => deletePlan(p.id)}>Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -1558,10 +1662,10 @@ export default function AdminPage() {
                               <td>{fmtDate(c.updated)}</td>
                               <td>
                                 <div className="row-actions">
-                                  <span onClick={() => downloadContract(c)}>{downloadingContractId === c.id ? 'Preparing…' : 'Download PDF'}</span>
-                                  <span onClick={() => openContractModal(c)}>Edit</span>
-                                  <span onClick={() => duplicateContract(c)}>Duplicate</span>
-                                  <span className="danger" onClick={() => deleteContract(c.id)}>Delete</span>
+                                  <button type="button" onClick={() => downloadContract(c)}>{downloadingContractId === c.id ? 'Preparing…' : 'Download PDF'}</button>
+                                  <button type="button" onClick={() => openContractModal(c)}>Edit</button>
+                                  <button type="button" onClick={() => duplicateContract(c)}>Duplicate</button>
+                                  <button type="button" className="danger" onClick={() => deleteContract(c.id)}>Delete</button>
                                 </div>
                               </td>
                             </tr>
@@ -1590,6 +1694,13 @@ export default function AdminPage() {
                     <span className={`saved-note ${settingsSaved ? 'show' : ''}`}>Saved ✓</span>
                     <button className="save-btn" type="submit">Save all changes</button>
                   </div>
+                  {/* The form is a dozen panels long; these jump straight to
+                      one, from anywhere, since the bar stays pinned. */}
+                  <nav className="content-jump" aria-label="Jump to section">
+                    {CONTENT_SECTIONS.map(([label, heading]) => (
+                      <button type="button" key={label} onClick={() => jumpToContentSection(heading)}>{label}</button>
+                    ))}
+                  </nav>
                 </div>
 
                 <div className={`content-editor ${isAr ? 'rtl-preview' : ''}`}>
@@ -1649,7 +1760,10 @@ export default function AdminPage() {
                         <textarea value={s.desc?.[editLang] ?? ''} onChange={(e) => updateService(i, 'desc', e.target.value)} placeholder={isAr ? 'وصف قصير' : 'Short description'} />
                         <div className="repeat-subrow">
                           <input className="neutral-input" value={s.stat ?? ''} onChange={(e) => updateServiceNeutral(i, 'stat', e.target.value)} placeholder="Big number, e.g. 50+" />
-                          <input className="neutral-input" value={s.image ?? ''} onChange={(e) => updateServiceNeutral(i, 'image', e.target.value)} placeholder="Background image URL (optional)" />
+                        </div>
+                        {/* shown framed on the service's card (optional) */}
+                        <div className="repeat-subrow">
+                          <ImageUpload value={s.image ?? ''} onChange={(url) => updateServiceNeutral(i, 'image', url)} label="Upload card photo" />
                         </div>
                       </div>
                     ))}
@@ -1716,8 +1830,8 @@ export default function AdminPage() {
                       <input value={locVal('aboutPanelHeading')} onChange={setLoc('aboutPanelHeading')} placeholder="Who are we?" />
                     </Field>
                     <div className="field-row">
-                      <Field label="Panel image URL (optional)">
-                        <input className="neutral-input" value={settingsForm.aboutImage} onChange={setNeutral('aboutImage')} placeholder="https://…  (leave empty for a placeholder)" />
+                      <Field label="Panel photo (optional)" hint="without one, the KEDA mark fills the space">
+                        <ImageUpload value={settingsForm.aboutImage ?? ''} onChange={(url) => setSettingsForm((f) => ({ ...f, aboutImage: url }))} />
                       </Field>
                       <Field label={`Vertical side label (${isAr ? 'عربي' : 'English'})`}>
                         <input value={locVal('aboutSideLabel')} onChange={setLoc('aboutSideLabel')} placeholder="KEDA" />
@@ -1795,8 +1909,8 @@ export default function AdminPage() {
                         <td>
                           {u.role !== 'owner' && (
                             <div className="row-actions">
-                              <span onClick={() => openUserModal(u)}>Edit</span>
-                              <span className="danger" onClick={() => deleteUser(u.id)}>Delete</span>
+                              <button type="button" onClick={() => openUserModal(u)}>Edit</button>
+                              <button type="button" className="danger" onClick={() => deleteUser(u.id)}>Delete</button>
                             </div>
                           )}
                         </td>
@@ -1939,18 +2053,12 @@ export default function AdminPage() {
               <Field label="Client name">
                 <input value={clientForm.name} onChange={(e) => setClientForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Sunset Coffee Co." />
               </Field>
-              <Field label="Logo image URL (optional — shows in the scrolling bar)">
-                <input value={clientForm.logo} onChange={(e) => setClientForm((f) => ({ ...f, logo: e.target.value }))} placeholder="https://…  (leave empty to show the name)" />
+              <Field label="Logo (optional)" hint="shows in the clients bar — without one, the name is shown instead. A PNG with a transparent background works best.">
+                <ImageUpload value={clientForm.logo} onChange={(url) => setClientForm((f) => ({ ...f, logo: url }))} label="Upload logo" />
               </Field>
-              {clientForm.logo ? (
-                <div className="logo-preview"><img src={clientForm.logo} alt="logo preview" /></div>
-              ) : null}
-              <Field label="Card cover URL (optional — shown first on this client's homepage card)" hint="the card already cycles through this client's project images; set this only to pin a specific design at the front">
-                <input value={clientForm.cardImage} onChange={(e) => setClientForm((f) => ({ ...f, cardImage: e.target.value }))} placeholder="https://…  (leave empty to use the project images)" />
+              <Field label="Card cover (optional)" hint="the homepage card already cycles through this client's project photos; set this only to pin one design at the front">
+                <ImageUpload value={clientForm.cardImage} onChange={(url) => setClientForm((f) => ({ ...f, cardImage: url }))} label="Upload cover" />
               </Field>
-              {clientForm.cardImage ? (
-                <div className="card-image-preview"><img src={clientForm.cardImage} alt="card design preview" /></div>
-              ) : null}
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setClientModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save client</button>

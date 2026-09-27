@@ -995,7 +995,12 @@ footer{padding:70px 0 50px;}
 .error.show{display:block;}
 
 .shell{display:grid; grid-template-columns:240px 1fr; min-height:100vh;}
-.sidebar{background:var(--bg-soft); border-right:1px solid var(--line); padding:28px 20px; display:flex; flex-direction:column;}
+/* pinned beside the page, so the sections stay in reach on a long tab */
+.sidebar{
+  background:var(--bg-soft); border-right:1px solid var(--line); padding:28px 20px;
+  display:flex; flex-direction:column;
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+}
 .sidebar .logo{font-family:var(--display); font-weight:700; font-size:19px; margin-bottom:36px; padding:0 8px;}
 .side-links{display:flex; flex-direction:column; gap:2px; flex:1;}
 .side-group{margin-bottom:18px;}
@@ -1003,18 +1008,19 @@ footer{padding:70px 0 50px;}
   font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
   color:var(--text-dim); opacity:.6; padding:0 12px; margin-bottom:8px;
 }
-.side-links a{
+.side-links .side-link{
+  width:100%; border:0; background:none; font-family:inherit; text-align:start;
   font-size:14px; font-weight:500; color:var(--text-dim); padding:10px 12px; border-radius:10px;
   display:flex; align-items:center; gap:11px; transition:all .18s ease; cursor:pointer; position:relative;
 }
-.side-links a:hover{background:var(--card); color:var(--text);}
-.side-links a.active{background:var(--card); color:var(--text);}
+.side-links .side-link:hover{background:var(--card); color:var(--text);}
+.side-links .side-link.active{background:var(--card); color:var(--text);}
 .side-icon{
   width:26px; height:26px; border-radius:8px; flex:none;
   display:flex; align-items:center; justify-content:center; font-size:14px;
   background:rgba(245,241,232,0.05); color:var(--text-dim);
 }
-.side-links a.active .side-icon{background:var(--orange); color:var(--on-accent);}
+.side-links .side-link.active .side-icon{background:var(--orange); color:var(--on-accent);}
 .side-badge{
   margin-left:auto; background:var(--orange); color:var(--on-accent); font-size:11px; font-weight:700;
   min-width:20px; height:20px; padding:0 6px; border-radius:999px; display:flex; align-items:center; justify-content:center;
@@ -1022,7 +1028,7 @@ footer{padding:70px 0 50px;}
 .side-account{padding:12px 12px 0; border-top:1px solid var(--line); margin-top:12px;}
 .side-account-name{font-size:13px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .side-account-role{font-size:11px; color:var(--text-dim); margin-top:2px;}
-.logout{font-size:13px; color:var(--text-dim); padding:11px 12px; cursor:pointer; margin-top:2px;}
+.logout{font-size:13px; color:var(--text-dim); padding:11px 12px; cursor:pointer; margin-top:2px; background:none; border:0; font-family:inherit; text-align:start;}
 .logout:hover{color:var(--text);}
 
 /* ---- settings / content editor ---- */
@@ -1075,7 +1081,10 @@ footer{padding:70px 0 50px;}
 }
 @media (max-width:700px){ .field-row{grid-template-columns:1fr;} }
 
-.main{padding:34px 40px; overflow-y:auto;}
+/* No overflow of its own: an overflow:auto .main made itself the scroll
+   container for everything inside it, but never actually scrolled (the page
+   does) — so Site Content's sticky save bar never stuck and scrolled away. */
+.main{padding:34px 40px; min-width:0;}
 .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:32px;}
 .topbar h1{font-family:var(--display); font-weight:700; font-size:26px;}
 .topbar .env-tag{
@@ -1110,9 +1119,13 @@ tr:last-child td{border-bottom:none;}
 .inv-status.paid{background:rgba(76,175,125,0.15); color:var(--green);}
 .inv-status.overdue{background:rgba(224,101,74,0.15); color:var(--red);}
 .row-actions{display:flex; gap:10px;}
-.row-actions span{font-size:12px; color:var(--text-dim); cursor:pointer;}
-.row-actions span:hover{color:var(--text);}
-.row-actions span.danger:hover{color:var(--red);}
+/* real buttons (keyboard-reachable), styled as the quiet text links they were */
+.row-actions button{
+  font:inherit; font-size:12px; color:var(--text-dim); cursor:pointer;
+  background:none; border:0; padding:4px 0; white-space:nowrap;
+}
+.row-actions button:hover, .row-actions button:focus-visible{color:var(--text);}
+.row-actions button.danger:hover, .row-actions button.danger:focus-visible{color:var(--red);}
 .order-controls{display:flex; gap:6px;}
 .order-btn{
   width:26px; height:26px; border-radius:7px; border:1px solid var(--line); background:transparent;
@@ -1183,9 +1196,46 @@ td.msg-cell{max-width:340px; color:var(--text-dim);}
 .no-logo{color:var(--text-dim);}
 
 @media (max-width:900px){
-  .shell{grid-template-columns:1fr;}
-  .sidebar{display:none;}
-  .stat-grid{grid-template-columns:repeat(2,1fr);}
+  /* auto rows so the bar doesn't stretch to share the screen height with the
+     page, and min-width:0 so a wide row inside either one scrolls instead of
+     widening the whole grid column past the phone */
+  .shell{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
+  .shell > *{min-width:0;}
+  /* The sidebar used to be display:none here with nothing in its place, so on
+     a phone there was no way to change section at all. It becomes a top bar
+     instead: the mark and log-out on one line, every section in one
+     swipeable row under it. Not pinned — Site Content's own save bar is the
+     one thing that needs to stay on screen while scrolling. */
+  .sidebar{
+    position:static; height:auto; overflow:visible;
+    flex-direction:row; flex-wrap:wrap; align-items:center; gap:10px;
+    padding:12px 14px 10px; border-right:none; border-bottom:1px solid var(--line);
+  }
+  #dashboard .side-brand{margin:0; padding:0;}
+  .side-account{display:none;}
+  .logout{margin:0 0 0 auto; padding:6px 4px;}
+  .side-links{
+    order:3; flex:1 0 100%; flex-direction:row; gap:6px;
+    overflow-x:auto; scrollbar-width:none; padding-bottom:2px;
+  }
+  .side-links::-webkit-scrollbar{display:none;}
+  .side-group{display:contents;}
+  .side-group-label{display:none;}
+  .side-links .side-link{flex:none; width:auto; white-space:nowrap; padding:7px 11px 7px 7px; font-size:13px; gap:8px; background:var(--card);}
+  .side-icon{width:22px; height:22px; font-size:12px;}
+  .side-badge{margin-left:2px;}
+  .main{padding:22px 16px;}
+  .stat-grid{grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;}
+  .stat-card{padding:16px 14px; border-radius:14px;}
+  .stat-card .value{font-size:24px;}
+  #dashboard .stat-card .value[style]{font-size:21px !important;}
+  .lang-edit-bar{padding:12px; gap:10px;}
+  /* a table wider than the phone scrolls inside its panel rather than
+     pushing past the panel's edge */
+  .panel table{display:block; overflow-x:auto; white-space:nowrap;}
+  .panel{padding:18px 16px;}
+  .topbar{gap:12px;}
+  .topbar h1{font-size:24px;}
 }
 
 /* ================================================================ */
@@ -1943,3 +1993,47 @@ html[dir="rtl"] .site .client-gallery-head h2{letter-spacing:normal;}
 .site .not-found{min-height:58vh; display:flex; align-items:center;}
 .site .not-found .wrap{width:100%;}
 .site .not-found-sub{color:var(--text-dim); font-size:16px; line-height:1.6; max-width:46ch; margin:0 0 26px;}
+
+/* ---- admin overview: website numbers ---- */
+.stat-grid-site{margin-top:-8px;}
+.stat-card-link{
+  text-align:start; font:inherit; color:inherit; cursor:pointer;
+  transition:border-color .18s ease, transform .18s ease;
+}
+.stat-card-link:hover{border-color:var(--text-dim); transform:translateY(-2px);}
+.stat-card-link .delta{color:var(--text-dim);}
+
+/* ---- admin tables ---- */
+.project-cell{display:flex; align-items:center; gap:12px; min-width:180px;}
+.project-thumb{
+  width:44px; height:44px; flex:none; border-radius:8px; object-fit:cover;
+  background:var(--card); border:1px solid var(--line);
+}
+.project-thumb-empty{display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text-dim);}
+.muted-cell{color:var(--text-dim);}
+/* dates, amounts and the action links never break mid-value */
+#dashboard td.nowrap, #dashboard .row-actions{white-space:nowrap;}
+.row-actions a{font-size:12px; color:var(--text-dim); padding:4px 0; white-space:nowrap;}
+.row-actions a:hover, .row-actions a:focus-visible{color:var(--text);}
+
+/* ---- admin: Site Content jump links ---- */
+.content-jump{
+  flex:1 0 100%; display:flex; gap:6px; overflow-x:auto;
+  scrollbar-width:none; padding-top:12px; border-top:1px solid var(--line);
+}
+.content-jump::-webkit-scrollbar{display:none;}
+.content-jump button{
+  flex:none; white-space:nowrap; cursor:pointer;
+  font:inherit; font-size:12px; font-weight:500; color:var(--text-dim);
+  background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px 12px;
+}
+.content-jump button:hover, .content-jump button:focus-visible{color:var(--text); border-color:var(--text-dim);}
+/* land a jumped-to panel below the pinned bar, not under it */
+.content-editor .panel{scroll-margin-top:150px;}
+.panel-head-link{
+  flex:none; cursor:pointer; font:inherit; font-size:12px; font-weight:600; color:var(--text-dim);
+  background:none; border:1px solid var(--line); border-radius:999px; padding:6px 14px;
+}
+.panel-head-link:hover, .panel-head-link:focus-visible{color:var(--text); border-color:var(--text-dim);}
+/* .btn-secondary stretches (flex:1) for the modal footers; not in here */
+.image-upload-actions .btn-secondary{flex:none; padding:10px 18px;}
