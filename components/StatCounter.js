@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-// Sibling to CountUp.js (which stays as-is for .about-stats' plain numeric
-// targets) — this one parses admin-entered strings like "194+", "45%",
-// "700M+" into a numeric part to animate plus a preserved prefix/suffix.
+// Parses admin-entered stat strings like "194+", "45%", "700M+" into a
+// numeric part to animate plus a preserved prefix/suffix.
 function parseStat(raw) {
   const str = String(raw ?? '').trim();
   const m = str.match(/^([^0-9]*)([0-9]+(?:\.[0-9]+)?)(.*)$/);

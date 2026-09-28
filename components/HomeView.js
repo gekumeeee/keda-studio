@@ -7,7 +7,6 @@ import Footer from './Footer';
 import GlyphStrip from './GlyphStrip';
 import DiagMarquee from './DiagMarquee';
 import Reveal from './Reveal';
-import CountUp from './CountUp';
 import StatCounter from './StatCounter';
 import RotatingWord from './RotatingWord';
 import HeroFaces from './HeroFaces';
@@ -96,7 +95,6 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
     }, 180);
   }
 
-  const liveCount = projects.filter((p) => p.status === 'live').length;
   const heroHeading = pick(settings.heroHeading, lang) || null;
   const heroWords = settings.heroWords.map((w) => ({ text: pick(w.text, lang), color: w.color }));
 
@@ -265,30 +263,6 @@ export default function HomeView({ projects, clients, settings, lang = 'en', fan
                 </div>
               )}
             </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* about — violet; the body copy sits on an ink block inside the band */}
-      <section className="marketing-section" id="about">
-        <div className="wrap">
-          <SectionHead title={pick(settings.aboutHeading, lang)} tag={pick(settings.aboutEyebrow, lang)} />
-        </div>
-        <div className="accent-band sec-violet">
-          <div className="wrap">
-          <Reveal className="about-box">
-            <p>{pick(settings.aboutBody, lang)}</p>
-            <div className="about-stats">
-              <div className="stat">
-                <CountUp target={liveCount} />
-                <div className="label">{t.statProjects}</div>
-              </div>
-              <div className="stat">
-                <CountUp target={clients.length} />
-                <div className="label">{t.statClients}</div>
-              </div>
-            </div>
-          </Reveal>
           </div>
         </div>
       </section>

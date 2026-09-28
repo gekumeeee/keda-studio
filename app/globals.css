@@ -806,17 +806,6 @@ html[dir="rtl"] .hero-type{line-height:1.18;}
 @media (max-width:900px){ .impact-grid{grid-template-columns:repeat(2,1fr);} }
 @media (max-width:520px){ .impact-grid{grid-template-columns:1fr;} }
 
-/* about */
-.about-box{
-  background:var(--bg-soft); border:1px solid var(--line); border-radius:24px; padding:44px;
-  display:grid; grid-template-columns:1.2fr 1fr; gap:44px; align-items:center;
-}
-.about-box p{color:var(--text-dim); font-size:15px; line-height:1.75; max-width:48ch;}
-.about-stats{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
-.about-stats .stat{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px;}
-.about-stats .stat .num{font-family:var(--display); font-weight:800; font-size:32px;}
-.about-stats .stat .label{font-size:12px; color:var(--text-dim); margin-top:6px;}
-@media (max-width:760px){ .about-box{grid-template-columns:1fr;} }
 
 /* about page — colored panel with a vertical side label, like a section marker.
    The panel itself is pale (the new accent), so its direct text is dark
@@ -849,7 +838,6 @@ html[dir="rtl"] .about-panel-side{ transform:rotate(180deg); }
   background:rgba(0,0,0,0.45); border:1px dashed rgba(255,255,255,0.4); border-radius:18px;
 }
 .about-panel-media-fallback span{font-family:var(--display); font-weight:800; font-size:32px; color:rgba(255,255,255,0.5); letter-spacing:.05em;}
-.about-stats-standalone{margin-top:24px; grid-template-columns:1fr 1fr; max-width:460px;}
 @media (max-width:860px){
   .about-panel{grid-template-columns:1fr; padding-block:44px; padding-inline:68px 32px; gap:28px;}
   .about-panel-media{aspect-ratio:16/9;}
@@ -1488,17 +1476,6 @@ body:has(.site){background:var(--ink);}
 .site .video-frame.has-image{background:none;}
 .site .portfolio-video-wrap{background:var(--ink);}
 
-/* ---------------- about — violet ---------------- */
-/* Body copy sits on an ink block rather than directly on the violet fill:
-   the same move as the acid cards, and it keeps long text at full contrast. */
-.site .sec-violet .about-box{
-  background:var(--ink);
-  border:1px solid var(--ink);
-}
-.site .sec-violet .about-box p{color:rgba(242,239,230,0.76);}
-.site .sec-violet .about-stats .stat{background:#1A1A1A; border:1px solid rgba(242,239,230,0.18);}
-.site .sec-violet .about-stats .stat .num{color:var(--paper);}
-.site .sec-violet .about-stats .stat .label{color:rgba(242,239,230,0.64);}
 /* about page panel — flat violet, no gradient */
 .site .about-panel{background:var(--violet);}
 /* The side strip is a shade of the violet, not solid ink: solid, it matched
@@ -1912,19 +1889,15 @@ html[dir="rtl"] .site .sheet .cap-stat{text-align:right;}
 
 /* ---- the accent blocks line up with the paper sheets ----
    Services and selected work are rounded blocks held to the page's column;
-   the about and closing-CTA fills were full-bleed bars, which read as a
-   different design language two scrolls apart. Same width, same radius, so
-   the page is one stack of blocks all the way down. Only the home page's own
-   two (and the same closing CTA on About) — a page-hero band elsewhere is
-   still meant to run edge to edge. */
-.site #about .accent-band,
+   the closing-CTA fill was a full-bleed bar, which read as a different
+   design language a scroll apart. Same width, same radius, so the page is
+   one stack of blocks all the way down. */
 .site .big-cta .accent-band{
   width:min(1256px, 100% - 64px);
   margin-inline:auto;
   border-radius:clamp(26px, 3vw, 44px);
 }
 @media (max-width:700px){
-  .site #about .accent-band,
   .site .big-cta .accent-band{width:calc(100% - 32px);}
 }
 

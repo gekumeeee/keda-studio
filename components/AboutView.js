@@ -4,12 +4,9 @@ import Footer from './Footer';
 import DiagMarquee from './DiagMarquee';
 import Reveal from './Reveal';
 import SectionHead from './SectionHead';
-import CountUp from './CountUp';
-import { UI, pick } from '@/lib/i18n';
+import { pick } from '@/lib/i18n';
 
-export default function AboutView({ projectCount, clientCount, settings, lang = 'en' }) {
-  const t = UI[lang];
-
+export default function AboutView({ settings, lang = 'en' }) {
   return (
     <div className="site">
       <Header active="about" settings={settings} lang={lang} />
@@ -41,16 +38,6 @@ export default function AboutView({ projectCount, clientCount, settings, lang = 
             </div>
           </Reveal>
 
-          <Reveal className="about-stats about-stats-standalone">
-            <div className="stat">
-              <CountUp target={projectCount} />
-              <div className="label">{t.about.statProjects}</div>
-            </div>
-            <div className="stat">
-              <CountUp target={clientCount} />
-              <div className="label">{t.about.statClients}</div>
-            </div>
-          </Reveal>
         </div>
       </section>
 
