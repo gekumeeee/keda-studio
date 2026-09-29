@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   saveProjects, saveClients, saveMessages, saveSettings, saveInvoices, savePlans,
-  saveContracts, saveReportClients, saveReports,
+  saveContracts, saveReportClients, saveReports, saveContent,
 } from '@/lib/store';
 import { requireOwner } from '@/lib/auth';
 
@@ -20,7 +20,7 @@ import { requireOwner } from '@/lib/auth';
 const IMPORTABLE = {
   projects: saveProjects, clients: saveClients, messages: saveMessages, settings: saveSettings,
   invoices: saveInvoices, plans: savePlans, contracts: saveContracts,
-  reportClients: saveReportClients, reports: saveReports,
+  reportClients: saveReportClients, reports: saveReports, content: saveContent,
 };
 
 export async function POST(request) {

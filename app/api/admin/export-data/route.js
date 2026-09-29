@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   getProjects, getClients, getMessages, getSettings, getInvoices, getPlans,
-  getContracts, getReportClients, getReports, getUsers,
+  getContracts, getReportClients, getReports, getUsers, getContent,
 } from '@/lib/store';
 import { requireOwner } from '@/lib/auth';
 
@@ -20,16 +20,17 @@ export async function GET() {
 
   const [
     projects, clients, messages, settings, invoices, plans,
-    contracts, reportClients, reports, users,
+    contracts, reportClients, reports, users, content,
   ] = await Promise.all([
     getProjects({ fresh: true }), getClients({ fresh: true }), getMessages({ fresh: true }), getSettings({ fresh: true }), getInvoices({ fresh: true }), getPlans({ fresh: true }),
     getContracts({ fresh: true }), getReportClients({ fresh: true }), getReports({ fresh: true }), getUsers({ fresh: true }),
+    getContent({ fresh: true }),
   ]);
 
   const backup = {
     exportedAt: new Date().toISOString(),
     projects, clients, messages, settings, invoices, plans,
-    contracts, reportClients, reports,
+    contracts, reportClients, reports, content,
     // passwordHash stays out of a file that might end up sitting in a
     // Downloads folder — usernames/roles/permissions are still useful to see
     // in a backup, the hash itself isn't something export/import needs.

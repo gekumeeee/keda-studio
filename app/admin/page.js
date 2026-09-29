@@ -5,6 +5,7 @@ import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
 import PortfolioVideo from '@/components/PortfolioVideo';
 import { formatAmount, invoiceTotals, contractTotal } from '@/lib/invoiceMath';
 import ReportsTab from '@/components/admin/ReportsTab';
+import ContentTab from '@/components/admin/ContentTab';
 import ImageUpload from '@/components/admin/ImageUpload';
 import BulkPhotoUpload from '@/components/admin/BulkPhotoUpload';
 
@@ -19,6 +20,7 @@ const TAB_TITLES = {
   plans: 'Plans',
   contracts: 'Contracts',
   reports: 'Reports',
+  content: 'Content',
   settings: 'Site Content',
   users: 'Users',
   account: 'My Account',
@@ -32,6 +34,7 @@ const TAB_SUB = {
   plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
   contracts: 'Agreements for clients or team members — deliverables, total and terms — saved and exportable as a PDF.',
   reports: 'Monthly performance reports for retainer clients — enter this month’s numbers, preview the 6-page report and export it as a PDF.',
+  content: 'The content calendar — plan each post, write its caption and design brief, and export the brief as an image for the designer.',
   settings: 'Edit every piece of text on your homepage, in both languages.',
   users: 'Add people to the admin and control exactly what each of them can see and edit.',
   account: 'Change your own username and password.',
@@ -67,18 +70,19 @@ function whatsappNumber(phone) {
   return digits;
 }
 
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', reports: '◨', settings: '✎', users: '☺', account: '⚿' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', reports: '◨', content: '✦', settings: '✎', users: '☺', account: '⚿' };
 // Every tab except 'overview' is gated by a matching permission key. 'overview'
 // has no key here — it's always shown to any logged-in user. 'users' isn't
 // permission-based at all (owner-only, checked separately from `permissions`).
 const TAB_GROUPS = [
   { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
+  { label: 'Content', tabs: ['content'] },
   { label: 'Documents', tabs: ['invoices', 'plans', 'contracts'] },
   { label: 'Reports', tabs: ['reports'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
 const TAB_PERMISSION_KEY = {};
-const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', reports: 'Reports', settings: 'Site Content' };
+const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', reports: 'Reports', content: 'Content calendar', settings: 'Site Content' };
 const PERMISSIONS = Object.keys(PERMISSION_LABELS);
 const EMPTY_PERMISSIONS = Object.fromEntries(PERMISSIONS.map((p) => [p, false]));
 const EMPTY_USER = { username: '', password: '', permissions: { ...EMPTY_PERMISSIONS } };
@@ -2060,6 +2064,8 @@ export default function AdminPage() {
               rather than threading another dozen useState hooks through this
               already-2000+-line file — see components/admin/ReportsTab.js. */}
           {tab === 'reports' && <ReportsTab />}
+
+          {tab === 'content' && <ContentTab />}
 
           {tab === 'users' && isOwner && (
             <section className="tab-panel active">

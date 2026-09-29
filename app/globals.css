@@ -2061,3 +2061,225 @@ html[dir="rtl"] .site .client-gallery-head h2{letter-spacing:normal;}
   color:#fff; background:var(--red); border:0; border-radius:999px; padding:7px 16px;
 }
 .danger-btn:hover, .danger-btn:focus-visible{filter:brightness(1.1);}
+
+/* ================================================================ */
+/* ============ Local brand fonts for exported sheets ============= */
+/* ================================================================ */
+/* The same TTFs as /public/fonts, under their own names so they never clash
+   with the site's Google-hosted Cairo. Used by the document PDFs and the
+   content briefs, which are captured as images (lib/sheetCapture.js) and so
+   need fonts that can be embedded; the browser only downloads a face once
+   something actually uses it. */
+@font-face{font-family:'KedaPdfCairo'; src:url('/fonts/Cairo-Regular.ttf') format('truetype'); font-weight:400; font-style:normal; font-display:swap;}
+@font-face{font-family:'KedaPdfCairo'; src:url('/fonts/Cairo-SemiBold.ttf') format('truetype'); font-weight:600; font-style:normal; font-display:swap;}
+@font-face{font-family:'KedaPdfCairo'; src:url('/fonts/Cairo-Bold.ttf') format('truetype'); font-weight:700; font-style:normal; font-display:swap;}
+@font-face{font-family:'KedaPdfCairo'; src:url('/fonts/Cairo-ExtraBold.ttf') format('truetype'); font-weight:800; font-style:normal; font-display:swap;}
+@font-face{font-family:'KedaPdfBricolage'; src:url('/fonts/BricolageGrotesque-Regular.ttf') format('truetype'); font-weight:400; font-style:normal; font-display:swap;}
+@font-face{font-family:'KedaPdfBricolage'; src:url('/fonts/BricolageGrotesque-Bold.ttf') format('truetype'); font-weight:700; font-style:normal; font-display:swap;}
+@font-face{font-family:'KedaPdfBricolage'; src:url('/fonts/BricolageGrotesque-ExtraBold.ttf') format('truetype'); font-weight:800; font-style:normal; font-display:swap;}
+
+/* ================================================================ */
+/* ================ Admin: content calendar ====================== */
+/* ================================================================ */
+.status-dot{width:9px; height:9px; border-radius:50%; flex:none; display:inline-block;}
+.status-dot.is-idea{background:var(--violet);}
+.status-dot.is-writing{background:var(--tangerine);}
+.status-dot.is-ready{background:var(--acid);}
+.status-dot.is-design{background:var(--cobalt);}
+.status-dot.is-approved{background:var(--aqua);}
+.status-dot.is-published{background:#8E96A0;}
+.brief-status-pill{
+  display:inline-block; font-size:11px; font-weight:700; padding:5px 11px; border-radius:999px; white-space:nowrap;
+}
+.brief-status-pill.is-idea{background:var(--violet); color:#fff;}
+.brief-status-pill.is-writing{background:var(--tangerine); color:var(--ink);}
+.brief-status-pill.is-ready{background:var(--acid); color:var(--ink);}
+.brief-status-pill.is-design{background:var(--cobalt); color:#fff;}
+.brief-status-pill.is-approved{background:var(--aqua); color:var(--ink);}
+.brief-status-pill.is-published{background:#3A3F45; color:var(--paper);}
+
+.content-toolbar{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;}
+.content-month{display:flex; align-items:center; gap:10px;}
+.content-month h3{min-width:170px; text-align:center; font-family:var(--display); font-size:18px;}
+.content-nav{
+  width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:none;
+  color:var(--text); cursor:pointer; font-size:18px; line-height:1;
+}
+.content-nav:hover, .content-nav:focus-visible{border-color:var(--text-dim);}
+.content-filters{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+.content-filters select{
+  background:var(--card); border:1px solid var(--line); color:var(--text);
+  border-radius:10px; padding:9px 12px; font:inherit; font-size:13px;
+}
+.content-legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text-dim); margin-bottom:12px;}
+.content-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+.content-calendar{display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px;}
+.content-weekday{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); padding:4px 6px;}
+.content-day{
+  min-height:108px; min-width:0; display:flex; flex-direction:column; gap:4px; padding:6px;
+  background:var(--card); border:1px solid var(--line); border-radius:10px;
+}
+.content-day.is-blank{background:transparent; border-color:transparent;}
+.content-day.is-today{border-color:var(--orange);}
+.content-day-add{
+  display:flex; justify-content:space-between; align-items:center; padding:2px 5px; border-radius:6px;
+  background:none; border:0; color:var(--text-dim); cursor:pointer; font:inherit;
+}
+.content-day-add:hover, .content-day-add:focus-visible{background:rgba(245,241,232,.06); color:var(--text);}
+.content-day-num{font-weight:700; font-size:13px;}
+.content-day.is-today .content-day-num{color:var(--orange);}
+.content-day-plus{opacity:0; font-size:15px;}
+.content-day:hover .content-day-plus, .content-day-add:focus-visible .content-day-plus{opacity:1;}
+.content-chip{
+  display:flex; align-items:center; gap:6px; width:100%; min-width:0; text-align:start; cursor:pointer;
+  background:rgba(245,241,232,.06); border:1px solid var(--line); border-radius:7px;
+  padding:4px 6px; font:inherit; font-size:11.5px; color:var(--text);
+}
+.content-chip span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.content-chip:hover, .content-chip:focus-visible{border-color:var(--text-dim);}
+
+.content-list{margin-top:26px;}
+.content-list h4{font-family:var(--display); font-size:15px; margin:18px 0 10px; display:flex; gap:10px; align-items:baseline;}
+.content-list h4 span{font-size:12px; color:var(--text-dim); font-weight:500;}
+.content-row{
+  display:flex; align-items:center; gap:14px; width:100%; text-align:start; cursor:pointer;
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:12px 14px; margin-bottom:8px; font:inherit; color:inherit;
+}
+.content-row:hover, .content-row:focus-visible{border-color:var(--text-dim);}
+.content-row-date{display:flex; flex-direction:column; align-items:center; min-width:44px; font-size:11px; color:var(--text-dim); text-transform:uppercase;}
+.content-row-date b{font-size:20px; color:var(--text); font-family:var(--display); line-height:1.1;}
+.content-row-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;}
+.content-row-title{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.content-row-meta{font-size:12px; color:var(--text-dim);}
+
+/* ---- the brief editor, opened over the calendar ---- */
+.brief-modal{position:fixed; inset:0; z-index:100; overflow:auto; padding:20px; background:rgba(0,0,0,.72);}
+.brief-modal-inner{max-width:1400px; margin:0 auto;}
+.brief-actions{
+  position:sticky; top:0; z-index:2; margin-bottom:14px;
+  display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:10px 12px; border-radius:12px; background:var(--bg); border:1px solid var(--line);
+}
+.brief-actions-right{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.brief-actions button:disabled{opacity:.5; cursor:default;}
+.brief-notice{font-size:12.5px; color:var(--text-dim); margin-inline-end:6px;}
+
+/* ================================================================ */
+/* ======== The post brief: KEDA ink, paper and accents =========== */
+/* ================================================================ */
+/* The same sheet is the editor and the exported picture, so everything
+   here is drawn for both; .is-editing only adds what inputs need. */
+.brief{
+  font-family:'KedaPdfCairo', sans-serif; color:#0D0D0D; background:#F2EFE6;
+  border-radius:22px; overflow:hidden; line-height:1.5; text-align:start;
+}
+.brief *{box-sizing:border-box;}
+.brief-export{width:1400px; background:#ffffff; padding:0;}
+.brief-export .brief{border-radius:0;}
+
+.brief-top{
+  display:flex; justify-content:space-between; align-items:center; gap:24px; flex-wrap:wrap;
+  padding:22px 28px; background:#0D0D0D; color:#F2EFE6;
+}
+.brief-meta{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;}
+.brief-meta-item{display:flex; flex-direction:column; gap:7px;}
+.brief-meta-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.brief-meta-label{
+  font-family:'KedaPdfBricolage', 'KedaPdfCairo', sans-serif; font-weight:700; font-size:11px;
+  letter-spacing:.12em; text-transform:uppercase; color:rgba(242,239,230,.55);
+}
+.brief-meta-label i, .brief-label i{
+  font-style:normal; font-family:'KedaPdfCairo', sans-serif; letter-spacing:0; text-transform:none; margin-inline-start:6px;
+}
+.brief-meta-value, .brief-top input, .brief-top select{
+  background:#F2EFE6; color:#0D0D0D; border:0; border-radius:999px;
+  padding:7px 14px; font-family:'KedaPdfCairo', sans-serif; font-weight:700; font-size:14px;
+}
+.brief-top input:focus, .brief-top select:focus{outline:2px solid var(--acid); outline-offset:2px;}
+.brief-top input[type="date"], .brief-top input[type="time"]{color-scheme:light;}
+.brief-platforms{display:flex; gap:6px; flex-wrap:wrap;}
+.brief-platforms button{
+  cursor:pointer; font-family:'KedaPdfCairo', sans-serif; font-weight:700; font-size:12.5px;
+  padding:6px 12px; border-radius:999px; background:transparent; color:#F2EFE6;
+  border:1px solid rgba(242,239,230,.35);
+}
+.brief-platforms button.is-on{background:var(--acid); color:#0D0D0D; border-color:var(--acid);}
+.brief-brand{display:flex; align-items:center; gap:16px;}
+.brief-client{display:flex; flex-direction:column; gap:7px;}
+.brief-client-logo{height:40px; width:auto; max-width:110px; object-fit:contain;}
+.brief-keda{height:36px; width:auto;}
+
+.brief-body{display:grid; grid-template-columns:330px minmax(0, 1fr); gap:30px; padding:34px 30px 32px;}
+.brief-direction{position:relative;}
+/* a board clip: the way a brief is handed over */
+.brief-clip{
+  position:relative; z-index:1; width:86px; height:26px; margin:0 auto -13px;
+  background:#0D0D0D; border-radius:10px 10px 4px 4px;
+}
+.brief-direction-card{
+  background:#ffffff; border:2px solid #0D0D0D; border-radius:16px;
+  padding:28px 18px 18px; box-shadow:6px 6px 0 #0D0D0D;
+}
+.brief-label{
+  display:inline-flex; align-items:baseline; margin-bottom:12px; padding:6px 12px; border-radius:999px;
+  font-family:'KedaPdfBricolage', 'KedaPdfCairo', sans-serif; font-weight:800; font-size:12.5px;
+  letter-spacing:.08em; text-transform:uppercase; background:#0D0D0D; color:#F2EFE6;
+}
+.brief-label.is-violet{background:var(--violet); color:#ffffff;}
+.brief-label.is-magenta{background:var(--magenta); color:#ffffff;}
+.brief-label.is-small{font-size:10.5px; padding:4px 10px; margin:18px 0 8px;}
+.brief-direction-text{font-size:15px; line-height:1.75; font-weight:600;}
+.brief-reference{font-size:13px; color:var(--cobalt); word-break:break-all;}
+
+.brief-main{display:flex; flex-direction:column; gap:14px; min-width:0;}
+.brief-headline-bar{
+  background:var(--acid); border:2px solid #0D0D0D; border-radius:14px;
+  padding:14px 20px; box-shadow:6px 6px 0 #0D0D0D;
+}
+.brief-headline{font-size:30px; font-weight:800; line-height:1.3;}
+.brief-sub{
+  font-size:19px; font-weight:700; line-height:1.4;
+  background:#ffffff; border:2px solid #0D0D0D; border-radius:12px; padding:10px 16px;
+}
+.brief-caption-box{
+  margin-top:6px; background:#ffffff; border:2px solid #0D0D0D; border-radius:16px;
+  padding:18px 20px; box-shadow:6px 6px 0 var(--magenta);
+}
+.brief-caption{font-size:16px; line-height:1.95; font-weight:500;}
+
+/* shared by the text in the export and the fields in the editor */
+.brief-direction-text, .brief-reference, .brief-headline, .brief-sub, .brief-caption{white-space:pre-wrap; overflow-wrap:anywhere;}
+.brief .is-empty{color:rgba(13,13,13,.35);}
+.brief.is-editing textarea, .brief.is-editing .brief-body input{
+  display:block; width:100%; resize:none; overflow:hidden; border:0; outline:none;
+  background:transparent; color:inherit; font:inherit; line-height:inherit; padding:0; margin:0;
+}
+.brief.is-editing textarea.brief-sub{padding:10px 16px; background:#ffffff; border:2px solid #0D0D0D;}
+.brief.is-editing textarea::placeholder, .brief.is-editing .brief-body input::placeholder{color:rgba(13,13,13,.38);}
+.brief.is-editing .brief-headline-bar:focus-within,
+.brief.is-editing textarea.brief-sub:focus,
+.brief.is-editing .brief-caption-box:focus-within,
+.brief.is-editing .brief-direction-card:focus-within{outline:3px solid var(--cobalt); outline-offset:3px;}
+
+@media (max-width:900px){
+  .brief-modal{padding:10px;}
+  .brief-top{padding:18px;}
+  .brief-body{grid-template-columns:1fr; gap:22px; padding:24px 16px 22px;}
+  .brief-headline{font-size:24px;}
+  .brief-sub{font-size:17px;}
+}
+@media (max-width:760px){
+  .content-calendar{gap:3px;}
+  .content-day{min-height:56px; padding:3px; border-radius:8px;}
+  .content-day-num{font-size:12px;}
+  .content-chip{justify-content:center; padding:3px;}
+  .content-chip span{display:none;}
+  .content-month h3{min-width:0; font-size:16px;}
+}
+/* Each line takes its own direction — an Arabic line reads from the right, a
+   phone number or an English hashtag line from the left — the way the
+   textareas in the editor already behave, so the exported picture matches
+   what the writer typed. */
+.brief div[dir="auto"], .brief textarea, .brief .brief-body input{unicode-bidi:plaintext;}
