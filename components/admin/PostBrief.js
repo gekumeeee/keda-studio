@@ -68,7 +68,7 @@ function fmtTime(hhmm) {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
-export default function PostBrief({ post, clients = [], editable = false, compact = false, onChange }) {
+export default function PostBrief({ post, clients = [], editable = false, onChange }) {
   const set = (key) => (value) => onChange?.({ ...post, [key]: value });
   // the editor always shows every block; the exported picture only the
   // ones that have something in them
@@ -86,7 +86,7 @@ export default function PostBrief({ post, clients = [], editable = false, compac
   }
 
   return (
-    <div className={`brief ${editable ? 'is-editing' : 'is-export'}${compact ? ' is-compact' : ''}`} dir="ltr">
+    <div className={`brief ${editable ? 'is-editing' : 'is-export'}`} dir="ltr">
       <div className="brief-top">
         <div className="brief-meta">
           <div className="brief-meta-item">

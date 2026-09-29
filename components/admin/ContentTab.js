@@ -191,15 +191,18 @@ export default function ContentTab() {
     setBusy('export');
     setNotice('');
     try {
-      const { captureOffscreen, dataUrlToBlob, downloadBlob, safeFileName } = await import('@/lib/sheetCapture');
-      // A compact, phone-width picture, as tall as the post's text and no
-      // taller: the brief in one column (heading, sub text, direction,
-      // caption), laid out 600px wide and captured at 2× — 1200px wide. Sent
-      // over WhatsApp it reads without zooming; a wide landscape picture
-      // shrank the text to nothing on a phone.
+      const { captureOffscreen, dataUrlToBlob, downloadBlob, safeFileName, scaleToFit } = await import('@/lib/sheetCapture');
+      // The brief as it looks in the editor, in a picture that's always
+      // landscape or square — never a long strip either way. It starts
+      // 1100px wide; if the text makes it taller than it is wide, it widens
+      // (so the caption wraps into fewer lines) until it's square, and only
+      // past 1700px does it shrink to fit the square. A short brief keeps
+      // at least a 4:3 shape, with the paper running to the bottom.
       const dataUrl = await captureOffscreen(
-        <div className="brief-export"><PostBrief post={draft} clients={clients} compact /></div>,
-        { selector: '.brief-export', format: 'png', pixelRatio: 2 }
+        <div className="brief-export">
+          <div className="brief-export-fit"><PostBrief post={draft} clients={clients} /></div>
+        </div>,
+        { selector: '.brief-export', format: 'png', pixelRatio: 1.5, prepare: fitBriefFrame }
       );
       const name = [draft.clientName, draft.date, draft.format].filter(Boolean).join(' ');
       downloadBlob(await dataUrlToBlob(dataUrl), `brief-${safeFileName(name, 'post')}.png`);
@@ -328,6 +331,32 @@ export default function ContentTab() {
 
     </section>
   );
+}
+
+// Sizes the export frame around the laid-out brief (see exportImage).
+function fitBriefFrame(frame) {
+  const fit = frame.querySelector('.brief-export-fit');
+  const brief = fit.querySelector('.brief');
+  let width = 0;
+  let height = 0;
+  for (let w = 1100; w <= 1700; w += 50) {
+    fit.style.width = `${w}px`;
+    const h = fit.getBoundingClientRect().height;
+    if (h <= w) {
+      width = w;
+      height = Math.max(h, Math.round(w * 0.75));
+      break;
+    }
+  }
+  let scale = 1;
+  if (!width) {
+    // still taller than wide at the widest: shrink it into a square
+    width = height = 1700;
+    scale = scaleToFit(fit, width, height, 0.5);
+  }
+  brief.style.minHeight = `${height / scale}px`;
+  frame.style.width = `${width}px`;
+  frame.style.height = `${height}px`;
 }
 
 function PostRow({ post, onOpen }) {
