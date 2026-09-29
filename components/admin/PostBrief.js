@@ -68,8 +68,11 @@ function fmtTime(hhmm) {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
-export default function PostBrief({ post, clients = [], editable = false, onChange }) {
+export default function PostBrief({ post, clients = [], editable = false, compact = false, onChange }) {
   const set = (key) => (value) => onChange?.({ ...post, [key]: value });
+  // the editor always shows every block; the exported picture only the
+  // ones that have something in them
+  const show = (key) => editable || String(post[key] || '').trim() !== '';
   const status = statusOf(post.status);
   const client = clients.find((c) => c.id === post.clientId);
 
@@ -83,7 +86,7 @@ export default function PostBrief({ post, clients = [], editable = false, onChan
   }
 
   return (
-    <div className={`brief ${editable ? 'is-editing' : 'is-export'}`} dir="ltr">
+    <div className={`brief ${editable ? 'is-editing' : 'is-export'}${compact ? ' is-compact' : ''}`} dir="ltr">
       <div className="brief-top">
         <div className="brief-meta">
           <div className="brief-meta-item">
@@ -175,61 +178,75 @@ export default function PostBrief({ post, clients = [], editable = false, onChan
       </div>
 
       <div className="brief-body">
-        <aside className="brief-direction">
-          <div className="brief-clip" aria-hidden="true" />
-          <div className="brief-direction-card">
-            <div className="brief-label is-violet">Design direction <i>دايركشن التصميم</i></div>
-            <Field
-              editable={editable}
-              multiline
-              minRows={6}
-              className="brief-direction-text"
-              value={post.direction}
-              onChange={set('direction')}
-              placeholder="What the design should do: layout, mood, what goes in it, dates to show…"
-            />
-            <div className="brief-label is-small">Reference <i>ريفرنس</i></div>
-            <Field
-              editable={editable}
-              className="brief-reference"
-              value={post.reference}
-              onChange={set('reference')}
-              placeholder="https://…"
-            />
+        {show('direction') || show('reference') ? (
+          <aside className="brief-direction">
+            <div className="brief-clip" aria-hidden="true" />
+            <div className="brief-direction-card">
+              <div className="brief-label is-violet">Design direction <i>دايركشن التصميم</i></div>
+              {show('direction') ? (
+                <Field
+                  editable={editable}
+                  multiline
+                  minRows={6}
+                  className="brief-direction-text"
+                  value={post.direction}
+                  onChange={set('direction')}
+                  placeholder="What the design should do: layout, mood, what goes in it, dates to show…"
+                />
+            ) : null}
+            {show('reference') ? (
+              <>
+                <div className="brief-label is-small">Reference <i>ريفرنس</i></div>
+                <Field
+                  editable={editable}
+                  className="brief-reference"
+                  value={post.reference}
+                  onChange={set('reference')}
+                  placeholder="https://…"
+                />
+              </>
+            ) : null}
           </div>
         </aside>
+        ) : null}
 
         <main className="brief-main">
-          <div className="brief-headline-bar">
+          {show('headline') ? (
+            <div className="brief-headline-bar">
+              <Field
+                editable={editable}
+                multiline
+                className="brief-headline"
+                value={post.headline}
+                onChange={set('headline')}
+                placeholder="Headline on the design — العنوان على التصميم"
+              />
+            </div>
+          ) : null}
+          {show('subText') ? (
             <Field
               editable={editable}
               multiline
-              className="brief-headline"
-              value={post.headline}
-              onChange={set('headline')}
-              placeholder="Headline on the design — العنوان على التصميم"
+              className="brief-sub"
+              value={post.subText}
+              onChange={set('subText')}
+              placeholder="Sub text (smaller line) — النص الصغير"
             />
-          </div>
-          <Field
-            editable={editable}
-            multiline
-            className="brief-sub"
-            value={post.subText}
-            onChange={set('subText')}
-            placeholder="Sub text (smaller line) — النص الصغير"
-          />
-          <div className="brief-caption-box">
-            <span className="brief-label is-magenta">Caption <i>الكابشن</i></span>
-            <Field
-              editable={editable}
-              multiline
-              minRows={8}
-              className="brief-caption"
-              value={post.caption}
-              onChange={set('caption')}
-              placeholder="The post caption — hashtags, contact number, everything that gets posted with it."
-            />
-          </div>
+          ) : null}
+          {show('caption') ? (
+            <div className="brief-caption-box">
+              <span className="brief-label is-magenta">Caption <i>الكابشن</i></span>
+              <Field
+                editable={editable}
+                multiline
+                minRows={8}
+                className="brief-caption"
+                value={post.caption}
+                onChange={set('caption')}
+                placeholder="The post caption — hashtags, contact number, everything that gets posted with it."
+              />
+            </div>
+          ) : null}
         </main>
       </div>
     </div>

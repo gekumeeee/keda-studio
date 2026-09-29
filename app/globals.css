@@ -2184,9 +2184,31 @@ html[dir="rtl"] .site .client-gallery-head h2{letter-spacing:normal;}
   border-radius:22px; overflow:hidden; line-height:1.5; text-align:start;
 }
 .brief *{box-sizing:border-box;}
-.brief-export{position:relative; width:1600px; height:900px; overflow:hidden; background:#F2EFE6;}
-.brief-export-fit{position:absolute; top:0; left:0; transform-origin:0 0;}
+/* the exported picture: phone width, as tall as the text */
+.brief-export{width:600px; background:#F2EFE6;}
 .brief-export .brief{border-radius:0;}
+
+/* ---- compact brief: one column, for the exported picture ---- */
+.brief.is-compact .brief-top{padding:18px 20px; gap:14px;}
+.brief.is-compact .brief-meta{gap:12px 14px;}
+.brief.is-compact .brief-meta-label{font-size:10px;}
+.brief.is-compact .brief-meta-value{font-size:13px; padding:6px 12px;}
+.brief.is-compact .brief-status-pill{font-size:12px;}
+.brief.is-compact .brief-brand{width:100%; justify-content:space-between;}
+.brief.is-compact .brief-body{display:flex; flex-direction:column; gap:16px; padding:22px 20px 26px;}
+/* the main column's blocks join the body's column so the direction can sit
+   between the design copy and the caption */
+.brief.is-compact .brief-main{display:contents;}
+.brief.is-compact .brief-headline-bar{order:1;}
+.brief.is-compact .brief-sub{order:2;}
+.brief.is-compact .brief-direction{order:3;}
+.brief.is-compact .brief-caption-box{order:4; margin-top:0;}
+.brief.is-compact .brief-clip{display:none;}
+.brief.is-compact .brief-direction-card{padding:18px 16px 16px;}
+.brief.is-compact .brief-headline{font-size:24px;}
+.brief.is-compact .brief-sub{font-size:17px;}
+.brief.is-compact .brief-direction-text{font-size:15px;}
+.brief.is-compact .brief-caption{font-size:16px; line-height:1.85;}
 
 .brief-top{
   display:flex; justify-content:space-between; align-items:center; gap:24px; flex-wrap:wrap;
@@ -2301,3 +2323,9 @@ html[dir="rtl"] .site .client-gallery-head h2{letter-spacing:normal;}
    textareas in the editor already behave, so the exported picture matches
    what the writer typed. */
 .brief div[dir="auto"], .brief textarea, .brief .brief-body input{unicode-bidi:plaintext;}
+/* in the picture the client's name sits at the start and the KEDA mark at
+   the end; a client logo from another site can't be copied into the
+   picture and only left a blank square, so the name stands alone */
+.brief.is-compact .brief-client-logo{display:none;}
+.brief.is-compact .brief-brand{flex-direction:row;}
+.brief.is-compact .brief-client{margin-inline-end:auto;}
