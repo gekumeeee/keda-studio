@@ -2154,17 +2154,25 @@ html[dir="rtl"] .site .client-gallery-head h2{letter-spacing:normal;}
 .content-row-title{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .content-row-meta{font-size:12px; color:var(--text-dim);}
 
-/* ---- the brief editor, opened over the calendar ---- */
-.brief-modal{position:fixed; inset:0; z-index:100; overflow:auto; padding:20px; background:rgba(0,0,0,.72);}
-.brief-modal-inner{max-width:1400px; margin:0 auto;}
+/* ---- an open post: the brief in the page, in place of the calendar ---- */
+.brief-page{display:flex; flex-direction:column; gap:16px;}
+/* pinned while the brief scrolls under it, so Save is never out of reach */
 .brief-actions{
-  position:sticky; top:0; z-index:2; margin-bottom:14px;
-  display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:10px 12px; border-radius:12px; background:var(--bg); border:1px solid var(--line);
+  position:sticky; top:0; z-index:5;
+  display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;
+  padding:12px 14px; border-radius:14px;
+  background:rgba(21,24,27,.92); backdrop-filter:blur(10px);
+  border:1px solid var(--line);
 }
+.brief-actions-left{display:flex; align-items:center; gap:14px; flex-wrap:wrap; min-width:0;}
+.brief-back{padding:0;}
+.brief-crumb{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px; color:var(--text-dim);}
+.brief-crumb b{color:var(--text); font-size:14px;}
+.brief-unsaved{color:var(--gold); font-weight:600;}
 .brief-actions-right{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .brief-actions button:disabled{opacity:.5; cursor:default;}
 .brief-notice{font-size:12.5px; color:var(--text-dim); margin-inline-end:6px;}
+.brief-page .brief{box-shadow:0 18px 50px rgba(0,0,0,.35);}
 
 /* ================================================================ */
 /* ======== The post brief: KEDA ink, paper and accents =========== */
@@ -2263,8 +2271,17 @@ html[dir="rtl"] .site .client-gallery-head h2{letter-spacing:normal;}
 .brief.is-editing .brief-caption-box:focus-within,
 .brief.is-editing .brief-direction-card:focus-within{outline:3px solid var(--cobalt); outline-offset:3px;}
 
+.brief-save-float{display:none;}
 @media (max-width:900px){
-  .brief-modal{padding:10px;}
+  /* compact and unpinned on a phone — pinned, it covered half the screen */
+  .brief-actions{position:static; padding:10px; gap:10px;}
+  .brief-actions-right{width:100%; gap:6px;}
+  .brief-actions .panel-head-link, .brief-actions .danger-btn, .brief-actions .add-btn{font-size:12px; padding:7px 12px;}
+  .brief-crumb{font-size:12px; gap:8px;}
+  .brief-save-float{
+    display:block; position:fixed; z-index:40; left:16px; right:16px; bottom:16px;
+    padding:14px; font-size:15px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+  }
   .brief-top{padding:18px;}
   .brief-body{grid-template-columns:1fr; gap:22px; padding:24px 16px 22px;}
   .brief-headline{font-size:24px;}

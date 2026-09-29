@@ -80,6 +80,7 @@ export default function ContentTab() {
     setDraft(post);
     setOpened(snapshot(post));
     setNotice('');
+    window.scrollTo({ top: 0 });
   }
   function close() {
     if (dirty && !confirm('Close without saving? Your changes to this post will be lost.')) return;
@@ -151,7 +152,7 @@ export default function ContentTab() {
       setPosts((prev) => (draft.id ? prev.map((p) => (p.id === saved.id ? saved : p)) : [...prev, saved]));
       setDraft(saved);
       setOpened(snapshot(saved));
-      setNotice('Saved ✓');
+      setNotice(''); // the Save button itself turns to "Saved ✓"
     } catch {
       setNotice('Saving failed — nothing was lost here; try again.');
     } finally {
@@ -203,6 +204,51 @@ export default function ContentTab() {
     } finally {
       setBusy('');
     }
+  }
+
+  // An open post takes the calendar's place in the page — the sidebar and the
+  // section heading stay where they are, and "← Calendar" goes back.
+  if (draft) {
+    const status = statusOf(draft.status);
+    const when = draft.date
+      ? new Date(`${draft.date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+      : 'No date yet';
+    return (
+      <section className="tab-panel active brief-page">
+        <div className="brief-actions">
+          <div className="brief-actions-left">
+            <button type="button" className="folder-back brief-back" onClick={close}>← Calendar</button>
+            <div className="brief-crumb">
+              <b>{draft.id ? when : 'New post'}</b>
+              {draft.clientName ? <span dir="auto">{draft.clientName}</span> : null}
+              <span className={`brief-status-pill is-${draft.status}`}>{status.label}</span>
+              {dirty ? <span className="brief-unsaved">Unsaved changes</span> : null}
+            </div>
+          </div>
+          <div className="brief-actions-right">
+            {notice ? <span className="brief-notice">{notice}</span> : null}
+            <button type="button" className="panel-head-link" onClick={copyCaption} disabled={!draft.caption}>Copy caption</button>
+            <button type="button" className="panel-head-link" onClick={exportImage} disabled={busy === 'export'}>
+              {busy === 'export' ? 'Making image…' : 'Export image'}
+            </button>
+            {draft.id ? <button type="button" className="panel-head-link" onClick={duplicate}>Duplicate</button> : null}
+            {draft.id ? <button type="button" className="danger-btn" onClick={remove} disabled={busy === 'delete'}>Delete</button> : null}
+            <button type="button" className="add-btn" onClick={save} disabled={busy === 'save' || (!dirty && !!draft.id)}>
+              {busy === 'save' ? 'Saving…' : draft.id ? (dirty ? 'Save changes' : 'Saved ✓') : 'Save post'}
+            </button>
+          </div>
+        </div>
+        <PostBrief post={draft} clients={clients} editable onChange={setDraft} />
+        {/* on a phone the toolbar scrolls away with the page; this keeps Save
+            in reach whenever there's something to save (hidden on desktop,
+            where the toolbar itself stays pinned) */}
+        {dirty ? (
+          <button type="button" className="add-btn brief-save-float" onClick={save} disabled={busy === 'save'}>
+            {busy === 'save' ? 'Saving…' : 'Save changes'}
+          </button>
+        ) : null}
+      </section>
+    );
   }
 
   if (loading) return <section className="tab-panel active"><div className="panel"><div className="empty">Loading the calendar…</div></div></section>;
@@ -275,28 +321,6 @@ export default function ContentTab() {
         </div>
       </div>
 
-      {draft ? (
-        <div className="brief-modal" role="dialog" aria-modal="true" aria-label="Post brief">
-          <div className="brief-modal-inner">
-            <div className="brief-actions">
-              <button type="button" className="panel-head-link" onClick={close}>← Calendar</button>
-              <div className="brief-actions-right">
-                {notice ? <span className="brief-notice">{notice}</span> : null}
-                <button type="button" className="panel-head-link" onClick={copyCaption} disabled={!draft.caption}>Copy caption</button>
-                <button type="button" className="panel-head-link" onClick={exportImage} disabled={busy === 'export'}>
-                  {busy === 'export' ? 'Making image…' : 'Export image'}
-                </button>
-                {draft.id ? <button type="button" className="panel-head-link" onClick={duplicate}>Duplicate</button> : null}
-                {draft.id ? <button type="button" className="danger-btn" onClick={remove} disabled={busy === 'delete'}>Delete</button> : null}
-                <button type="button" className="add-btn" onClick={save} disabled={busy === 'save' || (!dirty && !!draft.id)}>
-                  {busy === 'save' ? 'Saving…' : draft.id ? (dirty ? 'Save changes' : 'Saved') : 'Save post'}
-                </button>
-              </div>
-            </div>
-            <PostBrief post={draft} clients={clients} editable onChange={setDraft} />
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }
