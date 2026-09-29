@@ -10,6 +10,9 @@ import { POST_STATUSES, POST_PLATFORMS, POST_FORMATS, statusOf } from '@/lib/con
 // Reports tab, so someone given only the "content" permission can use it.
 
 const WEEKDAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+// the exported brief's frame, in CSS px (captured at 1.2× → 1920×1080)
+const EXPORT_WIDTH = 1600;
+const EXPORT_HEIGHT = 900;
 const pad = (n) => String(n).padStart(2, '0');
 const dayKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const todayKey = () => {
@@ -191,10 +194,26 @@ export default function ContentTab() {
     setBusy('export');
     setNotice('');
     try {
-      const { captureOffscreen, dataUrlToBlob, downloadBlob, safeFileName } = await import('@/lib/sheetCapture');
+      const { captureOffscreen, dataUrlToBlob, downloadBlob, safeFileName, scaleToFit } = await import('@/lib/sheetCapture');
+      // Always a 16:9 landscape picture, 1920×1080: the brief is laid out in
+      // a 1600×900 frame and captured at 1.2×. A long caption shrinks the
+      // whole brief to fit rather than making the picture taller, and a
+      // short one leaves paper below it rather than a wide strip.
       const dataUrl = await captureOffscreen(
-        <div className="brief-export"><PostBrief post={draft} clients={clients} /></div>,
-        { selector: '.brief-export', format: 'png', pixelRatio: 2 }
+        <div className="brief-export">
+          <div className="brief-export-fit"><PostBrief post={draft} clients={clients} /></div>
+        </div>,
+        {
+          selector: '.brief-export',
+          format: 'png',
+          pixelRatio: 1.2,
+          prepare: (frame) => {
+            const fit = frame.querySelector('.brief-export-fit');
+            const z = scaleToFit(fit, EXPORT_WIDTH, EXPORT_HEIGHT, 0.5);
+            // a short brief still runs its paper to the bottom of the frame
+            fit.querySelector('.brief').style.minHeight = `${EXPORT_HEIGHT / z}px`;
+          },
+        }
       );
       const name = [draft.clientName, draft.date, draft.format].filter(Boolean).join(' ');
       downloadBlob(await dataUrlToBlob(dataUrl), `brief-${safeFileName(name, 'post')}.png`);

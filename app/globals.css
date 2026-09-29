@@ -2184,7 +2184,8 @@ html[dir="rtl"] .site .client-gallery-head h2{letter-spacing:normal;}
   border-radius:22px; overflow:hidden; line-height:1.5; text-align:start;
 }
 .brief *{box-sizing:border-box;}
-.brief-export{width:1400px; background:#ffffff; padding:0;}
+.brief-export{position:relative; width:1600px; height:900px; overflow:hidden; background:#F2EFE6;}
+.brief-export-fit{position:absolute; top:0; left:0; transform-origin:0 0;}
 .brief-export .brief{border-radius:0;}
 
 .brief-top{
