@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getReports, saveReports, uid } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 
 // GET /api/reports?clientId=X — every month on file for one client, newest
 // first. The monthly entry screen uses this to list existing months and to
@@ -17,9 +18,12 @@ export async function GET(request) {
 export async function POST(request) {
   const gate = await requirePermission('reports');
   if (gate.error) return gate.error;
-  const body = await request.json();
-  if (!body.clientId || !body.month) {
-    return NextResponse.json({ error: 'clientId and month are required' }, { status: 400 });
+  const body = await readBody(request);
+  if (!body) return badBody();
+  // month has to be "YYYY-MM": the list sorts on it as a string and the
+  // report pages split it into year and month
+  if (typeof body.clientId !== 'string' || !body.clientId || typeof body.month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(body.month)) {
+    return NextResponse.json({ error: 'clientId and month (YYYY-MM) are required' }, { status: 400 });
   }
   const reports = await getReports({ fresh: true });
   if (reports.some((r) => r.clientId === body.clientId && r.month === body.month)) {

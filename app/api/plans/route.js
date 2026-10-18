@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPlans, savePlans, uid } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
@@ -16,18 +17,19 @@ export async function GET() {
 export async function POST(request) {
   const gate = await requirePermission('plans');
   if (gate.error) return gate.error;
-  const body = await request.json();
-  if (!body.name?.trim()) {
+  const body = await readBody(request);
+  if (!body) return badBody();
+  if (!str(body.name)) {
     return NextResponse.json({ error: 'Plan name is required' }, { status: 400 });
   }
   const plans = await getPlans({ fresh: true });
   const plan = {
     id: uid(),
-    name: body.name.trim(),
-    description: (body.description || '').trim(),
-    currency: (body.currency || 'LE').trim() || 'LE',
-    price: (body.price || '').trim(),
-    cycle: (body.cycle || '').trim(),
+    name: str(body.name),
+    description: str(body.description),
+    currency: str(body.currency) || 'LE',
+    price: str(body.price),
+    cycle: str(body.cycle),
     items: normalizeItems(body.items),
     updated: new Date().toISOString(),
   };

@@ -82,7 +82,11 @@ export default function ReportsTab() {
 
   async function deleteClient(id) {
     if (!confirm('Remove this client? Its saved monthly reports stay on file but become unreachable from here.')) return;
-    await fetch(`/api/report-clients/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/report-clients/${id}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) {
+      alert('Removing the client failed — it’s still there. Try again.');
+      return;
+    }
     setClients((prev) => prev.filter((c) => c.id !== id));
   }
 
@@ -111,7 +115,11 @@ export default function ReportsTab() {
 
   async function deleteReport(id) {
     if (!confirm('Delete this month’s report? This can’t be undone.')) return;
-    await fetch(`/api/reports/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/reports/${id}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) {
+      alert('Deleting the report failed — it’s still there. Try again.');
+      return;
+    }
     setClientReports((prev) => prev.filter((r) => r.id !== id));
   }
 

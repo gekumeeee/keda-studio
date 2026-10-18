@@ -120,7 +120,7 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
                           <div className={`gallery-card ${isPortraitProject(p) ? 'is-portrait' : ''}`} key={`${copy}-${i}-${p.id}`}>
                             <div className="work-card-media">
                               {p.video ? (
-                                <PortfolioVideo src={p.video} poster={p.image} label={p.category} orientation={p.orientation} />
+                                <PortfolioVideo src={p.video} poster={p.image} label={t.filters[p.category] || p.category} orientation={p.orientation} />
                               ) : p.image ? (
                                 // Real image: shown at its own natural size
                                 // (plain <img>, not a background-image crop
@@ -128,11 +128,11 @@ export default function PortfolioView({ projects, settings, clients = [], lang =
                                 // just the picture — no label or caption on it.
                                 <div className="work-card-img has-image">
                                   <img src={p.image} alt={p.title || ''} className="work-card-img-el" />
-                                  {p.title ? <span className="label">{p.category}</span> : null}
+                                  {p.title ? <span className="label">{t.filters[p.category] || p.category}</span> : null}
                                 </div>
                               ) : (
                                 <div className="work-card-img" style={{ background: CARD_TINTS[i % CARD_TINTS.length] }}>
-                                  <span className="label">{p.category}</span>
+                                  <span className="label">{t.filters[p.category] || p.category}</span>
                                 </div>
                               )}
                               {p.title ? <div className="gallery-card-caption">{p.title}</div> : null}

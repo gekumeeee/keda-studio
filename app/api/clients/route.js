@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getClients, saveClients, uid } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 export async function GET() {
   const gate = await requirePermission('clients');
@@ -11,18 +12,19 @@ export async function GET() {
 export async function POST(request) {
   const gate = await requirePermission('clients');
   if (gate.error) return gate.error;
-  const body = await request.json();
-  if (!body.name || !body.name.trim()) {
+  const body = await readBody(request);
+  if (!body) return badBody();
+  if (!str(body.name)) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
   const clients = await getClients({ fresh: true });
   const client = {
     id: uid(),
-    name: body.name.trim(),
-    logo: typeof body.logo === 'string' ? body.logo.trim() : '',
+    name: str(body.name),
+    logo: str(body.logo),
     // Artwork for the client's card in the homepage fan. Separate from the
     // logo: the logo is a mark on a bar, this is a full-bleed design.
-    cardImage: typeof body.cardImage === 'string' ? body.cardImage.trim() : '',
+    cardImage: str(body.cardImage),
     added: new Date().toISOString(),
   };
   clients.unshift(client);

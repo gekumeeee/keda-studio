@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getContracts, saveContracts } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
@@ -15,7 +16,8 @@ export async function PUT(request, { params }) {
   const gate = await requirePermission('contracts');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const contracts = await getContracts({ fresh: true });
   const idx = contracts.findIndex((c) => c.id === id);
   if (idx === -1) {
@@ -24,14 +26,14 @@ export async function PUT(request, { params }) {
   const base = contracts[idx];
   contracts[idx] = {
     ...base,
-    title: body.title?.trim() || base.title,
+    title: str(body.title) || base.title,
     partyType: ['client', 'employee'].includes(body.partyType) ? body.partyType : base.partyType,
-    clientId: body.clientId !== undefined ? body.clientId.trim() : (base.clientId || ''),
-    partyName: body.partyName !== undefined ? body.partyName.trim() : base.partyName,
-    role: body.role !== undefined ? body.role.trim() : base.role,
-    startDate: body.startDate !== undefined ? body.startDate.trim() : base.startDate,
-    endDate: body.endDate !== undefined ? body.endDate.trim() : base.endDate,
-    currency: body.currency !== undefined ? (body.currency.trim() || 'LE') : base.currency,
+    clientId: body.clientId !== undefined ? str(body.clientId) : (base.clientId || ''),
+    partyName: body.partyName !== undefined ? str(body.partyName) : base.partyName,
+    role: body.role !== undefined ? str(body.role) : base.role,
+    startDate: body.startDate !== undefined ? str(body.startDate) : base.startDate,
+    endDate: body.endDate !== undefined ? str(body.endDate) : base.endDate,
+    currency: body.currency !== undefined ? (str(body.currency) || 'LE') : base.currency,
     items: body.items !== undefined ? normalizeItems(body.items) : base.items,
     terms: body.terms !== undefined ? (typeof body.terms === 'string' ? body.terms : '') : base.terms,
     notes: body.notes !== undefined ? (typeof body.notes === 'string' ? body.notes : '') : base.notes,

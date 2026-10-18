@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getReportClients, saveReportClients } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 export async function PUT(request, { params }) {
   const gate = await requirePermission('reports');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const clients = await getReportClients({ fresh: true });
   const idx = clients.findIndex((c) => c.id === id);
   if (idx === -1) {
@@ -15,7 +17,7 @@ export async function PUT(request, { params }) {
   const cur = clients[idx];
   clients[idx] = {
     ...cur,
-    name: body.name?.trim() || cur.name,
+    name: str(body.name) || cur.name,
     logoUrl: body.logoUrl !== undefined ? String(body.logoUrl).trim() : cur.logoUrl,
     primaryColor: body.primaryColor || cur.primaryColor,
     secondaryColor: body.secondaryColor || cur.secondaryColor,

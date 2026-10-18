@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getContent, saveContent } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 import { normalizePost } from '@/lib/contentPosts';
 
 export async function PUT(request, { params }) {
   const gate = await requirePermission('content');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const body = await request.json().catch(() => ({}));
+  const body = await readBody(request);
+  if (!body) return badBody();
   const posts = await getContent({ fresh: true });
   const idx = posts.findIndex((p) => p.id === id);
   if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });

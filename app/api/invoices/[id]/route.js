@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInvoices, saveInvoices } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 function normalizeSections(sections) {
   if (!Array.isArray(sections)) return [];
@@ -15,7 +16,8 @@ export async function PUT(request, { params }) {
   const gate = await requirePermission('invoices');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const invoices = await getInvoices({ fresh: true });
   const idx = invoices.findIndex((i) => i.id === id);
   if (idx === -1) {
@@ -30,15 +32,15 @@ export async function PUT(request, { params }) {
   if (status !== 'paid') paidDate = '';
   invoices[idx] = {
     ...base,
-    clientId: body.clientId !== undefined ? body.clientId.trim() : (base.clientId || ''),
-    clientName: body.clientName !== undefined ? body.clientName.trim() : base.clientName,
-    projectName: body.projectName?.trim() || base.projectName,
-    currency: body.currency !== undefined ? body.currency.trim() || 'LE' : base.currency,
-    discount: body.discount !== undefined ? body.discount.trim() : base.discount,
+    clientId: body.clientId !== undefined ? str(body.clientId) : (base.clientId || ''),
+    clientName: body.clientName !== undefined ? str(body.clientName) : base.clientName,
+    projectName: str(body.projectName) || base.projectName,
+    currency: body.currency !== undefined ? str(body.currency) || 'LE' : base.currency,
+    discount: body.discount !== undefined ? str(body.discount) : base.discount,
     sections: body.sections !== undefined ? normalizeSections(body.sections) : base.sections,
     status,
-    issueDate: body.issueDate !== undefined ? body.issueDate.trim() : (base.issueDate || ''),
-    dueDate: body.dueDate !== undefined ? body.dueDate.trim() : (base.dueDate || ''),
+    issueDate: body.issueDate !== undefined ? str(body.issueDate) : (base.issueDate || ''),
+    dueDate: body.dueDate !== undefined ? str(body.dueDate) : (base.dueDate || ''),
     paidDate,
     updated: new Date().toISOString(),
   };

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getContent, saveContent, getClients, uid } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 import { normalizePost } from '@/lib/contentPosts';
 
 // The content calendar. GET also hands back the client list (names and logos
@@ -19,7 +20,8 @@ export async function GET() {
 export async function POST(request) {
   const gate = await requirePermission('content');
   if (gate.error) return gate.error;
-  const body = await request.json().catch(() => ({}));
+  const body = await readBody(request);
+  if (!body) return badBody();
   const now = new Date().toISOString();
   const post = {
     id: uid(),

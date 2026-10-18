@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getReports, saveReports } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 
 // GET is intentionally unauthenticated-friendly at the field level — it's
 // still gated the same as everything else here, but the report TEMPLATE
@@ -27,7 +28,8 @@ export async function PUT(request, { params }) {
   const gate = await requirePermission('reports');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const reports = await getReports({ fresh: true });
   const idx = reports.findIndex((r) => r.id === id);
   if (idx === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });

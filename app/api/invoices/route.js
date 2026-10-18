@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInvoices, saveInvoices, uid } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 function normalizeSections(sections) {
   if (!Array.isArray(sections)) return [];
@@ -20,23 +21,24 @@ export async function GET() {
 export async function POST(request) {
   const gate = await requirePermission('invoices');
   if (gate.error) return gate.error;
-  const body = await request.json();
-  if (!body.projectName?.trim()) {
+  const body = await readBody(request);
+  if (!body) return badBody();
+  if (!str(body.projectName)) {
     return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
   }
   const invoices = await getInvoices({ fresh: true });
   const status = ['draft', 'sent', 'paid'].includes(body.status) ? body.status : 'draft';
   const invoice = {
     id: uid(),
-    clientId: (body.clientId || '').trim(),
-    clientName: (body.clientName || '').trim(),
-    projectName: body.projectName.trim(),
-    currency: (body.currency || 'LE').trim() || 'LE',
-    discount: (body.discount || '').trim(),
+    clientId: str(body.clientId),
+    clientName: str(body.clientName),
+    projectName: str(body.projectName),
+    currency: str(body.currency) || 'LE',
+    discount: str(body.discount),
     sections: normalizeSections(body.sections),
     status,
-    issueDate: (body.issueDate || '').trim(),
-    dueDate: (body.dueDate || '').trim(),
+    issueDate: str(body.issueDate),
+    dueDate: str(body.dueDate),
     // paidDate is server-managed: only stamped when the invoice is created paid
     paidDate: status === 'paid' ? new Date().toISOString() : '',
     updated: new Date().toISOString(),

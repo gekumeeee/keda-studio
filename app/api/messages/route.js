@@ -3,6 +3,7 @@ import { getMessages, saveMessages, uid, getSettings } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
 import { notifyNewMessage } from '@/lib/notify';
 import { clientIp, isBot, isRateLimited, validateMessage } from '@/lib/spamGuard';
+import { readBody } from '@/lib/apiInput';
 
 export async function GET() {
   const gate = await requirePermission('messages');
@@ -14,12 +15,8 @@ export async function GET() {
 // endpoint. Because it's open and every accepted submission writes to the
 // Blob store, the checks in lib/spamGuard.js run before anything is stored.
 export async function POST(request) {
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-  }
+  const body = await readBody(request);
+  if (!body) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
 
   // Answer a bot with the same 201 a real visitor gets: told it failed, a
   // bot retries or moves to another vector; told it succeeded, it stops.

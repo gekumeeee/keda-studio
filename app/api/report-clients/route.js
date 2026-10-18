@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getReportClients, saveReportClients, uid } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 export async function GET() {
   const gate = await requirePermission('reports');
@@ -11,20 +12,21 @@ export async function GET() {
 export async function POST(request) {
   const gate = await requirePermission('reports');
   if (gate.error) return gate.error;
-  const body = await request.json();
-  if (!body.name || !body.name.trim()) {
+  const body = await readBody(request);
+  if (!body) return badBody();
+  if (!str(body.name)) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
   const clients = await getReportClients({ fresh: true });
   const client = {
     id: uid(),
-    name: body.name.trim(),
-    logoUrl: typeof body.logoUrl === 'string' ? body.logoUrl.trim() : '',
+    name: str(body.name),
+    logoUrl: str(body.logoUrl),
     primaryColor: body.primaryColor || '#2F3A44',
     secondaryColor: body.secondaryColor || '#8791A0',
-    fbPageId: (body.fbPageId || '').trim(),
-    igId: (body.igId || '').trim(),
-    ytChannelId: (body.ytChannelId || '').trim(),
+    fbPageId: str(body.fbPageId),
+    igId: str(body.igId),
+    ytChannelId: str(body.ytChannelId),
     packageJson: typeof body.packageJson === 'object' && body.packageJson ? body.packageJson : {},
     price: typeof body.price === 'string' ? body.price.trim() : (body.price || ''),
     renewalDate: body.renewalDate || '',

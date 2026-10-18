@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getUsers, saveUsers, uid } from '@/lib/store';
 import { requireOwner, hashPassword, emptyPermissions, PERMISSIONS } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 
 function stripHash(u) {
   const { passwordHash, ...safe } = u;
@@ -27,9 +28,10 @@ export async function POST(request) {
   const gate = await requireOwner();
   if (gate.error) return gate.error;
 
-  const body = await request.json();
-  const username = (body.username || '').trim();
-  const password = body.password || '';
+  const body = await readBody(request);
+  if (!body) return badBody();
+  const username = typeof body.username === 'string' ? body.username.trim() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
   if (username.length < 3) {
     return NextResponse.json({ error: 'Username must be at least 3 characters' }, { status: 400 });
   }

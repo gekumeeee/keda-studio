@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getUsers, saveUsers } from '@/lib/store';
 import { requireUser, hashPassword, emptyPermissions, PERMISSIONS } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 
 function stripHash(u) {
   const { passwordHash, ...safe } = u;
@@ -34,7 +35,8 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const next = { ...users[idx] };
 
   if (typeof body.username === 'string' && body.username.trim()) {

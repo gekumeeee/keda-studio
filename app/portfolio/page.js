@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { getProjects, getSettings, getClients } from '@/lib/store';
 import { mergeSettings } from '@/lib/defaults';
-import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
+import { normalizeLang, LANG_COOKIE, UI } from '@/lib/i18n';
 import PortfolioView from '@/components/PortfolioView';
 import { pageMetadata } from '@/lib/site';
 
@@ -10,8 +10,11 @@ import { pageMetadata } from '@/lib/site';
 // lib/store.js's cross-request cache, not at this page's dynamic/static config.
 export async function generateMetadata() {
   const settings = mergeSettings(await getSettings());
+  // the tab title follows the visitor's language like the page does; a
+  // crawler has no cookie, so it still gets the English one
+  const lang = normalizeLang((await cookies()).get(LANG_COOKIE)?.value);
   return pageMetadata({
-    title: `Portfolio — ${settings.siteName || 'Keda Agency'}`,
+    title: `${lang === 'ar' ? UI.ar.nav.portfolio : 'Portfolio'} — ${settings.siteName || 'Keda Agency'}`,
     description:
       'Selected branding, video, social and campaign work by KEDA — a brand and creative agency in Cairo.',
     path: '/portfolio',

@@ -163,9 +163,11 @@ export default function ContentTab() {
   async function remove() {
     if (!draft.id || !confirm('Delete this post from the calendar? This cannot be undone.')) return;
     setBusy('delete');
-    const res = await fetch(`/api/content/${draft.id}`, { method: 'DELETE' });
+    // a dropped connection used to throw out of here and leave the button
+    // stuck on busy; treat it like any other failed delete
+    const res = await fetch(`/api/content/${draft.id}`, { method: 'DELETE' }).catch(() => null);
     setBusy('');
-    if (!res.ok) {
+    if (!res?.ok) {
       setNotice('Deleting failed — the post is still there. Try again.');
       return;
     }

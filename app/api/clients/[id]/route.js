@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getClients, saveClients } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 export async function PUT(request, { params }) {
   const gate = await requirePermission('clients');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const clients = await getClients({ fresh: true });
   const idx = clients.findIndex((c) => c.id === id);
   if (idx === -1) {
@@ -14,9 +16,9 @@ export async function PUT(request, { params }) {
   }
   clients[idx] = {
     ...clients[idx],
-    name: body.name?.trim() || clients[idx].name,
-    logo: body.logo !== undefined ? String(body.logo).trim() : (clients[idx].logo || ''),
-    cardImage: body.cardImage !== undefined ? String(body.cardImage).trim() : (clients[idx].cardImage || ''),
+    name: str(body.name) || clients[idx].name,
+    logo: body.logo !== undefined ? str(body.logo) : (clients[idx].logo || ''),
+    cardImage: body.cardImage !== undefined ? str(body.cardImage) : (clients[idx].cardImage || ''),
   };
   await saveClients(clients);
   return NextResponse.json(clients[idx]);

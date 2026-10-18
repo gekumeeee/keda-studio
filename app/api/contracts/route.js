@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getContracts, saveContracts, uid } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
@@ -13,14 +14,14 @@ function normalizeItems(items) {
 
 function normalizeContract(body, base = {}) {
   return {
-    title: body.title !== undefined ? (body.title || '').trim() : base.title,
+    title: body.title !== undefined ? str(body.title) : base.title,
     partyType: ['client', 'employee'].includes(body.partyType) ? body.partyType : (base.partyType || 'client'),
-    clientId: body.clientId !== undefined ? (body.clientId || '').trim() : (base.clientId || ''),
-    partyName: body.partyName !== undefined ? (body.partyName || '').trim() : base.partyName,
-    role: body.role !== undefined ? (body.role || '').trim() : (base.role || ''),
-    startDate: body.startDate !== undefined ? (body.startDate || '').trim() : (base.startDate || ''),
-    endDate: body.endDate !== undefined ? (body.endDate || '').trim() : (base.endDate || ''),
-    currency: body.currency !== undefined ? ((body.currency || 'LE').trim() || 'LE') : (base.currency || 'LE'),
+    clientId: body.clientId !== undefined ? str(body.clientId) : (base.clientId || ''),
+    partyName: body.partyName !== undefined ? str(body.partyName) : base.partyName,
+    role: body.role !== undefined ? str(body.role) : (base.role || ''),
+    startDate: body.startDate !== undefined ? str(body.startDate) : (base.startDate || ''),
+    endDate: body.endDate !== undefined ? str(body.endDate) : (base.endDate || ''),
+    currency: body.currency !== undefined ? (str(body.currency) || 'LE') : (base.currency || 'LE'),
     items: body.items !== undefined ? normalizeItems(body.items) : (base.items || []),
     terms: body.terms !== undefined ? (typeof body.terms === 'string' ? body.terms : '') : (base.terms || ''),
     notes: body.notes !== undefined ? (typeof body.notes === 'string' ? body.notes : '') : (base.notes || ''),
@@ -36,8 +37,9 @@ export async function GET() {
 export async function POST(request) {
   const gate = await requirePermission('contracts');
   if (gate.error) return gate.error;
-  const body = await request.json();
-  if (!body.title?.trim()) {
+  const body = await readBody(request);
+  if (!body) return badBody();
+  if (!str(body.title)) {
     return NextResponse.json({ error: 'Contract title is required' }, { status: 400 });
   }
   const contracts = await getContracts({ fresh: true });

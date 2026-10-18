@@ -66,7 +66,8 @@ function getShowcase(filter, projects, lang) {
     title: p.title,
     client: p.client,
     work: p.work,
-    label: p.category,
+    // the stored category is the English key; show it in the page's language
+    label: UI[lang].filters[p.category] || p.category,
     image: p.image || '',
     video: p.video || '',
     orientation: p.orientation || 'auto',

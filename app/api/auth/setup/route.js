@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getUsers, saveUsers, uid } from '@/lib/store';
 import { hashPassword, createSessionToken, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 
 // Creates the very first (owner) account. Only works while no users exist —
 // after that, new users can only be created by the owner from inside the
@@ -11,9 +12,10 @@ export async function POST(request) {
   if (users.length > 0) {
     return NextResponse.json({ error: 'Setup already completed' }, { status: 403 });
   }
-  const body = await request.json();
-  const username = (body.username || '').trim();
-  const password = body.password || '';
+  const body = await readBody(request);
+  if (!body) return badBody();
+  const username = typeof body.username === 'string' ? body.username.trim() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
   if (username.length < 3) {
     return NextResponse.json({ error: 'Username must be at least 3 characters' }, { status: 400 });
   }

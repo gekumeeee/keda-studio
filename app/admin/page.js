@@ -179,6 +179,38 @@ function isContractActive(c) {
   return true;
 }
 
+// Sends one save/delete and hands back the server's JSON, or null once the
+// person has been told it failed. The handlers used to take any response as
+// success: a rejected save (session expired, a validation error) closed the
+// form, dropped what was typed and put the error object into the list as if
+// it were a record — and a failed Site Content save reset the whole form to
+// the defaults while showing "Saved ✓".
+async function sendJson(url, method, body, what) {
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(`${what} failed — ${res.status === 401 ? 'you’ve been signed out. Sign in again and retry' : data.error || 'try again'}.`);
+      return null;
+    }
+    return data;
+  } catch {
+    alert(`${what} failed — check your connection and try again.`);
+    return null;
+  }
+}
+
+// The PDF downloads run in the browser; if one throws, say so instead of the
+// button quietly going back to "Download PDF" with nothing downloaded.
+function reportDownloadError(err) {
+  console.error('[admin] PDF export failed', err);
+  alert('The PDF couldn’t be made — try again.');
+}
+
 // Stable field wrapper (module-level so inputs never lose focus on re-render).
 function Field({ label, hint, children }) {
   return (
@@ -469,13 +501,15 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: authUsername, password: authPassword }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setAuthError(data.error || 'Something went wrong');
         return;
       }
       resetAuthForm();
       await checkSession();
+    } catch {
+      setAuthError('Couldn’t reach the server — check your connection and try again.');
     } finally {
       setAuthBusy(false);
     }
@@ -491,13 +525,15 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: authUsername, password: authPassword }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setAuthError(data.error || 'Something went wrong');
         return;
       }
       resetAuthForm();
       await checkSession();
+    } catch {
+      setAuthError('Couldn’t reach the server — check your connection and try again.');
     } finally {
       setAuthBusy(false);
     }
@@ -541,7 +577,7 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setUserFormError(data.error || 'Something went wrong');
       return;
@@ -555,7 +591,7 @@ export default function AdminPage() {
   }
   async function deleteUser(id) {
     if (!confirm('Remove this person from the admin? They will lose access immediately.')) return;
-    await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    if (!(await sendJson(`/api/users/${id}`, 'DELETE', undefined, 'Removing this person'))) return;
     setUsers((prev) => prev.filter((u) => u.id !== id));
   }
 
@@ -574,7 +610,7 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setAccountError(data.error || 'Something went wrong');
       return;
@@ -643,20 +679,12 @@ export default function AdminPage() {
   async function saveProject(e) {
     e.preventDefault();
     if (editingProjectId) {
-      const res = await fetch(`/api/projects/${editingProjectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projectForm),
-      });
-      const updated = await res.json();
+      const updated = await sendJson(`/api/projects/${editingProjectId}`, 'PUT', projectForm, 'Saving the project');
+      if (!updated) return;
       setProjects((prev) => prev.map((p) => (p.id === editingProjectId ? updated : p)));
     } else {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projectForm),
-      });
-      const created = await res.json();
+      const created = await sendJson('/api/projects', 'POST', projectForm, 'Saving the project');
+      if (!created) return;
       setProjects((prev) => [created, ...prev]);
     }
     setProjectModalOpen(false);
@@ -717,15 +745,16 @@ export default function AdminPage() {
     const b = projects.findIndex((p) => p.id === other.id);
     moveProjectTo(a, b);
   }
-  function moveProjectTo(index, target) {
+  async function moveProjectTo(index, target) {
+    const before = projects;
     const next = [...projects];
     [next[index], next[target]] = [next[target], next[index]];
     setProjects(next);
-    fetch('/api/projects/reorder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: next.map((p) => p.id) }),
-    });
+    // put the list back if the server didn't take the new order, so the
+    // admin never shows an order the site isn't using
+    if (!(await sendJson('/api/projects/reorder', 'POST', { ids: next.map((p) => p.id) }, 'Saving the new order'))) {
+      setProjects(before);
+    }
   }
 
   function openProjectFolder(key) {
@@ -785,20 +814,12 @@ export default function AdminPage() {
     e.preventDefault();
     if (!clientForm.name.trim()) return;
     if (editingClientId) {
-      const res = await fetch(`/api/clients/${editingClientId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(clientForm),
-      });
-      const updated = await res.json();
+      const updated = await sendJson(`/api/clients/${editingClientId}`, 'PUT', clientForm, 'Saving the client');
+      if (!updated) return;
       setClients((prev) => prev.map((c) => (c.id === editingClientId ? updated : c)));
     } else {
-      const res = await fetch('/api/clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(clientForm),
-      });
-      const created = await res.json();
+      const created = await sendJson('/api/clients', 'POST', clientForm, 'Saving the client');
+      if (!created) return;
       setClients((prev) => [created, ...prev]);
     }
     setClientModalOpen(false);
@@ -806,24 +827,20 @@ export default function AdminPage() {
 
   async function deleteClient(id) {
     if (!confirm('Remove this client?')) return;
-    await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+    if (!(await sendJson(`/api/clients/${id}`, 'DELETE', undefined, 'Removing the client'))) return;
     setClients((prev) => prev.filter((c) => c.id !== id));
   }
 
   async function deleteMessage(id) {
     if (!confirm('Delete this message?')) return;
-    await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+    if (!(await sendJson(`/api/messages/${id}`, 'DELETE', undefined, 'Deleting the message'))) return;
     setMessages((prev) => prev.filter((m) => m.id !== id));
   }
 
   async function saveSettings(e) {
     e.preventDefault();
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settingsForm),
-    });
-    const updated = await res.json();
+    const updated = await sendJson('/api/settings', 'PUT', settingsForm, 'Saving the site content');
+    if (!updated) return;
     setSettingsForm(mergeSettings(updated));
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 3500);
@@ -867,27 +884,19 @@ export default function AdminPage() {
     if (!invoiceForm.projectName.trim()) return;
     const payload = { ...invoiceForm, sections: invoiceForm.sections.map((s) => ({ ...s, items: s.items.filter((i) => i.trim()) })) };
     if (editingInvoiceId) {
-      const res = await fetch(`/api/invoices/${editingInvoiceId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const updated = await res.json();
+      const updated = await sendJson(`/api/invoices/${editingInvoiceId}`, 'PUT', payload, 'Saving the invoice');
+      if (!updated) return;
       setInvoices((prev) => prev.map((i) => (i.id === editingInvoiceId ? updated : i)));
     } else {
-      const res = await fetch('/api/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const created = await res.json();
+      const created = await sendJson('/api/invoices', 'POST', payload, 'Saving the invoice');
+      if (!created) return;
       setInvoices((prev) => [created, ...prev]);
     }
     setInvoiceModalOpen(false);
   }
   async function deleteInvoice(id) {
     if (!confirm('Delete this invoice? This cannot be undone.')) return;
-    await fetch(`/api/invoices/${id}`, { method: 'DELETE' });
+    if (!(await sendJson(`/api/invoices/${id}`, 'DELETE', undefined, 'Deleting the invoice'))) return;
     setInvoices((prev) => prev.filter((i) => i.id !== id));
   }
   async function downloadInvoice(invoice) {
@@ -895,18 +904,16 @@ export default function AdminPage() {
     try {
       const { downloadInvoicePdf } = await import('@/lib/pdfTemplates');
       await downloadInvoicePdf(invoice);
+    } catch (err) {
+      reportDownloadError(err);
     } finally {
       setDownloadingInvoiceId(null);
     }
   }
   async function markInvoicePaid(invoice) {
     // paidDate is set server-side — take the response as source of truth.
-    const res = await fetch(`/api/invoices/${invoice.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'paid' }),
-    });
-    const updated = await res.json();
+    const updated = await sendJson(`/api/invoices/${invoice.id}`, 'PUT', { status: 'paid' }, 'Marking the invoice paid');
+    if (!updated) return;
     setInvoices((prev) => prev.map((i) => (i.id === invoice.id ? updated : i)));
   }
   // Clone an invoice as a fresh draft for a new billing month, then open it so
@@ -924,12 +931,8 @@ export default function AdminPage() {
       issueDate: today,
       dueDate: '',
     };
-    const res = await fetch('/api/invoices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const created = await res.json();
+    const created = await sendJson('/api/invoices', 'POST', payload, 'Creating the new month’s invoice');
+    if (!created) return;
     setInvoices((prev) => [created, ...prev]);
     openInvoiceModal(created);
   }
@@ -960,38 +963,26 @@ export default function AdminPage() {
     if (!planForm.name.trim()) return;
     const payload = { ...planForm, items: planForm.items.filter((i) => i.trim()) };
     if (editingPlanId) {
-      const res = await fetch(`/api/plans/${editingPlanId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const updated = await res.json();
+      const updated = await sendJson(`/api/plans/${editingPlanId}`, 'PUT', payload, 'Saving the plan');
+      if (!updated) return;
       setPlans((prev) => prev.map((p) => (p.id === editingPlanId ? updated : p)));
     } else {
-      const res = await fetch('/api/plans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const created = await res.json();
+      const created = await sendJson('/api/plans', 'POST', payload, 'Saving the plan');
+      if (!created) return;
       setPlans((prev) => [created, ...prev]);
     }
     setPlanModalOpen(false);
   }
   async function deletePlan(id) {
     if (!confirm('Delete this plan? This cannot be undone.')) return;
-    await fetch(`/api/plans/${id}`, { method: 'DELETE' });
+    if (!(await sendJson(`/api/plans/${id}`, 'DELETE', undefined, 'Deleting the plan'))) return;
     setPlans((prev) => prev.filter((p) => p.id !== id));
   }
   async function duplicatePlan(plan) {
     const { id: _drop, updated: _u, ...rest } = plan;
     const payload = { ...rest, name: `${plan.name} (copy)` };
-    const res = await fetch('/api/plans', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const created = await res.json();
+    const created = await sendJson('/api/plans', 'POST', payload, 'Duplicating the plan');
+    if (!created) return;
     setPlans((prev) => [created, ...prev]);
   }
   async function downloadPlan(plan) {
@@ -999,6 +990,8 @@ export default function AdminPage() {
     try {
       const { downloadPlanPdf } = await import('@/lib/pdfTemplates');
       await downloadPlanPdf(plan);
+    } catch (err) {
+      reportDownloadError(err);
     } finally {
       setDownloadingPlanId(null);
     }
@@ -1015,6 +1008,8 @@ export default function AdminPage() {
       const { downloadProposalPdf } = await import('@/lib/pdfTemplates');
       await downloadProposalPdf(proposalPlan, proposalClientName);
       setProposalModalOpen(false);
+    } catch (err) {
+      reportDownloadError(err);
     } finally {
       setDownloadingProposal(false);
     }
@@ -1079,20 +1074,12 @@ export default function AdminPage() {
     if (!contractForm.title.trim()) return;
     const payload = { ...contractForm, items: contractForm.items.filter((it) => it.label.trim() || it.quantity.trim() || it.amount.trim()) };
     if (editingContractId) {
-      const res = await fetch(`/api/contracts/${editingContractId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const updated = await res.json();
+      const updated = await sendJson(`/api/contracts/${editingContractId}`, 'PUT', payload, 'Saving the contract');
+      if (!updated) return;
       setContracts((prev) => prev.map((c) => (c.id === editingContractId ? updated : c)));
     } else {
-      const res = await fetch('/api/contracts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const created = await res.json();
+      const created = await sendJson('/api/contracts', 'POST', payload, 'Saving the contract');
+      if (!created) return;
       setContracts((prev) => [created, ...prev]);
     }
     // follow the contract to its own side, so it's never saved "into" the
@@ -1102,18 +1089,14 @@ export default function AdminPage() {
   }
   async function deleteContract(id) {
     if (!confirm('Delete this contract? This cannot be undone.')) return;
-    await fetch(`/api/contracts/${id}`, { method: 'DELETE' });
+    if (!(await sendJson(`/api/contracts/${id}`, 'DELETE', undefined, 'Deleting the contract'))) return;
     setContracts((prev) => prev.filter((c) => c.id !== id));
   }
   async function duplicateContract(contract) {
     const { id: _drop, updated: _u, ...rest } = contract;
     const payload = { ...rest, title: `${contract.title} (copy)` };
-    const res = await fetch('/api/contracts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const created = await res.json();
+    const created = await sendJson('/api/contracts', 'POST', payload, 'Duplicating the contract');
+    if (!created) return;
     setContracts((prev) => [created, ...prev]);
   }
   async function downloadContract(contract) {
@@ -1121,6 +1104,8 @@ export default function AdminPage() {
     try {
       const { downloadContractPdf } = await import('@/lib/pdfTemplates');
       await downloadContractPdf(contract);
+    } catch (err) {
+      reportDownloadError(err);
     } finally {
       setDownloadingContractId(null);
     }

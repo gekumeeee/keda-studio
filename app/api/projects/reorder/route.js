@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getProjects, saveProjects } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 
 // Reorder the stored projects array to match the given list of ids.
 // The array order is the source of truth for how projects appear on the
@@ -9,7 +10,8 @@ import { requirePermission } from '@/lib/auth';
 export async function POST(request) {
   const gate = await requirePermission('projects');
   if (gate.error) return gate.error;
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const ids = Array.isArray(body?.ids) ? body.ids : null;
   if (!ids) {
     return NextResponse.json({ error: 'ids array required' }, { status: 400 });

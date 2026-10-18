@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPlans, savePlans } from '@/lib/store';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody, str } from '@/lib/apiInput';
 
 function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
@@ -11,7 +12,8 @@ export async function PUT(request, { params }) {
   const gate = await requirePermission('plans');
   if (gate.error) return gate.error;
   const { id } = await params;
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const plans = await getPlans({ fresh: true });
   const idx = plans.findIndex((p) => p.id === id);
   if (idx === -1) {
@@ -19,11 +21,11 @@ export async function PUT(request, { params }) {
   }
   plans[idx] = {
     ...plans[idx],
-    name: body.name?.trim() || plans[idx].name,
-    description: body.description !== undefined ? body.description.trim() : plans[idx].description,
-    currency: body.currency !== undefined ? body.currency.trim() || 'LE' : plans[idx].currency,
-    price: body.price !== undefined ? body.price.trim() : plans[idx].price,
-    cycle: body.cycle !== undefined ? body.cycle.trim() : plans[idx].cycle,
+    name: str(body.name) || plans[idx].name,
+    description: body.description !== undefined ? str(body.description) : plans[idx].description,
+    currency: body.currency !== undefined ? str(body.currency) || 'LE' : plans[idx].currency,
+    price: body.price !== undefined ? str(body.price) : plans[idx].price,
+    cycle: body.cycle !== undefined ? str(body.cycle) : plans[idx].cycle,
     items: body.items !== undefined ? normalizeItems(body.items) : plans[idx].items,
     updated: new Date().toISOString(),
   };

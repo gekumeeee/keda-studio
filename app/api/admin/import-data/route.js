@@ -33,6 +33,23 @@ export async function POST(request) {
   } catch {
     return NextResponse.json({ error: 'That file isn’t valid JSON' }, { status: 400 });
   }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: 'No recognizable data in that file' }, { status: 400 });
+  }
+
+  // Check every bucket's shape before writing any of them: settings is one
+  // object, everything else a list. A file with, say, "projects": "x" would
+  // otherwise be saved as-is and break every page that lists projects — and
+  // stopping halfway would leave the site half-restored.
+  for (const key of Object.keys(IMPORTABLE)) {
+    if (body[key] === undefined) continue;
+    const ok = key === 'settings'
+      ? body[key] && typeof body[key] === 'object' && !Array.isArray(body[key])
+      : Array.isArray(body[key]);
+    if (!ok) {
+      return NextResponse.json({ error: `"${key}" in that file isn’t in the expected format — nothing was imported` }, { status: 400 });
+    }
+  }
 
   const imported = {};
   for (const [key, saveFn] of Object.entries(IMPORTABLE)) {

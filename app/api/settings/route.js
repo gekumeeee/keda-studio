@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSettings, saveSettings } from '@/lib/store';
 import { DEFAULTS, mergeSettings } from '@/lib/defaults';
 import { requirePermission } from '@/lib/auth';
+import { readBody, badBody } from '@/lib/apiInput';
 
 function isLoc(v) {
   return v && typeof v === 'object' && !Array.isArray(v) && ('en' in v || 'ar' in v);
@@ -21,7 +22,8 @@ export async function GET() {
 export async function PUT(request) {
   const gate = await requirePermission('settings');
   if (gate.error) return gate.error;
-  const body = await request.json();
+  const body = await readBody(request);
+  if (!body) return badBody();
   const clean = {};
 
   for (const key of Object.keys(DEFAULTS)) {
