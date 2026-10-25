@@ -16,6 +16,8 @@ const WEEKDAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const PLATFORM_SHORT = { facebook: 'FB', instagram: 'IG', tiktok: 'TT', linkedin: 'IN', x: 'X', youtube: 'YT' };
 const MOBILE_QUERY = '(max-width: 760px)';
 const MAX_CHIPS = 3;
+const MAX_ZOOM = 2.5;
+const ZOOM_STEP = 1.3;
 const pad = (n) => String(n).padStart(2, '0');
 const dayKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const todayKey = () => {
@@ -388,6 +390,7 @@ export default function ContentTab({ username = '' }) {
         </div>
 
         {view === 'month' ? (
+          <ZoomFrame key={monthPrefix}>
           <div className="content-calendar" role="grid" aria-label={monthLabel}>
             {WEEKDAYS.map((d) => <div className="content-weekday" key={d} role="columnheader">{d}</div>)}
             {cells.map((key, i) => {
@@ -417,6 +420,7 @@ export default function ContentTab({ username = '' }) {
               );
             })}
           </div>
+          </ZoomFrame>
         ) : (
           <div className="content-list">
             {groups.length === 0 && unscheduled.length === 0 ? (
@@ -484,6 +488,123 @@ export default function ContentTab({ username = '' }) {
         </div>
       </header>
       <main className="cp-main">{body}</main>
+    </div>
+  );
+}
+
+// Wraps the month grid so it can be magnified in place: Ctrl + scroll (which
+// is also what a trackpad pinch sends) or a two-finger pinch zooms toward the
+// cursor with a short easing, the − / + buttons zoom toward the middle, a
+// zoomed grid can be dragged around, and zooming back out to 100% (or the
+// percentage button) puts it back exactly as it was.
+function applyZoom(view, factor, cx, cy, w, h) {
+  const s = Math.min(MAX_ZOOM, view.s * factor);
+  if (s < 1.04) return { s: 1, x: 0, y: 0 };
+  const k = s / view.s;
+  return clampView(s, cx - (cx - view.x) * k, cy - (cy - view.y) * k, w, h);
+}
+// the magnified grid never slides off its frame and leaves a gap
+const clampView = (s, x, y, w, h) => ({ s, x: Math.min(0, Math.max(w - w * s, x)), y: Math.min(0, Math.max(h - h * s, y)) });
+
+function ZoomFrame({ children }) {
+  const frame = useRef(null);
+  const [view, setView] = useState({ s: 1, x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef(null);
+
+  useEffect(() => {
+    const el = frame.current;
+    let pinch = null;
+    const box = () => el.getBoundingClientRect();
+    const spread = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    function onWheel(e) {
+      if (!e.ctrlKey && !e.metaKey) return; // a plain scroll still scrolls the page
+      e.preventDefault();
+      const b = box();
+      setView((v) => applyZoom(v, Math.exp(-e.deltaY * 0.0025), e.clientX - b.left, e.clientY - b.top, b.width, b.height));
+    }
+    function onTouchStart(e) {
+      pinch = e.touches.length === 2 ? spread(e.touches) : null;
+    }
+    function onTouchMove(e) {
+      if (e.touches.length !== 2 || !pinch) return;
+      e.preventDefault();
+      const now = spread(e.touches);
+      const b = box();
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - b.left;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - b.top;
+      const factor = now / pinch;
+      pinch = now;
+      setView((v) => applyZoom(v, factor, cx, cy, b.width, b.height));
+    }
+    const endPinch = (e) => {
+      if (e.touches.length < 2) pinch = null;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', endPinch);
+    el.addEventListener('touchcancel', endPinch);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', endPinch);
+      el.removeEventListener('touchcancel', endPinch);
+    };
+  }, []);
+
+  const zoomBy = (factor) => {
+    const b = frame.current.getBoundingClientRect();
+    setView((v) => applyZoom(v, factor, b.width / 2, b.height / 2, b.width, b.height));
+  };
+  const zoomed = view.s > 1;
+
+  // Dragging only starts after a few pixels, so a plain tap on a post still
+  // opens it; once it starts the frame keeps the pointer until it is released.
+  function onPointerDown(e) {
+    if (!zoomed || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, on: false };
+  }
+  function onPointerMove(e) {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.on) {
+      if (Math.hypot(dx, dy) < 6) return;
+      d.on = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setDragging(true);
+    }
+    const b = e.currentTarget.getBoundingClientRect();
+    setView((v) => clampView(v.s, d.vx + dx, d.vy + dy, b.width, b.height));
+  }
+  function onPointerEnd() {
+    drag.current = null;
+    setDragging(false);
+  }
+
+  return (
+    <div className="cp-zoom">
+      <div className="cp-zoombar">
+        <span className="cp-zoom-hint">Ctrl + scroll or pinch to zoom</span>
+        <button type="button" onClick={() => zoomBy(1 / ZOOM_STEP)} disabled={!zoomed} aria-label="Zoom out">−</button>
+        <button type="button" className="cp-zoom-level" onClick={() => setView({ s: 1, x: 0, y: 0 })} disabled={!zoomed} aria-label="Back to 100%">{Math.round(view.s * 100)}%</button>
+        <button type="button" onClick={() => zoomBy(ZOOM_STEP)} disabled={view.s >= MAX_ZOOM} aria-label="Zoom in">+</button>
+      </div>
+      <div
+        ref={frame}
+        className={`cp-zoom-frame${zoomed ? ' is-zoomed' : ''}${dragging ? ' is-dragging' : ''}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+      >
+        <div className="cp-zoom-inner" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.s})` }}>
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
