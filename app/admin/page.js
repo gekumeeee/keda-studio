@@ -5,7 +5,6 @@ import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
 import PortfolioVideo from '@/components/PortfolioVideo';
 import { formatAmount, invoiceTotals, contractTotal } from '@/lib/invoiceMath';
 import ReportsTab from '@/components/admin/ReportsTab';
-import ContentTab from '@/components/admin/ContentTab';
 import ImageUpload from '@/components/admin/ImageUpload';
 import BulkPhotoUpload from '@/components/admin/BulkPhotoUpload';
 
@@ -1183,13 +1182,20 @@ export default function AdminPage() {
             {visibleGroups.map((group) => (
               <div className="side-group" key={group.label}>
                 <div className="side-group-label">{group.label}</div>
-                {group.tabs.map((key) => (
+                {group.tabs.map((key) => (key === 'content' ? (
+                  // the content plan is a page of its own, in a new browser tab
+                  <a key={key} className="side-link" href="/admin/content" target="_blank" rel="noopener">
+                    <span className="side-icon">{TAB_ICONS[key]}</span>
+                    {TAB_TITLES[key]}
+                    <span className="side-external" aria-hidden="true">↗</span>
+                  </a>
+                ) : (
                   <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setClientDetailId(null); openProjectFolder(null); }}>
                     <span className="side-icon">{TAB_ICONS[key]}</span>
                     {TAB_TITLES[key]}
                     {key === 'messages' && messages.length > 0 && <span className="side-badge">{messages.length}</span>}
                   </button>
-                ))}
+                )))}
               </div>
             ))}
             <div className="side-group">
@@ -2049,8 +2055,6 @@ export default function AdminPage() {
               rather than threading another dozen useState hooks through this
               already-2000+-line file — see components/admin/ReportsTab.js. */}
           {tab === 'reports' && <ReportsTab />}
-
-          {tab === 'content' && <ContentTab />}
 
           {tab === 'users' && isOwner && (
             <section className="tab-panel active">
