@@ -19,6 +19,8 @@ export async function PUT(request, { params }) {
     name: str(body.name) || clients[idx].name,
     logo: body.logo !== undefined ? str(body.logo) : (clients[idx].logo || ''),
     cardImage: body.cardImage !== undefined ? str(body.cardImage) : (clients[idx].cardImage || ''),
+    // private notes about the client, shown on its profile in the admin only
+    notes: body.notes !== undefined ? (typeof body.notes === 'string' ? body.notes.slice(0, 5000) : '') : (clients[idx].notes || ''),
   };
   await saveClients(clients);
   return NextResponse.json(clients[idx]);

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { getProjects, getSettings, getClients } from '@/lib/store';
+import { publicClient } from '@/lib/site';
 import { mergeSettings } from '@/lib/defaults';
 import { normalizeLang, LANG_COOKIE, UI } from '@/lib/i18n';
 import PortfolioView from '@/components/PortfolioView';
@@ -28,7 +29,8 @@ export default async function PortfolioPage({ searchParams }) {
   const initialClient = typeof query?.client === 'string' ? query.client.slice(0, 200) : '';
   const cookieStore = await cookies();
   const lang = normalizeLang(cookieStore.get(LANG_COOKIE)?.value);
-  const [projects, savedSettings, clients] = await Promise.all([getProjects(), getSettings(), getClients()]);
+  const [projects, savedSettings, allClients] = await Promise.all([getProjects(), getSettings(), getClients()]);
+  const clients = allClients.map(publicClient);
   const settings = mergeSettings(savedSettings);
   return <PortfolioView projects={projects} settings={settings} clients={clients} lang={lang} initialClient={initialClient} />;
 }

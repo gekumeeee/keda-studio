@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getMessages, saveMessages, uid, getSettings } from '@/lib/store';
+import { getMessages, saveMessages, uid, getSettings, getLeads, saveLeads } from '@/lib/store';
+import { leadFromMessage } from '@/lib/leads';
 import { requirePermission } from '@/lib/auth';
 import { notifyNewMessage } from '@/lib/notify';
 import { clientIp, isBot, isRateLimited, validateMessage } from '@/lib/spamGuard';
@@ -47,6 +48,17 @@ export async function POST(request) {
   };
   messages.unshift(message);
   await saveMessages(messages);
+
+  // Every enquiry lands in the CRM pipeline as a new lead. Best-effort: the
+  // message itself is already saved, so a failure here must not fail the form.
+  try {
+    const leads = await getLeads({ fresh: true });
+    const now = new Date().toISOString();
+    leads.unshift({ id: uid(), ...leadFromMessage(message), created: now, updated: now });
+    await saveLeads(leads);
+  } catch (err) {
+    console.error('[contact] adding the lead failed — message is still saved:', err);
+  }
 
   // Best-effort, and deliberately after the save: the stored message is the
   // source of truth, so a missing API key, a Resend outage or a rejected

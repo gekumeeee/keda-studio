@@ -5,6 +5,8 @@ import { WORD_COLORS, mergeSettings } from '@/lib/defaults';
 import PortfolioVideo from '@/components/PortfolioVideo';
 import { formatAmount, invoiceTotals, contractTotal } from '@/lib/invoiceMath';
 import ReportsTab from '@/components/admin/ReportsTab';
+import CrmTab from '@/components/admin/CrmTab';
+import ClientProfile from '@/components/admin/ClientProfile';
 import ImageUpload from '@/components/admin/ImageUpload';
 import BulkPhotoUpload from '@/components/admin/BulkPhotoUpload';
 import ThemeToggle from '@/components/site/ThemeToggle';
@@ -17,6 +19,7 @@ const TAB_TITLES = {
   projects: 'Projects',
   clients: 'Clients',
   messages: 'Messages',
+  crm: 'CRM',
   invoices: 'Invoices',
   plans: 'Plans',
   contracts: 'Contracts',
@@ -31,6 +34,7 @@ const TAB_SUB = {
   projects: 'Case studies shown in the hero gallery and portfolio.',
   clients: 'The brands in the homepage clients bar — each one groups its projects on the site.',
   messages: 'Messages sent from your contact form.',
+  crm: 'Every lead from first contact to signed client — drag them along the pipeline and never miss a follow-up.',
   invoices: 'Branded invoices you can send to clients as a PDF.',
   plans: 'Reusable pricing plans you can send to clients as a PDF. Pick one, edit, or create a new one.',
   contracts: 'Agreements for clients or team members — deliverables, total and terms — saved and exportable as a PDF.',
@@ -71,13 +75,13 @@ function whatsappNumber(phone) {
   return digits;
 }
 
-const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', reports: '◨', content: '✦', settings: '✎', users: '☺', account: '⚿' };
+const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', crm: '⇉', invoices: '▥', plans: '¤', contracts: '§', reports: '◨', content: '✦', settings: '✎', users: '☺', account: '⚿' };
 // each section's colour: its icon in the sidebar when it's the open one
-const TAB_COLORS = { overview: 'var(--acid)', projects: 'var(--tangerine)', clients: 'var(--aqua)', messages: 'var(--magenta)', content: 'var(--violet)', invoices: 'var(--acid)', plans: 'var(--aqua)', contracts: 'var(--tangerine)', reports: 'var(--cobalt)', settings: 'var(--magenta)', users: 'var(--violet)', account: 'var(--acid)' };
+const TAB_COLORS = { overview: 'var(--acid)', projects: 'var(--tangerine)', clients: 'var(--aqua)', messages: 'var(--magenta)', crm: 'var(--cobalt)', content: 'var(--violet)', invoices: 'var(--acid)', plans: 'var(--aqua)', contracts: 'var(--tangerine)', reports: 'var(--cobalt)', settings: 'var(--magenta)', users: 'var(--violet)', account: 'var(--acid)' };
 // the colour cards' and folders' brand characters, in turn
 const BLOCK_FACES = ['02', '07', '05', '09', '03', '04', '01', '08', '10', '06'];
 // What the search box looks through: the visible tab's own records.
-const SEARCHABLE = ['projects', 'clients', 'messages', 'invoices', 'plans', 'contracts', 'users'];
+const SEARCHABLE = ['projects', 'clients', 'messages', 'crm', 'invoices', 'plans', 'contracts', 'users'];
 function matches(query, ...fields) {
   const q = query.trim().toLowerCase();
   if (!q) return true;
@@ -87,14 +91,14 @@ function matches(query, ...fields) {
 // has no key here — it's always shown to any logged-in user. 'users' isn't
 // permission-based at all (owner-only, checked separately from `permissions`).
 const TAB_GROUPS = [
-  { label: 'Manage', tabs: ['overview', 'projects', 'clients', 'messages'] },
+  { label: 'Manage', tabs: ['overview', 'crm', 'projects', 'clients', 'messages'] },
   { label: 'Content', tabs: ['content'] },
   { label: 'Documents', tabs: ['invoices', 'plans', 'contracts'] },
   { label: 'Reports', tabs: ['reports'] },
   { label: 'Configure', tabs: ['settings'] },
 ];
 const TAB_PERMISSION_KEY = {};
-const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', reports: 'Reports', content: 'Content calendar', settings: 'Site Content' };
+const PERMISSION_LABELS = { projects: 'Projects', clients: 'Clients', messages: 'Messages', crm: 'CRM (leads)', invoices: 'Invoices', plans: 'Plans', contracts: 'Contracts', reports: 'Reports', content: 'Content calendar', settings: 'Site Content' };
 const PERMISSIONS = Object.keys(PERMISSION_LABELS);
 const EMPTY_PERMISSIONS = Object.fromEntries(PERMISSIONS.map((p) => [p, false]));
 const EMPTY_USER = { username: '', password: '', permissions: { ...EMPTY_PERMISSIONS } };
@@ -310,6 +314,8 @@ export default function AdminPage() {
   const [editingClientId, setEditingClientId] = useState(null);
   const [clientForm, setClientForm] = useState({ name: '', logo: '', cardImage: '' });
   const [clientDetailId, setClientDetailId] = useState(null);
+  // bumped by the top bar's "+ New lead", which the CRM tab listens for
+  const [newLeadSignal, setNewLeadSignal] = useState(0);
 
   const [invoices, setInvoices] = useState([]);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
@@ -850,6 +856,13 @@ export default function AdminPage() {
     setClientModalOpen(false);
   }
 
+  async function saveClientNotes(client, notes) {
+    const saved = await sendJson(`/api/clients/${client.id}`, 'PUT', { notes }, 'Saving the notes');
+    if (!saved) return false;
+    setClients((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+    return true;
+  }
+
   async function deleteClient(id) {
     if (!confirm('Remove this client?')) return;
     if (!(await sendJson(`/api/clients/${id}`, 'DELETE', undefined, 'Removing the client'))) return;
@@ -872,7 +885,7 @@ export default function AdminPage() {
   }
 
   // ---- invoices ----
-  function openInvoiceModal(invoice) {
+  function openInvoiceModal(invoice, presetClient = null) {
     if (invoice) {
       setEditingInvoiceId(invoice.id);
       setInvoiceForm({
@@ -888,7 +901,7 @@ export default function AdminPage() {
       });
     } else {
       setEditingInvoiceId(null);
-      setInvoiceForm(EMPTY_INVOICE);
+      setInvoiceForm(presetClient ? { ...EMPTY_INVOICE, clientId: presetClient.id, clientName: presetClient.name } : EMPTY_INVOICE);
     }
     setInvoiceModalOpen(true);
   }
@@ -1062,7 +1075,7 @@ export default function AdminPage() {
   }
 
   // ---- contracts ----
-  function openContractModal(contract) {
+  function openContractModal(contract, presetClient = null) {
     if (contract) {
       setEditingContractId(contract.id);
       setContractForm({
@@ -1081,7 +1094,9 @@ export default function AdminPage() {
     } else {
       setEditingContractId(null);
       // new contracts default to whichever side (client/team) is being viewed
-      setContractForm({ ...EMPTY_CONTRACT, partyType: contractView === 'team' ? 'employee' : 'client' });
+      setContractForm(presetClient
+        ? { ...EMPTY_CONTRACT, partyType: 'client', clientId: presetClient.id, partyName: presetClient.name }
+        : { ...EMPTY_CONTRACT, partyType: contractView === 'team' ? 'employee' : 'client' });
     }
     setContractModalOpen(true);
   }
@@ -1208,6 +1223,7 @@ export default function AdminPage() {
     overview: permissions.projects ? { label: '+ New project', onClick: () => openProjectModal(null) } : null,
     projects: { label: '+ New project', onClick: () => openProjectModal(null, openFolderClient) },
     clients: { label: '+ New client', onClick: () => openClientModal(null) },
+    crm: { label: '+ New lead', onClick: () => setNewLeadSignal((n) => n + 1) },
     invoices: { label: '+ New invoice', onClick: () => openInvoiceModal(null) },
     plans: { label: '+ New plan', onClick: () => openPlanModal(null) },
     contracts: { label: `+ New ${contractView === 'team' ? 'team' : 'client'} contract`, onClick: () => openContractModal(null) },
@@ -1604,94 +1620,26 @@ export default function AdminPage() {
           {tab === 'clients' && (() => {
             const detailClient = clientDetailId ? clients.find((c) => c.id === clientDetailId) : null;
             if (detailClient) {
-              const clientInvoices = invoices.filter((i) => i.clientId === detailClient.id);
-              const clientContracts = contracts.filter((c) => c.clientId === detailClient.id);
-              const clientProjects = projects.filter((p) => p.clientId === detailClient.id);
-              const billed = clientInvoices.reduce((sum, i) => sum + invoiceTotals(i).total, 0);
-              const paid = clientInvoices.filter((i) => i.status === 'paid').reduce((sum, i) => sum + invoiceTotals(i).total, 0);
-              const currency = clientInvoices[0]?.currency || 'LE';
               return (
-                <section className="tab-panel active">
-                  <div className="client-detail-head">
-                    <button type="button" className="btn-secondary" onClick={() => setClientDetailId(null)}>← Back to clients</button>
-                    <h2 className="client-detail-name">{detailClient.name}</h2>
-                  </div>
-                  <div className="stat-grid">
-                    <div className="stat-card"><div className="label">Work / projects</div><div className="value">{clientProjects.length}</div></div>
-                    <div className="stat-card"><div className="label">Total billed</div><div className="value" style={{ fontSize: 24 }}>{formatAmount(billed)} {currency}</div></div>
-                    <div className="stat-card"><div className="label">Paid</div><div className="value" style={{ fontSize: 24, color: 'var(--green)' }}>{formatAmount(paid)} {currency}</div></div>
-                    <div className="stat-card"><div className="label">Outstanding</div><div className="value" style={{ fontSize: 24, color: billed - paid > 0 ? 'var(--red)' : 'var(--text)' }}>{formatAmount(billed - paid)} {currency}</div></div>
-                  </div>
-                  <div className="panel">
-                    <div className="panel-head"><h3>Work</h3></div>
-                    {clientProjects.length === 0 ? (
-                      <div className="empty">No projects linked to this client yet.</div>
-                    ) : (
-                      <table>
-                        <thead><tr><th>Title</th><th>Category</th><th>Status</th><th></th></tr></thead>
-                        <tbody>
-                          {clientProjects.map((p) => (
-                            <tr key={p.id}>
-                              <td>{p.title}</td>
-                              <td>{p.category}</td>
-                              <td><span className={`status ${p.status}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span></td>
-                              <td><div className="row-actions"><button type="button" onClick={() => openProjectModal(p)}>Edit</button></div></td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                  <div className="panel">
-                    <div className="panel-head"><h3>Invoices</h3></div>
-                    {clientInvoices.length === 0 ? (
-                      <div className="empty">No invoices linked to this client yet.</div>
-                    ) : (
-                      <table>
-                        <thead><tr><th>Project</th><th>Total</th><th>Status</th><th>Updated</th><th></th></tr></thead>
-                        <tbody>
-                          {clientInvoices.map((inv) => {
-                            const st = invoiceStatus(inv);
-                            return (
-                              <tr key={inv.id}>
-                                <td>{inv.projectName}</td>
-                                <td>{formatAmount(invoiceTotals(inv).total)} {inv.currency}</td>
-                                <td><span className={`inv-status ${st}`}>{INVOICE_STATUS_LABELS[st]}</span></td>
-                                <td>{fmtDate(inv.updated)}</td>
-                                <td><div className="row-actions"><button type="button" onClick={() => openInvoiceModal(inv)}>Edit</button></div></td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                  <div className="panel">
-                    <div className="panel-head"><h3>Contracts</h3></div>
-                    {clientContracts.length === 0 ? (
-                      <div className="empty">No contracts linked to this client yet.</div>
-                    ) : (
-                      <table>
-                        <thead><tr><th>Title</th><th>Value</th><th>Period</th><th></th></tr></thead>
-                        <tbody>
-                          {clientContracts.map((c) => {
-                            const total = contractTotal(c);
-                            return (
-                              <tr key={c.id}>
-                                <td>{c.title}</td>
-                                <td>{total > 0 ? `${formatAmount(total)} ${c.currency}` : '—'}</td>
-                                <td style={{ color: 'var(--text-dim)', fontSize: 12 }}>
-                                  {c.startDate || c.endDate ? `${c.startDate ? fmtDate(c.startDate) : '—'} → ${c.endDate ? fmtDate(c.endDate) : 'open'}` : '—'}
-                                </td>
-                                <td><div className="row-actions"><button type="button" onClick={() => openContractModal(c)}>Edit</button></div></td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </section>
+                <ClientProfile
+                  key={detailClient.id}
+                  client={detailClient}
+                  projects={projects}
+                  invoices={invoices}
+                  contracts={contracts}
+                  posts={posts}
+                  permissions={permissions}
+                  onBack={() => setClientDetailId(null)}
+                  onEditClient={() => openClientModal(detailClient)}
+                  onEditProject={(p) => openProjectModal(p)}
+                  onNewProject={() => openProjectModal(null, detailClient)}
+                  onEditInvoice={(i) => openInvoiceModal(i)}
+                  onNewInvoice={() => openInvoiceModal(null, detailClient)}
+                  onEditContract={(c) => openContractModal(c)}
+                  onNewContract={() => openContractModal(null, detailClient)}
+                  onSaveNotes={(notes) => saveClientNotes(detailClient, notes)}
+                  onOpenCrm={() => { goTab('crm'); setClientDetailId(null); }}
+                />
               );
             }
             return (
@@ -2177,6 +2125,17 @@ export default function AdminPage() {
               rather than threading another dozen useState hooks through this
               already-2000+-line file — see components/admin/ReportsTab.js. */}
           {tab === 'reports' && <ReportsTab />}
+
+          {tab === 'crm' && (
+            <CrmTab
+              newSignal={newLeadSignal}
+              query={query}
+              canClients={!!permissions.clients}
+              canMessages={!!permissions.messages}
+              onClientCreated={(c) => setClients((prev) => (prev.some((x) => x.id === c.id) ? prev : [c, ...prev]))}
+              onOpenClient={(id) => { goTab('clients'); setClientDetailId(id); }}
+            />
+          )}
 
           {tab === 'users' && isOwner && (
             <section className="tab-panel active">

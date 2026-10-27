@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { getProjects, getClients, getSettings } from '@/lib/store';
+import { publicClient } from '@/lib/site';
 import { mergeSettings } from '@/lib/defaults';
 import { normalizeLang, LANG_COOKIE } from '@/lib/i18n';
 import HomeView from '@/components/HomeView';
@@ -21,7 +22,8 @@ export async function generateMetadata() {
 export default async function HomePage() {
   const cookieStore = await cookies();
   const lang = normalizeLang(cookieStore.get(LANG_COOKIE)?.value);
-  const [projects, clients, savedSettings] = await Promise.all([getProjects(), getClients(), getSettings()]);
+  const [projects, allClients, savedSettings] = await Promise.all([getProjects(), getClients(), getSettings()]);
+  const clients = allClients.map(publicClient);
   const settings = mergeSettings(savedSettings);
   // The hero card fan is assembled here because each image's colours are
   // read on the server (lib/imageSwatch.js), so the
