@@ -8,6 +8,11 @@ import LoadingSplash from '@/components/LoadingSplash';
 // the relative image/canonical paths below resolve to absolute URLs — social
 // crawlers reject relative ones, so without it a shared link renders as bare
 // text no matter what else is set here.
+// Runs before the first paint: the visitor's saved theme (shared by the site
+// and the admin), else dark. Kept tiny and dependency-free on purpose.
+const THEME_SCRIPT =
+  "try{var t=localStorage.getItem('keda-theme');document.documentElement.dataset.theme=t==='light'?'light':'dark'}catch(e){}";
+
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -50,18 +55,21 @@ export default async function RootLayout({ children }) {
   const showSplash = !cookieStore.has(SPLASH_COOKIE);
 
   return (
-    <html lang={lang} dir={dir}>
+    // data-theme is the server's default (dark, the brand's own); the inline
+    // script below swaps in a saved choice before the first paint, which is
+    // why the attribute is exempt from the hydration check.
+    <html lang={lang} dir={dir} data-theme="dark" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Baloo+Bhaijaan+2:wght@600;700;800&family=Cairo:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
       <body>
         {showSplash ? <LoadingSplash /> : null}
-        <img src="/brand/keda-logomark-white.svg" alt="" aria-hidden="true" className="site-watermark" />
         {children}
       </body>
     </html>

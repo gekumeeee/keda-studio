@@ -41,6 +41,9 @@ export async function PUT(request) {
             desc: cleanLoc(s?.desc),
             stat: typeof s?.stat === 'string' ? s.stat.trim() : '',
             image: typeof s?.image === 'string' ? s.image.trim() : '',
+            tab: cleanLoc(s?.tab),
+            statLabel: cleanLoc(s?.statLabel),
+            points: cleanLoc(s?.points),
           }))
         : def;
     } else if (key === 'impact') {

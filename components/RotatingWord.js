@@ -2,54 +2,58 @@
 
 import { useEffect, useState } from 'react';
 
-// Cycles through phrases, fading between them, each in its own brand accent.
-// This is the deliberate exception to the rule that colour never touches type
-// — everywhere else on the site accents are flat fills only. Colours come from
-// the admin (WORD_COLORS in lib/defaults.js), already normalised through
-// resolveWordColor() so pre-palette values don't render as plain white.
-export default function RotatingWord({ phrases }) {
-  const [index, setIndex] = useState(0);
-  const [visible, setVisible] = useState(true);
+// The hero's middle line: plain type that cycles through the admin's words,
+// each in its own brand colour. All the words sit stacked in one grid cell,
+// so the line is as wide as the longest and nothing shifts as they change.
+//
+// `color` is what the admin picked (a palette token such as var(--acid)).
+// It becomes data-c, which site.css maps to a per-theme colour: as chosen on
+// the dark ground, and a readable partner on paper. Anything that isn't a
+// palette token (a hand-entered colour) is used as it is.
+const PALETTE = ['acid', 'magenta', 'aqua', 'tangerine', 'violet', 'cobalt', 'paper'];
+const HOLD = 2300;
 
-  // Keyed off the COUNT, not the array itself. The parent builds this list
-  // fresh on every render (it maps the admin's words through pick() for the
-  // current language), so depending on the array's identity restarted the
-  // timer on every render — leaving overlapping intervals that kept yanking
-  // the word back to opacity 0, so it cycled but was never actually visible.
-  const count = phrases.length;
+function colorKey(value) {
+  const m = /^var\(--([a-z]+)\)$/.exec(String(value || '').trim());
+  return m && PALETTE.includes(m[1]) ? m[1] : null;
+}
+
+export default function RotatingWord({ words }) {
+  const [{ cur, prev }, setPos] = useState({ cur: 0, prev: -1 });
+  const count = words.length;
+  const still = count <= 1;
 
   useEffect(() => {
     if (count <= 1) return;
-    const HOLD = 2000;
-    const FADE = 350;
-    let fadeTimer;
-    const cycle = setInterval(() => {
-      setVisible(false);
-      fadeTimer = setTimeout(() => {
-        setIndex((i) => (i + 1) % count);
-        setVisible(true);
-      }, FADE);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const id = setInterval(() => {
+      // with motion reduced the first word simply stays
+      if (document.hidden || reduced.matches) return;
+      setPos((p) => ({ cur: (p.cur + 1) % count, prev: p.cur % count }));
     }, HOLD);
-    return () => {
-      clearInterval(cycle);
-      clearTimeout(fadeTimer);
-    };
+    return () => clearInterval(id);
   }, [count]);
 
-  // Guard the lookup: the word list can shrink from the admin while a higher
-  // index is still held in state.
-  const current = phrases[index % count] || phrases[0];
+  // the admin's list can shrink while a later index is held here
+  const on = cur % Math.max(count, 1);
 
   return (
-    <span
-      className="rotating-word"
-      style={{
-        color: current.color,
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(10px)',
-      }}
-    >
-      {current.text}
+    <span className={`rot${still ? ' still' : ''}`}>
+      {words.map((w, i) => {
+        const key = colorKey(w.color);
+        const state = still ? '' : i === on ? ' on' : i === prev ? ' off' : '';
+        return (
+          <span
+            key={i}
+            className={`rw${state}`}
+            data-c={key || undefined}
+            style={key ? undefined : { '--wc': w.color }}
+            aria-hidden={i === on ? undefined : true}
+          >
+            {w.text}
+          </span>
+        );
+      })}
     </span>
   );
 }

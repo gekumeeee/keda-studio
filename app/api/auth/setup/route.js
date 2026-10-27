@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getUsers, saveUsers, uid } from '@/lib/store';
-import { hashPassword, createSessionToken, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@/lib/auth';
+import { hashPassword, setSessionCookie } from '@/lib/auth';
 import { readBody, badBody } from '@/lib/apiInput';
 
 // Creates the very first (owner) account. Only works while no users exist —
@@ -32,15 +31,7 @@ export async function POST(request) {
   };
   await saveUsers([owner]);
 
-  const token = await createSessionToken(owner.id);
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_TTL_SECONDS,
-  });
+  await setSessionCookie(owner);
 
   return NextResponse.json({ id: owner.id, username: owner.username, role: owner.role });
 }

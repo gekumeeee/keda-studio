@@ -1,157 +1,93 @@
-'use client';
-
-import { useState } from 'react';
 import Header from './Header';
 import Footer from './Footer';
-import DiagMarquee from './DiagMarquee';
-import Reveal from './Reveal';
-import SectionHead from './SectionHead';
-import PortfolioVideo from './PortfolioVideo';
+import PageHead, { splitTitle } from './site/PageHead';
+import BlockStrip from './site/BlockStrip';
+import CtaBlock from './site/CtaBlock';
+import PortfolioGallery from './site/PortfolioGallery';
 import { getVideoEmbed, guessEmbedOrientation } from '@/lib/videoEmbed';
-import { UI, pick } from '@/lib/i18n';
+import { UI, SITE_COPY, pick } from '@/lib/i18n';
 
-const FILTERS = ['All', 'Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
-
-const CARD_TINTS = ['var(--orange)', 'var(--gold)', 'var(--green)', 'var(--blue)'];
-
-function matchesFilter(p, filter) {
-  return filter === 'All' || p.category === filter;
-}
-
-// Embeds can't self-report their real size (cross-origin iframe), so a
-// portrait one left on "Auto" is guessed from the URL shape — same logic
-// PortfolioVideo itself uses. Direct video files rely on onLoadedMetadata
-// client-side instead, which we can't know here — they just don't get the
-// width cap; the video tag's own aspect-ratio keeps them reasonable anyway.
-function isPortraitProject(p) {
-  if (p.orientation && p.orientation !== 'auto') return p.orientation === 'portrait';
-  if (!p.video) return false;
+// A video-only project's picture: YouTube serves a public thumbnail; the
+// other platforms would need an API call, so those show a plain play card.
+function posterFor(p) {
+  if (p.image && p.image.trim()) return p.image.trim();
   const embed = getVideoEmbed(p.video);
-  return embed.kind === 'embed' && guessEmbedOrientation(p.video) === 'portrait';
+  const yt = embed.kind === 'embed' && embed.embedUrl.match(/youtube\.com\/embed\/([\w-]{11})/);
+  return yt ? `https://img.youtube.com/vi/${yt[1]}/hqdefault.jpg` : '';
 }
 
-// Each strip repeats its client's items until there's enough of them to read
-// as a full, dense row rather than 2-3 cards floating in empty space — same
-// reasoning as lib/blocks.js's fixed COUNT for the brand-block marquee, just
-// data-driven here since a client's project count varies. Doubles at minimum
-// (matching the two-copy loop below), more for a client with very few pieces.
-function fillGroup(items) {
-  if (items.length === 0) return [];
-  const reps = Math.max(2, Math.ceil(8 / items.length));
-  return Array.from({ length: reps }, () => items).flat();
+function orientationFor(p) {
+  if (p.orientation && p.orientation !== 'auto') return p.orientation;
+  const embed = getVideoEmbed(p.video);
+  return embed.kind === 'embed' ? guessEmbedOrientation(p.video) : 'auto';
 }
 
-export default function PortfolioView({ projects, settings, clients = [], lang = 'en' }) {
-  const t = UI[lang];
-  const [activeFilter, setActiveFilter] = useState('All');
-
-  // Preserve the stored array order — that's the order the admin sets with the
-  // move up / move down controls, so the first project in the array is the
-  // first one shown here, and it's also first-seen-wins order for the
-  // sections built below.
-  const live = projects.filter((p) => p.status === 'live');
-  const pool = live.filter((p) => matchesFilter(p, activeFilter));
-
-  // One section per client, each its own auto-scrolling strip — projects
-  // saved with no client fall back server-side to the literal string
-  // "Placeholder" (app/api/projects/route.js), a human hint for the admin
-  // table rather than a real name, so those (and any truly unassigned
-  // project) get bucketed into one trailing, unlabeled section instead.
+// One gallery per client, built the way the site always has: live work only,
+// in the order the admin set, grouped by the linked client record, else by
+// the typed client name. Work with neither ("Placeholder" is the API's
+// stand-in for "no client") goes into one last group.
+export function groupPortfolio(projects, clients, t) {
   const groupMap = new Map();
   let unassigned = null;
-  for (const p of pool) {
+  for (const p of projects.filter((x) => x.status === 'live')) {
     const name = (p.client || '').trim();
-    const isUnassigned = !p.clientId && (!name || name === 'Placeholder');
-    if (isUnassigned) {
-      if (!unassigned) unassigned = { key: 'unassigned', name: null, logo: null, items: [] };
-      unassigned.items.push(p);
+    const item = {
+      id: p.id,
+      title: p.title || '',
+      image: posterFor(p),
+      video: p.video || '',
+      orientation: orientationFor(p),
+      label: t.filters[p.category] || p.category || '',
+    };
+    if (!item.image && !item.video) continue;
+    if (!p.clientId && (!name || name === 'Placeholder')) {
+      if (!unassigned) unassigned = { key: 'unassigned', name: t.site.moreWork, logo: '', items: [] };
+      unassigned.items.push(item);
       continue;
     }
     const key = p.clientId || `name:${name}`;
     if (!groupMap.has(key)) {
-      const logo = p.clientId ? clients.find((c) => c.id === p.clientId)?.logo || null : null;
-      groupMap.set(key, { key, name, logo, items: [] });
+      const record = p.clientId ? clients.find((c) => c.id === p.clientId) : null;
+      groupMap.set(key, { key, name: record?.name || name, logo: record?.logo || '', items: [] });
     }
-    groupMap.get(key).items.push(p);
+    groupMap.get(key).items.push(item);
   }
-  const galleries = [...groupMap.values(), ...(unassigned ? [unassigned] : [])];
+  return [...groupMap.values(), ...(unassigned ? [unassigned] : [])];
+}
+
+export default function PortfolioView({ projects, settings, clients = [], lang = 'en', initialClient = '' }) {
+  const t = UI[lang];
+  const galleries = groupPortfolio(projects, clients, t);
+  // ?client= is a client id (the fan and the clients strip link that way),
+  // or a gallery's own key. A client whose work only carries its name
+  // (no link to the record) is found by that name.
+  let initial = 'all';
+  if (initialClient) {
+    if (galleries.some((g) => g.key === initialClient)) initial = initialClient;
+    else {
+      const record = clients.find((c) => c.id === initialClient);
+      const byName = record && galleries.find((g) => g.key === `name:${record.name}`);
+      if (byName) initial = byName.key;
+    }
+  }
+  const [line1, line2] = splitTitle(pick(settings.portfolioHeading, lang));
 
   return (
-    <div className="site">
+    <>
       <Header active="portfolio" settings={settings} lang={lang} />
-
-      <section className="marketing-section" style={{ paddingBottom: 0 }}>
-        <div className="wrap">
-          <SectionHead level={1} title={pick(settings.portfolioHeading, lang)} tag={pick(settings.portfolioEyebrow, lang)} />
-          <Reveal className="filters">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                className={`filter-pill ${activeFilter === f ? 'active' : ''}`}
-                onClick={() => setActiveFilter(f)}
-              >
-                {t.filters[f]}
-              </button>
-            ))}
-          </Reveal>
-        </div>
-      </section>
-
-      <DiagMarquee />
-
-      <section className="marketing-section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          {galleries.length > 0 ? (
-            galleries.map((g, gi) => (
-              <Reveal as="section" className="client-gallery" key={g.key}>
-                {g.name ? (
-                  <div className="client-gallery-head">
-                    {g.logo ? (
-                      <img className="client-gallery-bg-logo" src={g.logo} alt="" aria-hidden="true" />
-                    ) : null}
-                    <h2>{g.name}</h2>
-                  </div>
-                ) : null}
-                <div className="gallery-strip">
-                  <div className="gallery-track">
-                    {[0, 1].map((copy) => (
-                      <div className={`gallery-group ${gi % 2 === 1 ? 'reverse' : ''}`} key={copy}>
-                        {fillGroup(g.items).map((p, i) => (
-                          <div className={`gallery-card ${isPortraitProject(p) ? 'is-portrait' : ''}`} key={`${copy}-${i}-${p.id}`}>
-                            <div className="work-card-media">
-                              {p.video ? (
-                                <PortfolioVideo src={p.video} poster={p.image} label={t.filters[p.category] || p.category} orientation={p.orientation} />
-                              ) : p.image ? (
-                                // Real image: shown at its own natural size
-                                // (plain <img>, not a background-image crop
-                                // box). A project saved without a title is
-                                // just the picture — no label or caption on it.
-                                <div className="work-card-img has-image">
-                                  <img src={p.image} alt={p.title || ''} className="work-card-img-el" />
-                                  {p.title ? <span className="label">{t.filters[p.category] || p.category}</span> : null}
-                                </div>
-                              ) : (
-                                <div className="work-card-img" style={{ background: CARD_TINTS[i % CARD_TINTS.length] }}>
-                                  <span className="label">{t.filters[p.category] || p.category}</span>
-                                </div>
-                              )}
-                              {p.title ? <div className="gallery-card-caption">{p.title}</div> : null}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Reveal>
-            ))
+      <main id="top">
+        <PageHead eyebrow={pick(settings.portfolioEyebrow, lang)} line1={line1} line2={line2} sub={SITE_COPY[lang].workLead} />
+        <BlockStrip />
+        <section className="work inset flush" id="work">
+          {galleries.length ? (
+            <PortfolioGallery key={initial} galleries={galleries} initial={initial} labels={t.site} lang={lang} />
           ) : (
-            <p className="portfolio-empty">{t.portfolio.empty}</p>
+            <p className="pf-empty">{t.portfolio.empty}</p>
           )}
-        </div>
-      </section>
-
+        </section>
+        <CtaBlock settings={settings} lang={lang} />
+      </main>
       <Footer settings={settings} lang={lang} />
-    </div>
+    </>
   );
 }

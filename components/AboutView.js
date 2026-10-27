@@ -1,61 +1,60 @@
 import Link from 'next/link';
 import Header from './Header';
 import Footer from './Footer';
-import DiagMarquee from './DiagMarquee';
-import Reveal from './Reveal';
-import SectionHead from './SectionHead';
-import { pick } from '@/lib/i18n';
+import PageHead, { splitTitle } from './site/PageHead';
+import BlockStrip from './site/BlockStrip';
+import ImpactStats from './site/ImpactStats';
+import CtaBlock from './site/CtaBlock';
+import { ArrowIcon } from './site/Icons';
+import { SITE_COPY, pick } from '@/lib/i18n';
 
+// The about page: a page head, the violet panel with "كده" set as a
+// dictionary entry beside who KEDA is, then the impact numbers.
 export default function AboutView({ settings, lang = 'en' }) {
+  const c = SITE_COPY[lang].about;
+  const [line1, line2] = splitTitle(pick(settings.aboutPanelHeading, lang));
+  const eyebrow = pick(settings.aboutEyebrow, lang);
+
   return (
-    <div className="site">
+    <>
       <Header active="about" settings={settings} lang={lang} />
-
-      <section className="marketing-section" style={{ paddingBottom: 40 }}>
-        <div className="wrap">
-          <SectionHead level={1} title={pick(settings.aboutHeading, lang)} tag={pick(settings.aboutEyebrow, lang)} />
-        </div>
-      </section>
-
-      <section className="marketing-section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <Reveal className="about-panel">
-            <div className="about-panel-side">{pick(settings.aboutSideLabel, lang)}</div>
-            <div className="about-panel-text">
-              <h3>{pick(settings.aboutPanelHeading, lang)}</h3>
+      <main id="top">
+        <PageHead eyebrow={eyebrow} line1={line1} line2={line2} sub={c.pageSub} />
+        <BlockStrip />
+        <section className="sec" id="about">
+          <div className="wrap about rv">
+            <div className="ab-side d" aria-hidden="true">{pick(settings.aboutSideLabel, lang)}</div>
+            <div className="ab-main">
+              <span className="eyebrow"><i />{eyebrow}</span>
+              <h2 className="d">{pick(settings.aboutHeading, lang).replace(/\n/g, ' ')}</h2>
               <p>{pick(settings.aboutBody, lang)}</p>
+              <div className="ab-pills">
+                {c.pills.map((p) => <span key={p}>{p}</span>)}
+              </div>
+              <Link className="btn btn-paper" href="/contact">
+                <span>{pick(settings.ctaButton, lang)}</span>
+                <ArrowIcon />
+              </Link>
             </div>
-            <div className="about-panel-media">
+            <div className="ab-card">
               {settings.aboutImage ? (
-                <img src={settings.aboutImage} alt={pick(settings.aboutPanelHeading, lang)} />
-              ) : (
-                // no photo set in the admin yet: the brand mark holds the
-                // space rather than the word "KEDA" typed in grey
-                <div className="about-panel-media-fallback" aria-hidden="true">
-                  <img src="/brand/keda-logomark-white.svg" alt="" />
-                </div>
-              )}
+                <img className="ab-photo" src={settings.aboutImage} alt="" draggable={false} />
+              ) : null}
+              <div className="dict">
+                <img className="t" src="/blocks/block-02.svg" alt="" draggable={false} />
+                <img className="b" src="/blocks/block-09.svg" alt="" draggable={false} />
+                <div className="w">كده</div>
+                <div className="ph"><span dir="ltr">/ˈke.da/</span> <i>{c.kind}</i></div>
+                <hr />
+                <p className="df"><b>{c.defTag}</b>{c.def}</p>
+              </div>
             </div>
-          </Reveal>
-
-        </div>
-      </section>
-
-      <DiagMarquee />
-
-      <section className="big-cta">
-        <div className="accent-band sec-cobalt">
-          <Reveal className="wrap">
-            <h2>
-              <span className="line1">{pick(settings.ctaLine1, lang)}</span>
-              <span className="line2">{pick(settings.ctaLine2, lang)}</span>
-            </h2>
-            <Link href="/contact" className="cta-btn">{pick(settings.ctaButton, lang)}</Link>
-          </Reveal>
-        </div>
-      </section>
-
+          </div>
+        </section>
+        <ImpactStats settings={settings} lang={lang} padTop={false} />
+        <CtaBlock settings={settings} lang={lang} />
+      </main>
       <Footer settings={settings} lang={lang} />
-    </div>
+    </>
   );
 }

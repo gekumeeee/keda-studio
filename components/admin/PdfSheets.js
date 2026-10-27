@@ -67,7 +67,7 @@ export const SHEET_CSS = `
 .con-header-top{display:flex; justify-content:space-between; align-items:flex-start; gap:20px;}
 .con-kicker{font-size:13px; font-weight:700; color:#AEB7C0; text-transform:uppercase; letter-spacing:2.6px;}
 .con-header h1{font-size:35px; font-weight:800; color:#fff; letter-spacing:-.5px; margin-top:10px; line-height:1.12;}
-.con-logo{width:86px; height:auto; flex:none;}
+.con-logo{width:132px; height:auto; flex:none;}
 .con-ref{display:flex; gap:34px; margin-top:26px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.3px;}
 .con-ref span{color:#8791A0;}
 .con-ref b{color:#E4E8EC; margin-left:8px;}
@@ -218,7 +218,7 @@ export function ContractSheet({ contract }) {
             <div className="con-kicker">{isTeam ? 'Team Agreement' : 'Client Agreement'}</div>
             <Auto as="h1" className="pdf-display">{contract.title}</Auto>
           </div>
-          <img className="con-logo" src="/keda-white.png" alt="" />
+          <img className="con-logo" src="/brand/keda-logo-white.png" alt="" />
         </div>
         <div className="con-ref">
           <div><span>Ref</span><b>{ref || '—'}</b></div>

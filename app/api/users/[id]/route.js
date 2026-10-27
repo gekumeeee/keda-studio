@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getUsers, saveUsers } from '@/lib/store';
-import { requireUser, hashPassword, emptyPermissions, PERMISSIONS } from '@/lib/auth';
+import { requireUser, hashPassword, emptyPermissions, PERMISSIONS, tokenVersion, setSessionCookie } from '@/lib/auth';
 import { readBody, badBody } from '@/lib/apiInput';
 
 function stripHash(u) {
-  const { passwordHash, ...safe } = u;
+  const { passwordHash, tokenVersion: _tv, ...safe } = u;
   return safe;
 }
 function normalizePermissions(input) {
@@ -38,6 +38,7 @@ export async function PUT(request, { params }) {
   const body = await readBody(request);
   if (!body) return badBody();
   const next = { ...users[idx] };
+  let passwordChanged = false;
 
   if (typeof body.username === 'string' && body.username.trim()) {
     const username = body.username.trim();
@@ -54,6 +55,9 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
     }
     next.passwordHash = await hashPassword(body.password);
+    // every session signed before the change stops working
+    next.tokenVersion = tokenVersion(next) + 1;
+    passwordChanged = true;
   }
   // Only the owner can change permissions, and only for non-owner accounts —
   // the owner's access is always implicitly "everything" (see userPermissions()).
@@ -63,6 +67,8 @@ export async function PUT(request, { params }) {
 
   users[idx] = next;
   await saveUsers(users);
+  // someone changing their own password stays signed in on this device
+  if (isSelf && passwordChanged) await setSessionCookie(next);
   return NextResponse.json(stripHash(next));
 }
 

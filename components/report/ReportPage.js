@@ -5,7 +5,7 @@ export default function ReportPage({ pageNumber, className = '', children }) {
     <section className={`report-page ${className}`}>
       {children}
       <div className="report-footer">
-        <img src="/keda-black.png" alt="KEDA" className="report-footer-logo" />
+        <img src="/brand/keda-logo-black.png" alt="KEDA" className="report-footer-logo" />
         <span className="report-page-num">{pageNumber} / 6</span>
       </div>
     </section>

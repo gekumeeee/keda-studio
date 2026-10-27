@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getUsers } from '@/lib/store';
 import {
-  verifyPassword, createSessionToken, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS,
+  verifyPasswordOrDummy, setSessionCookie,
   loginLocked, recordFailedLogin, clearFailedLogins,
 } from '@/lib/auth';
 import { clientIp } from '@/lib/spamGuard';
@@ -22,22 +21,16 @@ export async function POST(request) {
   const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
 
   // Same generic error whether the username doesn't exist or the password is
-  // wrong — don't help an attacker enumerate valid usernames.
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  // wrong — don't help an attacker enumerate valid usernames. An unknown
+  // username is still checked against a stand-in hash, so it takes as long
+  // to refuse as a wrong password does.
+  if (!(await verifyPasswordOrDummy(password, user?.passwordHash)) || !user) {
     recordFailedLogin(ip);
     return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
   }
   clearFailedLogins(ip);
 
-  const token = await createSessionToken(user.id);
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_TTL_SECONDS,
-  });
+  await setSessionCookie(user);
 
   return NextResponse.json({ id: user.id, username: user.username, role: user.role });
 }

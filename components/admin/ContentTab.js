@@ -479,7 +479,7 @@ export default function ContentTab({ username = '' }) {
     <div id="dashboard" dir="ltr" className={`cp${draft ? ' is-editing' : ''}`}>
       <header className="cp-bar">
         <a className="cp-brand" href="/admin">
-          <img src="/keda-white.png" alt="KEDA" />
+          <img className="logo-d" src="/brand/keda-logo-white.png" alt="KEDA Agency" /><img className="logo-l" src="/brand/keda-logo-black.png" alt="KEDA Agency" />
           <span>Content plan</span>
         </a>
         <div className="cp-bar-right">

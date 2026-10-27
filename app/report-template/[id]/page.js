@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getReports, getReportClients } from '@/lib/store';
 import { prevMonthKey } from '@/lib/reportMath';
+import { getSessionUser, hasPermission, verifyReportPass } from '@/lib/auth';
 import CoverPage from '@/components/report/CoverPage';
 import SummaryPage from '@/components/report/SummaryPage';
 import DeliveredPage from '@/components/report/DeliveredPage';
@@ -9,13 +10,19 @@ import AnalysisPage from '@/components/report/AnalysisPage';
 import NextMonthPage from '@/components/report/NextMonthPage';
 import '../report.css';
 
-// Deliberately outside /admin's auth: the PDF export step (lib/pdf.js) has
-// Playwright navigate straight to this URL, and per SPEC.md §8 it also
-// doubles as a plain-browser preview link from the admin. Nothing here is
-// sensitive in a way a stray visit would expose — same tier of "unlisted, not
-// secret" as everything else with a random id in this app.
-export default async function ReportTemplatePage({ params }) {
+export const metadata = { robots: { index: false, follow: false } };
+
+// A client's monthly report, laid out for print. Opened by the admin's
+// "Preview report" link (signed in, with the reports permission) and by the
+// PDF export, whose headless browser (lib/pdf.js) carries no cookie and gets
+// a short-lived signed pass in the URL instead (lib/auth.js). Anyone else
+// gets a 404, the same as for an id that doesn't exist, so the ids — which
+// are only partly random — can't be walked to read clients' numbers.
+export default async function ReportTemplatePage({ params, searchParams }) {
   const { id } = await params;
+  const { pass } = await searchParams;
+  const allowed = (await verifyReportPass(id, pass)) || hasPermission(await getSessionUser(), 'reports');
+  if (!allowed) notFound();
   const [reports, clients] = await Promise.all([getReports(), getReportClients()]);
   const report = reports.find((r) => r.id === id);
   if (!report) notFound();

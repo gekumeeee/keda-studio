@@ -1,310 +1,181 @@
-'use client';
-
-import { useState } from 'react';
 import Link from 'next/link';
 import Header from './Header';
 import Footer from './Footer';
-import GlyphStrip from './GlyphStrip';
-import DiagMarquee from './DiagMarquee';
-import Reveal from './Reveal';
-import StatCounter from './StatCounter';
 import RotatingWord from './RotatingWord';
-import HeroFaces from './HeroFaces';
 import ClientCardFan from './ClientCardFan';
-import SectionHead from './SectionHead';
-import AccentGlyph from './AccentGlyph';
-import GlyphIcon from './GlyphIcon';
-import PortfolioVideo from './PortfolioVideo';
-import { UI, pick } from '@/lib/i18n';
+import HeroStage from './site/HeroStage';
+import HeroFaces from './site/HeroFaces';
+import BlockStrip from './site/BlockStrip';
+import ClientsMarquee from './site/ClientsMarquee';
+import ServicesTabs from './site/ServicesTabs';
+import ImpactStats from './site/ImpactStats';
+import Faq from './site/Faq';
+import CtaBlock from './site/CtaBlock';
+import { ArrowIcon } from './site/Icons';
+import { SITE_COPY, pick } from '@/lib/i18n';
 
-const FILTERS = ['All', 'Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
-const CAP_CLASSES = ['cc1', 'cc2', 'cc3', 'cc4'];
+const STEP_COLORS = ['var(--acid)', 'var(--magenta)', 'var(--aqua)', 'var(--tangerine)'];
+const AUDIENCES = [
+  { c: 'var(--acid)', fg: 'var(--ink)', block: '03', r: '-8deg' },
+  { c: 'var(--magenta)', fg: 'var(--ink)', block: '05', r: '8deg' },
+  { c: 'var(--cobalt)', fg: 'var(--paper)', block: '01', r: '-6deg' },
+];
+const lines = (text) => String(text || '').replace(/\n/g, ' ');
 
-const PLACEHOLDER_SHOWCASE = {
-  en: {
-    All: { title: 'Your First Case Study Goes Here', client: 'Placeholder', work: 'Branding, Motion, Social', label: 'Case 01' },
-    Branding: { title: 'A Brand Identity Case Study', client: 'Placeholder', work: 'Logo, Guidelines, Naming', label: 'Branding' },
-    Video: { title: 'A Brand Film Case Study', client: 'Placeholder', work: 'Concept, Shoot, Edit', label: 'Video' },
-    'Social Media': { title: 'A Content System Case Study', client: 'Placeholder', work: 'Templates, Captions, Calendar', label: 'Social' },
-    Motion: { title: 'A Motion Design Case Study', client: 'Placeholder', work: 'Logo Animation, Kinetic Type', label: 'Motion' },
-    Campaigns: { title: 'A Campaign Case Study', client: 'Placeholder', work: 'Concept, Assets, Rollout', label: 'Campaign' },
-  },
-  ar: {
-    All: { title: 'أول مشروع ليك هيبان هنا', client: 'نموذج', work: 'براندينج، موشن، سوشيال', label: 'مشروع ٠١' },
-    Branding: { title: 'مشروع هوية بصرية', client: 'نموذج', work: 'لوجو، دليل، تسمية', label: 'براندينج' },
-    Video: { title: 'مشروع فيلم للبراند', client: 'نموذج', work: 'فكرة، تصوير، مونتاج', label: 'فيديو' },
-    'Social Media': { title: 'مشروع نظام محتوى', client: 'نموذج', work: 'قوالب، كابشنز، خطة', label: 'سوشيال' },
-    Motion: { title: 'مشروع موشن ديزاين', client: 'نموذج', work: 'تحريك لوجو، تايبوجرافي', label: 'موشن' },
-    Campaigns: { title: 'مشروع حملة', client: 'نموذج', work: 'فكرة، أصول، إطلاق', label: 'حملة' },
-  },
-};
-
-function handleMagnetic(e) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const x = e.clientX - r.left - r.width / 2;
-  const y = e.clientY - r.top - r.height / 2;
-  el.style.transform = `translate(${x * 0.28}px, ${y * 0.5}px)`;
-}
-function resetMagnetic(e) {
-  e.currentTarget.style.transform = 'translate(0,0)';
-}
-function handleCapSpotlight(e) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  el.style.setProperty('--x', `${e.clientX - r.left}px`);
-  el.style.setProperty('--y', `${e.clientY - r.top}px`);
-}
-
-function getShowcase(filter, projects, lang) {
-  const live = projects.filter((p) => p.status === 'live');
-  const pool = filter === 'All' ? live : live.filter((p) => p.category === filter);
-  if (pool.length === 0) return PLACEHOLDER_SHOWCASE[lang][filter] || PLACEHOLDER_SHOWCASE[lang].All;
-  const sorted = [...pool].sort((a, b) => new Date(b.updated) - new Date(a.updated));
-  const p = sorted[0];
-  return {
-    title: p.title,
-    client: p.client,
-    work: p.work,
-    // the stored category is the English key; show it in the page's language
-    label: UI[lang].filters[p.category] || p.category,
-    image: p.image || '',
-    video: p.video || '',
-    orientation: p.orientation || 'auto',
-  };
-}
-
-// glyph shapes used inside the impact circles
-const IMPACT_GLYPHS = ['circle', 'triangle', 'square', 'cross', 'eye'];
-
-export default function HomeView({ projects, clients, settings, lang = 'en', fanCards = [] }) {
-  const t = UI[lang];
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [shownFilter, setShownFilter] = useState('All');
-  const [fading, setFading] = useState(false);
-
-  // Derive the showcase during render so it always reflects the current
-  // language (and live projects) — no stale state on a language switch.
-  const showcase = getShowcase(shownFilter, projects, lang);
-
-  function selectFilter(filter) {
-    setActiveFilter(filter);
-    setFading(true);
-    setTimeout(() => {
-      setShownFilter(filter);
-      setFading(false);
-    }, 180);
-  }
-
-  const heroHeading = pick(settings.heroHeading, lang) || null;
-  const heroWords = settings.heroWords.map((w) => ({ text: pick(w.text, lang), color: w.color }));
-
-  // Build the scrolling clients track: fill to a minimum, then duplicate for a
-  // seamless loop. Falls back to placeholder names before real clients exist.
-  const clientSource =
-    clients.length > 0 ? clients : [0, 1, 2, 3].map((i) => ({ id: `ph${i}`, name: t.clientPlaceholder, logo: '' }));
-  const clientFilled = [];
-  let ci = 0;
-  while (clientFilled.length < Math.max(8, clientSource.length)) {
-    clientFilled.push(clientSource[ci % clientSource.length]);
-    ci++;
-  }
-  const clientMarquee = [...clientFilled, ...clientFilled];
+export default function HomeView({ clients, settings, lang = 'en', fanCards = [] }) {
+  const c = SITE_COPY[lang];
+  const fixedHeading = pick(settings.heroHeading, lang);
+  const words = settings.heroWords
+    .map((w) => ({ text: pick(w.text, lang), color: w.color }))
+    .filter((w) => w.text);
+  const services = settings.services.map((s) => ({
+    title: pick(s.title, lang),
+    tab: pick(s.tab, lang),
+    desc: pick(s.desc, lang),
+    stat: s.stat,
+    statLabel: pick(s.statLabel, lang),
+    image: s.image,
+    points: pick(s.points, lang).split('\n').map((p) => p.trim()).filter(Boolean),
+  }));
 
   return (
-    // .site carries the dark monochrome base (paper type on ink) and the
-    // accent token set — see globals.css. The admin dashboard deliberately
-    // sits outside it and keeps its own separate dark theme.
-    <div className="site">
+    <>
       <Header active="home" settings={settings} lang={lang} />
-
-      <section className="hero">
-        <div className="wrap hero-stage">
-          <Reveal className="hero-stage-inner">
-            <div className="eyebrow hero-eyebrow">{pick(settings.heroEyebrow, lang)}</div>
-            {/* The faces share a box with the headline so their percentage
-                positions track the type as it scales. */}
-            <div className="hero-type-wrap">
-              <HeroFaces />
-              {heroHeading ? (
-                <h1 className="hero-type">{heroHeading}</h1>
+      <main id="top">
+        <HeroStage className="hero">
+          <div className="hero-in">
+            <p className="eyebrow rv"><span>{pick(settings.heroEyebrow, lang)}</span></p>
+            <div className="hero-type">
+              <HeroFaces variant="home" />
+              {fixedHeading ? (
+                <h1 className="d fixed">
+                  <span className="ln">{fixedHeading}</span>
+                </h1>
               ) : (
-                <h1 className="hero-type hero-rotating">
-                  <span className="hero-line">{pick(settings.heroLine1, lang)}</span>
-                  {/* Its own line, centred, so a longer word grows out from
-                      the middle instead of shunting the line sideways. */}
-                  <span className="hero-line hero-line-rotating">
-                    <RotatingWord phrases={heroWords} />
-                  </span>
-                  <span className="hero-line">{pick(settings.heroLine3, lang)}</span>
+                <h1 className="d">
+                  <span className="ln" style={{ '--i': 0 }}>{pick(settings.heroLine1, lang)}</span>
+                  {words.length ? (
+                    <span className="ln" style={{ '--i': 1 }}>
+                      <RotatingWord words={words} />
+                    </span>
+                  ) : null}
+                  <span className="ln" style={{ '--i': 2 }}>{pick(settings.heroLine3, lang)}</span>
                 </h1>
               )}
             </div>
-            <p className="hero-sub">{pick(settings.heroPara, lang)}</p>
-            <Link href="/contact" className="hero-cta magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
-              {pick(settings.heroCtaLabel, lang)}
-            </Link>
-          </Reveal>
-          {/* Built in app/page.js, where each image's colours are read so its
-              character matches it. Renders nothing when no work has an image. */}
+            <p className="sub rv" style={{ '--d': '.16s' }}>{pick(settings.heroPara, lang)}</p>
+            <div className="hero-cta rv" style={{ '--d': '.24s' }}>
+              <Link className="btn btn-acid mag" href="/contact">
+                <span>{pick(settings.heroCtaLabel, lang).replace(/\s*[→←]\s*$/, '')}</span>
+                <ArrowIcon />
+              </Link>
+              <Link className="btn btn-line mag" href="/portfolio">
+                <span>{c.seeWork}</span>
+                <ArrowIcon />
+              </Link>
+            </div>
+          </div>
           <ClientCardFan cards={fanCards} />
-        </div>
-      </section>
+        </HeroStage>
 
-      <DiagMarquee />
+        <BlockStrip />
 
-      <section className="marketing-section" id="clients">
-        <div className="wrap">
-          <SectionHead title={pick(settings.clientsHeading, lang)} tag={t.clientsTag} />
-          <Reveal className="clients-bar">
-            <Link href="/contact" className="add">{t.clientsAdd}</Link>
-            {/* a KEDA mark at each end of the row of other people's logos */}
-            <AccentGlyph />
-            <div className="clients-marquee">
-              <div className="clients-track">
-                {clientMarquee.map((c, i) => (
-                  <div className="client-item" key={i}>
-                    {c.logo ? (
-                      <img src={c.logo} alt={c.name} draggable={false} onContextMenu={(e) => e.preventDefault()} />
-                    ) : (
-                      <span>{c.name}</span>
-                    )}
-                  </div>
+        {clients.length ? (
+          <section className="sec" id="clients" style={{ paddingTop: 'clamp(36px,4vw,56px)' }}>
+            <div className="wrap">
+              <div className="cl-head rv">
+                <div>
+                  <span className="eyebrow"><i />{pick(settings.clientsEyebrow, lang)}</span>
+                  <h2 className="d">{lines(pick(settings.clientsHeading, lang))}</h2>
+                </div>
+                <p>{c.clientsLead}</p>
+              </div>
+              <ClientsMarquee clients={clients} />
+            </div>
+          </section>
+        ) : null}
+
+        {services.length ? (
+          <section className="sec" id="services" style={clients.length ? { paddingTop: 0 } : undefined}>
+            <div className="wrap">
+              <div className="svc-head rv">
+                <span className="eyebrow"><i />{pick(settings.servicesEyebrow, lang)}</span>
+                <h2 className="d">{lines(pick(settings.servicesHeading, lang))}</h2>
+                <p className="lead">{c.servicesLead}</p>
+              </div>
+              <ServicesTabs
+                services={services}
+                startLabel={pick(settings.ctaButton, lang)}
+                tablistLabel={pick(settings.servicesEyebrow, lang)}
+              />
+            </div>
+          </section>
+        ) : null}
+
+        <section className="sec" id="process" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="pp rv">
+              <div>
+                <span className="eyebrow"><i />{c.process.eyebrow}</span>
+                <h2 className="d">{c.process.heading}</h2>
+                <p className="lead">{c.process.lead}</p>
+                <Link className="btn btn-fg" href="/contact">
+                  <span>{c.process.button}</span>
+                  <ArrowIcon />
+                </Link>
+              </div>
+              <div className="steps">
+                {c.process.steps.map((s, i) => (
+                  <article className="step rv" key={i} style={{ '--d': `${0.05 + i * 0.07}s` }}>
+                    <span className="pill" style={{ '--c': STEP_COLORS[i] }}>{s.tag}</span>
+                    <h3 className="d">{s.title}</h3>
+                    <p>{s.body}</p>
+                  </article>
                 ))}
               </div>
             </div>
-            <AccentGlyph delay={1200} />
-          </Reveal>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* services — a paper panel rising out of the ink, with a colour lip
-          showing above its top edge. The cards inside carry the accents, one
-          each, so the section still reads as one paper surface with colour
-          placed on it rather than a screenful of fill. */}
-      <section className="marketing-section sheet-section services-section" id="work">
-        <div className="wrap">
-          <div className="sheet">
-            <SectionHead title={pick(settings.servicesHeading, lang)} tag={pick(settings.servicesEyebrow, lang)} />
-            <div className="cap-grid">
-              {settings.services.map((svc, i) => (
-                <Reveal
-                  as="div"
-                  className={`cap-card ${CAP_CLASSES[i % CAP_CLASSES.length]}${svc.image ? ' has-photo' : ''}`}
-                  key={i}
-                  delay={i * 80}
-                  onMouseMove={handleCapSpotlight}
-                >
-                  {/* framed like a photo taped to the card rather than bled to
-                      its edges — the picture is an object sitting on it. */}
-                  {svc.image && (
-                    <div className="cap-photo">
-                      <img src={svc.image} alt="" draggable={false} />
+        <ImpactStats settings={settings} lang={lang} />
+
+        <section className="sec" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="aud-head rv">
+              <span className="eyebrow"><i />{c.audiences.eyebrow}</span>
+              <h2 className="d">{c.audiences.heading}</h2>
+            </div>
+            <div className="aud">
+              {c.audiences.items.map((a, i) => {
+                const look = AUDIENCES[i];
+                return (
+                  <article className="ac rv" key={i} style={{ '--c': look.c, '--fg': look.fg, '--d': `${0.05 + i * 0.07}s` }}>
+                    <header>{a.tag}</header>
+                    <div className="ac-b">
+                      <h3>{a.title}</h3>
+                      <p>{a.body}</p>
+                      <img src={`/blocks/block-${look.block}.svg`} alt="" style={{ '--r': look.r }} draggable={false} />
                     </div>
-                  )}
-                  <div className="cap-content">
-                    <div className="top"><h4>{pick(svc.title, lang)}</h4><div className="arrow">↗</div></div>
-                    <div>
-                      {svc.stat && <StatCounter value={svc.stat} className="cap-stat" />}
-                      <p>{pick(svc.desc, lang)}</p>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* selected work — the same paper panel as services, in the other
-          accent: one block for what we do, one for what it produced. */}
-      <section className="marketing-section sheet-section work-section">
-        <div className="wrap">
-          <div className="sheet">
-            <SectionHead title={pick(settings.workHeading, lang)} tag={pick(settings.workEyebrow, lang)} />
-            <Reveal className="filters">
-              {FILTERS.map((f) => (
-                <button
-                  key={f}
-                  className={`filter-pill ${activeFilter === f ? 'active' : ''}`}
-                  onClick={() => selectFilter(f)}
-                >
-                  {t.filters[f]}
-                </button>
-              ))}
-            </Reveal>
-            <Reveal className="showcase" style={{ opacity: fading ? 0 : 1 }}>
-              <div className="showcase-copy">
-                {/* an untitled project is led by its client's name instead;
-                    with neither, the copy starts at the meta lines */}
-                {showcase.title || (showcase.client && showcase.client !== 'Placeholder') ? (
-                  <h3>{showcase.title || showcase.client}</h3>
-                ) : null}
-                {showcase.title && showcase.client && showcase.client !== 'Placeholder' ? (
-                  <div className="meta">{t.showcaseClient} <b>{showcase.client}</b></div>
-                ) : null}
-                {showcase.work ? <div className="meta">{t.showcaseWork} <b>{showcase.work}</b></div> : null}
-                <Link href="/portfolio" className="view-btn">{t.viewProject}</Link>
-              </div>
-              {showcase.video ? (
-                <PortfolioVideo src={showcase.video} poster={showcase.image} label={showcase.label} orientation={showcase.orientation} />
-              ) : showcase.image ? (
-                // A real image: its own proportions are kept (no forced crop),
-                // but capped in height so a portrait shot can't stretch the row
-                // into a column of empty space beside it.
-                <div className="video-frame has-image">
-                  <img src={showcase.image} alt={showcase.title || ''} className="video-frame-img" />
-                </div>
-              ) : (
-                // No image at all yet — the gradient placeholder still needs
-                // the label/play cue since there's nothing else to show.
-                <div className="video-frame">
-                  <div className="label">{showcase.label}</div>
-                  <div className="play"></div>
-                </div>
-              )}
-            </Reveal>
+        <section className="sec" id="faq" style={{ paddingTop: 0 }}>
+          <div className="wrap faq">
+            <div className="rv">
+              <span className="eyebrow"><i />{c.faq.eyebrow}</span>
+              <h2 className="d">{c.faq.heading}</h2>
+            </div>
+            <Faq items={c.faq.items} />
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="marketing-section" id="impact">
-        <div className="wrap">
-          <SectionHead title={pick(settings.impactHeading, lang)} tag={pick(settings.impactEyebrow, lang)} />
-          <div className="impact-grid">
-            {settings.impact.map((it, i) => (
-              <Reveal as="div" className="impact-card" key={i} delay={i * 80}>
-                {/* no per-item colour: the impact section stays unaccented, so
-                    each icon is a flat ink block rather than four hues */}
-                <div className="impact-icon">
-                  <GlyphIcon type={IMPACT_GLYPHS[i % IMPACT_GLYPHS.length]} />
-                </div>
-                <StatCounter value={it.value} className="impact-value" />
-                <div className="impact-label">{pick(it.label, lang)}</div>
-                <div className="impact-sub">{pick(it.sub, lang)}</div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* closing CTA — cobalt, the one accent that carries white text */}
-      <section className="big-cta">
-        <div className="accent-band sec-cobalt">
-          <Reveal className="wrap">
-            <h2>
-              <span className="line1">{pick(settings.ctaLine1, lang)}</span>
-              <span className="line2">{pick(settings.ctaLine2, lang)}</span>
-            </h2>
-            <Link href="/contact" className="cta-btn magnetic" onMouseMove={handleMagnetic} onMouseLeave={resetMagnetic}>
-              {pick(settings.ctaButton, lang)}
-            </Link>
-          </Reveal>
-        </div>
-      </section>
-
-      <GlyphStrip />
+        <CtaBlock settings={settings} lang={lang} />
+      </main>
       <Footer settings={settings} lang={lang} />
-    </div>
+    </>
   );
 }

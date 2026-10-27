@@ -21,10 +21,14 @@ export async function generateMetadata() {
   });
 }
 
-export default async function PortfolioPage() {
+export default async function PortfolioPage({ searchParams }) {
+  // ?client=<id> opens the page on one client's gallery (the hero cards and
+  // the clients strip link here that way)
+  const query = await searchParams;
+  const initialClient = typeof query?.client === 'string' ? query.client.slice(0, 200) : '';
   const cookieStore = await cookies();
   const lang = normalizeLang(cookieStore.get(LANG_COOKIE)?.value);
   const [projects, savedSettings, clients] = await Promise.all([getProjects(), getSettings(), getClients()]);
   const settings = mergeSettings(savedSettings);
-  return <PortfolioView projects={projects} settings={settings} clients={clients} lang={lang} />;
+  return <PortfolioView projects={projects} settings={settings} clients={clients} lang={lang} initialClient={initialClient} />;
 }

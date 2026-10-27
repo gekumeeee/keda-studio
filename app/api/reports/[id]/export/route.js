@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getReports, getReportClients } from '@/lib/store';
-import { requirePermission } from '@/lib/auth';
+import { requirePermission, createReportPass } from '@/lib/auth';
 import { renderReportPdf } from '@/lib/pdf';
 import { reportFileName } from '@/lib/reportMath';
 
@@ -21,7 +21,8 @@ export async function POST(request, { params }) {
   const origin = new URL(request.url).origin;
   let pdfBuffer;
   try {
-    pdfBuffer = await renderReportPdf(`${origin}/report-template/${id}`);
+    const pass = await createReportPass(id);
+    pdfBuffer = await renderReportPdf(`${origin}/report-template/${id}?pass=${encodeURIComponent(pass)}`);
   } catch (err) {
     console.error('[reports/export] PDF render failed:', err);
     return NextResponse.json({ error: 'PDF generation failed' }, { status: 500 });

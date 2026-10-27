@@ -44,6 +44,63 @@ function extractTitle(html, url) {
   return m ? decodeEntities(m[1]).trim() : null;
 }
 
+// Only the video platforms this is for. The route fetches on the server, so
+// left open it could be pointed at anything the server can reach (internal
+// addresses, cloud metadata endpoints) — every hop of a redirect is checked
+// against the same list, and only https on the default port is allowed.
+const ALLOWED_HOSTS = ['youtube.com', 'youtu.be', 'vimeo.com', 'facebook.com', 'fb.watch', 'fb.me', 'instagram.com', 'tiktok.com'];
+const MAX_REDIRECTS = 5;
+const MAX_BYTES = 2_000_000;
+
+function isAllowedVideoUrl(raw) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== 'https:' || u.port || u.username || u.password) return false;
+  const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  return ALLOWED_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+}
+
+// fetch() with redirects followed by hand, so each Location is checked
+async function fetchAllowed(url) {
+  let current = url;
+  for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    if (!isAllowedVideoUrl(current)) return null;
+    const res = await fetch(current, {
+      headers: { 'User-Agent': CRAWLER_UA, Accept: 'text/html' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (!loc) return null;
+      current = new URL(loc, current).toString();
+      continue;
+    }
+    return res;
+  }
+  return null;
+}
+
+// reads at most MAX_BYTES of the page — the meta tags are in its <head>
+async function readCapped(res) {
+  if (!res.body) return '';
+  const reader = res.body.getReader();
+  const chunks = [];
+  let size = 0;
+  while (size < MAX_BYTES) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    size += value.length;
+  }
+  reader.cancel().catch(() => {});
+  return new TextDecoder().decode(Buffer.concat(chunks.map((c) => Buffer.from(c))));
+}
+
 function firstWords(text, limit) {
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length <= limit) return words.join(' ');
@@ -56,18 +113,16 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const url = (searchParams.get('url') || '').trim();
-  if (!/^https?:\/\//i.test(url)) {
+  // links pasted as http:// are upgraded rather than refused
+  const target = url.replace(/^http:\/\//i, 'https://');
+  if (!isAllowedVideoUrl(target)) {
     return NextResponse.json({ title: null });
   }
 
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': CRAWLER_UA, Accept: 'text/html' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return NextResponse.json({ title: null });
-    const html = await res.text();
+    const res = await fetchAllowed(target);
+    if (!res || !res.ok) return NextResponse.json({ title: null });
+    const html = await readCapped(res);
     const rawTitle = extractTitle(html, url);
     if (!rawTitle) return NextResponse.json({ title: null });
     return NextResponse.json({ title: firstWords(rawTitle, WORD_LIMIT) });

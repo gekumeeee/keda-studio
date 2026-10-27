@@ -7,6 +7,8 @@ import { formatAmount, invoiceTotals, contractTotal } from '@/lib/invoiceMath';
 import ReportsTab from '@/components/admin/ReportsTab';
 import ImageUpload from '@/components/admin/ImageUpload';
 import BulkPhotoUpload from '@/components/admin/BulkPhotoUpload';
+import ThemeToggle from '@/components/site/ThemeToggle';
+import { statusOf } from '@/lib/contentPosts';
 
 const CATEGORIES = ['Branding', 'Video', 'Social Media', 'Motion', 'Campaigns'];
 const METHOD_LABELS = { whatsapp: 'WhatsApp', email: 'Email', call: 'Phone call' };
@@ -70,6 +72,17 @@ function whatsappNumber(phone) {
 }
 
 const TAB_ICONS = { overview: '◎', projects: '▤', clients: '❏', messages: '✉', invoices: '▥', plans: '¤', contracts: '§', reports: '◨', content: '✦', settings: '✎', users: '☺', account: '⚿' };
+// each section's colour: its icon in the sidebar when it's the open one
+const TAB_COLORS = { overview: 'var(--acid)', projects: 'var(--tangerine)', clients: 'var(--aqua)', messages: 'var(--magenta)', content: 'var(--violet)', invoices: 'var(--acid)', plans: 'var(--aqua)', contracts: 'var(--tangerine)', reports: 'var(--cobalt)', settings: 'var(--magenta)', users: 'var(--violet)', account: 'var(--acid)' };
+// the colour cards' and folders' brand characters, in turn
+const BLOCK_FACES = ['02', '07', '05', '09', '03', '04', '01', '08', '10', '06'];
+// What the search box looks through: the visible tab's own records.
+const SEARCHABLE = ['projects', 'clients', 'messages', 'invoices', 'plans', 'contracts', 'users'];
+function matches(query, ...fields) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return fields.some((f) => String(f ?? '').toLowerCase().includes(q));
+}
 // Every tab except 'overview' is gated by a matching permission key. 'overview'
 // has no key here — it's always shown to any logged-in user. 'users' isn't
 // permission-based at all (owner-only, checked separately from `permissions`).
@@ -268,6 +281,12 @@ export default function AdminPage() {
   const [importError, setImportError] = useState('');
 
   const [tab, setTab] = useState('overview');
+  // the top bar's search, over whichever tab is open (cleared on a switch)
+  const [query, setQuery] = useState('');
+  // Invoices tab: which status is shown ('all' or an invoiceStatus() value)
+  const [invoiceFilter, setInvoiceFilter] = useState('all');
+  // the content plan's posts, for the overview's "coming up" list
+  const [posts, setPosts] = useState([]);
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -353,7 +372,7 @@ export default function AdminPage() {
   }
 
   async function loadAll(perms) {
-    const [p, c, m, s, inv, pl, con] = await Promise.all([
+    const [p, c, m, s, inv, pl, con, cp] = await Promise.all([
       perms.projects ? fetchJsonSafe('/api/projects', []) : Promise.resolve([]),
       perms.clients ? fetchJsonSafe('/api/clients', []) : Promise.resolve([]),
       perms.messages ? fetchJsonSafe('/api/messages', []) : Promise.resolve([]),
@@ -361,6 +380,7 @@ export default function AdminPage() {
       perms.invoices ? fetchJsonSafe('/api/invoices', []) : Promise.resolve([]),
       perms.plans ? fetchJsonSafe('/api/plans', []) : Promise.resolve([]),
       perms.contracts ? fetchJsonSafe('/api/contracts', []) : Promise.resolve([]),
+      perms.content ? fetchJsonSafe('/api/content', { posts: [] }) : Promise.resolve({ posts: [] }),
     ]);
     setProjects(p);
     setClients(c);
@@ -369,6 +389,12 @@ export default function AdminPage() {
     setInvoices(inv);
     setPlans(Array.isArray(pl) ? pl : []);
     setContracts(Array.isArray(con) ? con : []);
+    setPosts(Array.isArray(cp?.posts) ? cp.posts : []);
+  }
+
+  function goTab(key) {
+    setTab(key);
+    setQuery('');
   }
 
   async function loadUsers() {
@@ -455,7 +481,7 @@ export default function AdminPage() {
     }));
   }
   function addService() {
-    setSettingsForm((f) => ({ ...f, services: [...f.services, { title: { en: '', ar: '' }, desc: { en: '', ar: '' }, stat: '', image: '' }] }));
+    setSettingsForm((f) => ({ ...f, services: [...f.services, { title: { en: '', ar: '' }, desc: { en: '', ar: '' }, stat: '', image: '', tab: { en: '', ar: '' }, statLabel: { en: '', ar: '' }, points: { en: '', ar: '' } }] }));
   }
   function removeService(idx) {
     setSettingsForm((f) => ({ ...f, services: f.services.filter((_, i) => i !== idx) }));
@@ -1115,9 +1141,10 @@ export default function AdminPage() {
   if (authStatus === 'needsSetup') {
     return (
       <div id="loginGate" dir="ltr">
+        <div className="login-faces" aria-hidden="true"><img src="/blocks/block-05.svg" alt="" /><img src="/blocks/block-02.svg" alt="" /><img src="/blocks/block-09.svg" alt="" /></div>
         <div className="login-box">
-          <div className="login-brand"><img src="/keda-white.png" alt="KEDA" /></div>
-          <div className="logo">Set up your admin account</div>
+          <div className="login-brand"><img className="logo-d" src="/brand/keda-logo-white.png" alt="KEDA Agency" /><img className="logo-l" src="/brand/keda-logo-black.png" alt="KEDA Agency" /><span>Admin</span></div>
+          <h1 className="logo d">Set up your admin account</h1>
           <div className="sub">You&apos;re the first person here — choose the username and password you&apos;ll sign in with. You can add more people (with their own permissions) once you&apos;re in.</div>
           <form onSubmit={doSetup}>
             <Field label="Username">
@@ -1140,9 +1167,10 @@ export default function AdminPage() {
   if (authStatus === 'loggedOut') {
     return (
       <div id="loginGate" dir="ltr">
+        <div className="login-faces" aria-hidden="true"><img src="/blocks/block-05.svg" alt="" /><img src="/blocks/block-02.svg" alt="" /><img src="/blocks/block-09.svg" alt="" /></div>
         <div className="login-box">
-          <div className="login-brand"><img src="/keda-white.png" alt="KEDA" /></div>
-          <div className="logo">Admin</div>
+          <div className="login-brand"><img className="logo-d" src="/brand/keda-logo-white.png" alt="KEDA Agency" /><img className="logo-l" src="/brand/keda-logo-black.png" alt="KEDA Agency" /><span>Admin</span></div>
+          <h1 className="logo d">Sign in</h1>
           <div className="sub">Sign in to manage your site content.</div>
           <form onSubmit={doLogin}>
             <Field label="Username">
@@ -1173,187 +1201,247 @@ export default function AdminPage() {
     .filter((group) => group.tabs.length > 0);
   const configureExtras = ['account', ...(isOwner ? ['users'] : [])];
 
+  // Each section's main action, as the acid button in the top bar. Saves on
+  // Site Content and My account submit those tabs' own forms.
+  const openFolderClient = clients.find((c) => c.id === projectFolder) || null;
+  const PRIMARY = {
+    overview: permissions.projects ? { label: '+ New project', onClick: () => openProjectModal(null) } : null,
+    projects: { label: '+ New project', onClick: () => openProjectModal(null, openFolderClient) },
+    clients: { label: '+ New client', onClick: () => openClientModal(null) },
+    invoices: { label: '+ New invoice', onClick: () => openInvoiceModal(null) },
+    plans: { label: '+ New plan', onClick: () => openPlanModal(null) },
+    contracts: { label: `+ New ${contractView === 'team' ? 'team' : 'client'} contract`, onClick: () => openContractModal(null) },
+    settings: { label: 'Save changes', form: 'settings-form' },
+    users: isOwner ? { label: '+ Add user', onClick: () => openUserModal(null) } : null,
+    account: { label: 'Save changes', form: 'account-form' },
+  };
+  const primary = PRIMARY[tab] || null;
+
   return (
     <div id="dashboard" dir="ltr">
       <div className="shell">
         <aside className="sidebar">
-          <div className="side-brand"><img src="/keda-white.png" alt="KEDA" /><span>Admin</span></div>
-          <nav className="side-links">
-            {visibleGroups.map((group) => (
-              <div className="side-group" key={group.label}>
-                <div className="side-group-label">{group.label}</div>
-                {group.tabs.map((key) => (key === 'content' ? (
-                  // the content plan is a page of its own, in a new browser tab
-                  <a key={key} className="side-link" href="/admin/content" target="_blank" rel="noopener">
-                    <span className="side-icon">{TAB_ICONS[key]}</span>
-                    {TAB_TITLES[key]}
-                    <span className="side-external" aria-hidden="true">↗</span>
-                  </a>
-                ) : (
-                  <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setClientDetailId(null); openProjectFolder(null); }}>
-                    <span className="side-icon">{TAB_ICONS[key]}</span>
-                    {TAB_TITLES[key]}
-                    {key === 'messages' && messages.length > 0 && <span className="side-badge">{messages.length}</span>}
-                  </button>
-                )))}
-              </div>
-            ))}
-            <div className="side-group">
-              <div className="side-group-label">Account</div>
-              {configureExtras.map((key) => (
-                <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
-                  <span className="side-icon">{TAB_ICONS[key]}</span>
-                  {TAB_TITLES[key]}
-                </button>
+          <div className="side-in">
+            <a className="side-brand" href="/" target="_blank" rel="noopener" title="View site">
+              <img className="logo-d" src="/brand/keda-logo-white.png" alt="KEDA Agency" />
+              <img className="logo-l" src="/brand/keda-logo-black.png" alt="KEDA Agency" />
+              <span>Admin</span>
+            </a>
+            <nav className="side-links">
+              {visibleGroups.map((group) => (
+                <div className="side-group" key={group.label}>
+                  <div className="side-group-label">{group.label}</div>
+                  {group.tabs.map((key) => (key === 'content' ? (
+                    // the content plan is a page of its own, in a new browser tab
+                    <a key={key} className="side-link" href="/admin/content" target="_blank" rel="noopener" style={{ '--c': TAB_COLORS[key] }}>
+                      <span className="side-icon">{TAB_ICONS[key]}</span>
+                      {TAB_TITLES[key]}
+                      <span className="side-external" aria-hidden="true">↗</span>
+                    </a>
+                  ) : (
+                    <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} style={{ '--c': TAB_COLORS[key] }} aria-current={tab === key ? 'page' : undefined} onClick={() => { goTab(key); setClientDetailId(null); openProjectFolder(null); }}>
+                      <span className="side-icon">{TAB_ICONS[key]}</span>
+                      {TAB_TITLES[key]}
+                      {key === 'messages' && messages.length > 0 && <span className="side-badge">{messages.length}</span>}
+                    </button>
+                  )))}
+                </div>
               ))}
+              <div className="side-group">
+                <div className="side-group-label">Account</div>
+                {configureExtras.map((key) => (
+                  <button type="button" key={key} className={`side-link${tab === key ? ' active' : ''}`} style={{ '--c': TAB_COLORS[key] }} aria-current={tab === key ? 'page' : undefined} onClick={() => goTab(key)}>
+                    <span className="side-icon">{TAB_ICONS[key]}</span>
+                    {TAB_TITLES[key]}
+                  </button>
+                ))}
+              </div>
+            </nav>
+            <div className="side-me">
+              <div className="side-account">
+                <img src="/blocks/block-02.svg" alt="" />
+                <div>
+                  <div className="side-account-name">{currentUser?.username}</div>
+                  <div className="side-account-role">{isOwner ? 'Owner' : 'Member'}</div>
+                </div>
+              </div>
+              <button type="button" className="logout" onClick={doLogout}>↩ Log out</button>
             </div>
-          </nav>
-          <div className="side-account">
-            <div className="side-account-name">{currentUser?.username}</div>
-            <div className="side-account-role">{isOwner ? 'Owner' : 'Member'}</div>
           </div>
-          <button type="button" className="logout" onClick={doLogout}>↩ Log out</button>
         </aside>
 
         <main className="main">
           <div className="topbar">
-            <div>
-              <h1>{TAB_TITLES[tab]}</h1>
+            <div className="topbar-title">
+              <h1 className="d">{TAB_TITLES[tab]}</h1>
               <div className="topbar-sub">{TAB_SUB[tab]}</div>
             </div>
-            <a className="view-site" href="/" target="_blank" rel="noreferrer">View site ↗</a>
+            <div className="topbar-r">
+              {SEARCHABLE.includes(tab) ? (
+                <label className="search">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2.2" /><path d="m16 16 4 4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
+                  <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${TAB_TITLES[tab].toLowerCase()}…`} aria-label={`Search ${TAB_TITLES[tab]}`} />
+                </label>
+              ) : null}
+              <ThemeToggle className="circ theme" />
+              <a className="view-site" href="/" target="_blank" rel="noreferrer">View site ↗</a>
+              {primary ? (
+                <button type={primary.form ? 'submit' : 'button'} form={primary.form} className="top-primary" onClick={primary.onClick}>
+                  {primary.label}
+                </button>
+              ) : null}
+            </div>
           </div>
 
-          {tab === 'overview' && (
-            <section className="tab-panel active">
-              <div className="stat-grid">
-                {(() => {
-                  // Money cards need the invoices permission; fall back to the
-                  // original site cards for a member who can't see billing.
-                  if (!permissions.invoices) {
-                    return (
-                      <>
-                        <div className="stat-card">
-                          <div className="label">Projects Published</div>
-                          <div className="value">{liveCount}</div>
-                          <div className="delta">{liveCount ? `${projects.length} total (incl. drafts)` : 'Add your first case study'}</div>
-                        </div>
-                        <div className="stat-card">
-                          <div className="label">Clients Listed</div>
-                          <div className="value">{clients.length}</div>
-                          <div className="delta">{clients.length ? 'Showing on homepage' : 'Add your first client'}</div>
-                        </div>
-                        <div className="stat-card">
-                          <div className="label">New Messages</div>
-                          <div className="value">{messages.length}</div>
-                          <div className="delta">{messages.length ? 'From your contact form' : 'Nothing yet'}</div>
-                        </div>
-                        <div className="stat-card">
-                          <div className="label">Site Status</div>
-                          <div className="value" style={{ fontSize: 20 }}>{liveCount > 0 ? 'Live' : 'Draft'}</div>
-                          <div className="delta" style={{ color: liveCount > 0 ? 'var(--green)' : 'var(--gold)' }}>
-                            {liveCount > 0 ? 'Showing on homepage' : 'Not live'}
-                          </div>
-                        </div>
-                      </>
-                    );
-                  }
-                  const revenue = invoices.filter((i) => i.status === 'paid' && isCurrentMonth(i.paidDate)).reduce((s, i) => s + invoiceTotals(i).total, 0);
-                  const outstanding = invoices.filter((i) => i.status === 'sent').reduce((s, i) => s + invoiceTotals(i).total, 0);
-                  const overdueList = invoices.filter((i) => invoiceStatus(i) === 'overdue');
-                  const overdue = overdueList.reduce((s, i) => s + invoiceTotals(i).total, 0);
-                  const activeContracts = contracts.filter(isContractActive).length;
-                  // dominant currency across invoices, so mixed-currency setups
-                  // still show a sensible suffix (fallback LE).
-                  const curCount = {};
-                  invoices.forEach((i) => { const c = i.currency || 'LE'; curCount[c] = (curCount[c] || 0) + 1; });
-                  const cur = Object.keys(curCount).sort((a, b) => curCount[b] - curCount[a])[0] || 'LE';
-                  return (
-                    <>
-                      <div className="stat-card">
-                        <div className="label">This month&apos;s revenue</div>
-                        <div className="value" style={{ fontSize: 26 }}>{formatAmount(revenue)} {cur}</div>
-                        <div className="delta" style={{ color: 'var(--green)' }}>Paid this month</div>
-                      </div>
-                      <div className="stat-card">
-                        <div className="label">Outstanding</div>
-                        <div className="value" style={{ fontSize: 26 }}>{formatAmount(outstanding)} {cur}</div>
-                        <div className="delta">Sent, awaiting payment</div>
-                      </div>
-                      <div className="stat-card">
-                        <div className="label">Overdue</div>
-                        <div className="value" style={{ fontSize: 26, color: overdue > 0 ? 'var(--red)' : 'var(--text)' }}>{formatAmount(overdue)} {cur}</div>
-                        <div className="delta" style={{ color: overdue > 0 ? 'var(--red)' : undefined }}>
-                          {overdueList.length ? `${overdueList.length} invoice${overdueList.length === 1 ? '' : 's'} past due` : 'Nothing overdue'}
-                        </div>
-                      </div>
-                      {permissions.contracts ? (
-                        <div className="stat-card">
-                          <div className="label">Active client contracts</div>
-                          <div className="value">{activeContracts}</div>
-                          <div className="delta">Currently in effect</div>
-                        </div>
-                      ) : (
-                        <div className="stat-card">
-                          <div className="label">Clients Listed</div>
-                          <div className="value">{clients.length}</div>
-                          <div className="delta">{clients.length ? 'Showing on homepage' : 'Add your first client'}</div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
+          {tab === 'overview' && (() => {
+            // Money cards need the invoices permission; a member who can't see
+            // billing gets the site's own numbers in their place.
+            const overdueList = invoices.filter((i) => invoiceStatus(i) === 'overdue');
+            const curCount = {};
+            invoices.forEach((i) => { const c = i.currency || 'LE'; curCount[c] = (curCount[c] || 0) + 1; });
+            // dominant currency across invoices, so mixed-currency setups
+            // still show a sensible suffix (fallback LE)
+            const cur = Object.keys(curCount).sort((a, b) => curCount[b] - curCount[a])[0] || 'LE';
+            const revenue = invoices.filter((i) => i.status === 'paid' && isCurrentMonth(i.paidDate)).reduce((s, i) => s + invoiceTotals(i).total, 0);
+            const outstanding = invoices.filter((i) => i.status === 'sent').reduce((s, i) => s + invoiceTotals(i).total, 0);
+            const overdue = overdueList.reduce((s, i) => s + invoiceTotals(i).total, 0);
+            const activeContracts = contracts.filter(isContractActive).length;
+            const money = (v) => <>{formatAmount(v)}<small>{cur}</small></>;
+            const cards = permissions.invoices
+              ? [
+                  { label: 'This month’s revenue', value: money(revenue), delta: 'Paid this month' },
+                  { label: 'Outstanding', value: money(outstanding), delta: 'Sent, awaiting payment' },
+                  { label: 'Overdue', value: money(overdue), delta: overdueList.length ? `${overdueList.length} invoice${overdueList.length === 1 ? '' : 's'} past due` : 'Nothing overdue' },
+                  permissions.contracts
+                    ? { label: 'Active client contracts', value: activeContracts, delta: 'Currently in effect' }
+                    : { label: 'Clients listed', value: clients.length, delta: clients.length ? 'Showing on homepage' : 'Add your first client' },
+                ]
+              : [
+                  { label: 'Projects published', value: liveCount, delta: liveCount ? `${projects.length} total (incl. drafts)` : 'Add your first case study' },
+                  { label: 'Clients listed', value: clients.length, delta: clients.length ? 'Showing on homepage' : 'Add your first client' },
+                  { label: 'New messages', value: messages.length, delta: messages.length ? 'From your contact form' : 'Nothing yet' },
+                  { label: 'Site status', value: liveCount > 0 ? 'Live' : 'Draft', delta: liveCount > 0 ? 'Showing on homepage' : 'Not live' },
+                ];
+            const CARD_LOOKS = [
+              { c: 'var(--violet)', fg: 'var(--paper)', face: '08', r: '14deg' },
+              { c: 'var(--aqua)', fg: 'var(--ink)', face: '02', r: '-12deg' },
+              { c: 'var(--magenta)', fg: 'var(--ink)', face: '07', r: '14deg' },
+              { c: 'var(--acid)', fg: 'var(--ink)', face: '05', r: '-10deg' },
+            ];
+            // the posts planned from today on, soonest first
+            const today = new Date();
+            const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const weekEnd = new Date(today.getTime() + 7 * 864e5);
+            const upcoming = posts.filter((p) => p.date && p.date >= todayKey && p.status !== 'published').sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+            const thisWeek = upcoming.filter((p) => new Date(`${p.date}T00:00`) < weekEnd).length;
+            const summary = [
+              permissions.messages ? `${messages.length} message${messages.length === 1 ? '' : 's'} in the inbox` : null,
+              permissions.invoices ? (overdueList.length ? `${overdueList.length} overdue invoice${overdueList.length === 1 ? '' : 's'}` : 'nothing overdue') : null,
+              permissions.content ? `${thisWeek} post${thisWeek === 1 ? '' : 's'} planned this week` : null,
+              permissions.projects ? `${liveCount} live project${liveCount === 1 ? '' : 's'} on the site` : null,
+            ].filter(Boolean);
+            return (
+              <section className="tab-panel active">
+                <div className="hello">
+                  <div>
+                    <h2 className="d">Welcome back, {currentUser?.username}.</h2>
+                    {summary.length ? <p>{summary.join(', ').replace(/^./, (m) => m.toUpperCase())}.</p> : null}
+                    <div className="acts">
+                      {permissions.projects ? <button type="button" className="btn b-fg" onClick={() => openProjectModal(null)}>+ New project</button> : null}
+                      {permissions.invoices ? <button type="button" className="btn b-line" onClick={() => { goTab('invoices'); openInvoiceModal(null); }}>New invoice</button> : null}
+                      {permissions.content ? <a className="btn b-line" href="/admin/content" target="_blank" rel="noopener">Content plan ↗</a> : null}
+                    </div>
+                  </div>
+                  <div className="hello-faces" aria-hidden="true">
+                    <img src="/blocks/block-05.svg" alt="" style={{ left: 0, top: 40, rotate: '-12deg' }} />
+                    <img src="/blocks/block-02.svg" alt="" style={{ left: 84, top: 0, rotate: '10deg', animationDelay: '-2s' }} />
+                    <img src="/blocks/block-03.svg" alt="" style={{ left: 166, top: 52, rotate: '-6deg', animationDelay: '-4s' }} />
+                  </div>
+                </div>
 
-              {/* The money row above is all an owner saw of the website itself —
-                  how much is live, what's still a draft, who's listed. Each card
-                  opens the section it counts. Only shown alongside the money
-                  row: without billing access the cards above already are these. */}
-              {permissions.invoices ? (
-                <div className="stat-grid stat-grid-site">
-                  {[
-                    { label: 'Live projects', value: liveCount, delta: 'On the homepage & portfolio', to: 'projects', perm: 'projects' },
-                    { label: 'Drafts', value: projects.length - liveCount, delta: 'Hidden until set live', to: 'projects', perm: 'projects' },
-                    { label: 'Clients', value: clients.length, delta: 'In the clients bar', to: 'clients', perm: 'clients' },
-                    { label: 'Messages', value: messages.length, delta: 'From the contact form', to: 'messages', perm: 'messages' },
-                  ]
-                    .filter((c) => permissions[c.perm])
-                    .map((c) => (
-                      <button type="button" className="stat-card stat-card-link" key={c.label} onClick={() => setTab(c.to)}>
+                <div className="stat-grid">
+                  {cards.map((c, i) => {
+                    const look = CARD_LOOKS[i % CARD_LOOKS.length];
+                    return (
+                      <div className="stat-card" key={c.label} style={{ '--c': look.c, '--sc': look.fg }}>
+                        <img src={`/blocks/block-${look.face}.svg`} alt="" style={{ '--r': look.r }} />
                         <div className="label">{c.label}</div>
                         <div className="value">{c.value}</div>
-                        <div className="delta">{c.delta} →</div>
-                      </button>
-                    ))}
+                        <div className="delta">{c.delta}</div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ) : null}
 
-              <div className="panel">
-                <div className="panel-head">
-                  <h3>Recent Messages</h3>
-                  {permissions.messages && messages.length > 0 ? (
-                    <button type="button" className="panel-head-link" onClick={() => setTab('messages')}>View all →</button>
-                  ) : null}
-                </div>
-                <table>
-                  <thead><tr><th>From</th><th>Message</th><th>Received</th></tr></thead>
-                  <tbody>
+                {/* The money row above is all an owner saw of the website itself —
+                    how much is live, what's still a draft, who's listed. Each card
+                    opens the section it counts. Only shown alongside the money
+                    row: without billing access the cards above already are these. */}
+                {permissions.invoices ? (
+                  <div className="stat-grid stat-grid-site">
+                    {[
+                      { label: 'Live projects', value: liveCount, delta: 'On the homepage & portfolio', to: 'projects', perm: 'projects', c: 'var(--acid)' },
+                      { label: 'Drafts', value: projects.length - liveCount, delta: 'Hidden until set live', to: 'projects', perm: 'projects', c: 'var(--faint)' },
+                      { label: 'Clients', value: clients.length, delta: 'In the clients bar', to: 'clients', perm: 'clients', c: 'var(--aqua)' },
+                      { label: 'Messages', value: messages.length, delta: 'From the contact form', to: 'messages', perm: 'messages', c: 'var(--magenta)' },
+                    ]
+                      .filter((c) => permissions[c.perm])
+                      .map((c) => (
+                        <button type="button" className="stat-card stat-card-link" key={c.label} onClick={() => goTab(c.to)}>
+                          <div className="label"><i className="dot" style={{ '--c': c.c }} />{c.label}</div>
+                          <div className="value">{c.value}</div>
+                          <div className="delta">{c.delta} →</div>
+                        </button>
+                      ))}
+                  </div>
+                ) : null}
+
+                <div className={`ov-grid${permissions.content ? '' : ' one'}`}>
+                  <div className="panel">
+                    <div className="panel-head">
+                      <h3>Recent messages</h3>
+                      {permissions.messages && messages.length > 0 ? (
+                        <button type="button" className="panel-head-link" onClick={() => goTab('messages')}>View all →</button>
+                      ) : null}
+                    </div>
                     {messages.length === 0 ? (
-                      <tr><td colSpan={3}><div className="empty">Nothing yet.</div></td></tr>
+                      <div className="empty">Nothing yet.</div>
                     ) : (
-                      messages.slice(0, 3).map((m) => (
-                        <tr key={m.id}>
-                          <td>{m.name}</td>
-                          <td className="msg-cell">{m.message}</td>
-                          <td>{fmtDate(m.received)}</td>
-                        </tr>
+                      messages.slice(0, 3).map((m, i) => (
+                        <div className="row" key={m.id}>
+                          <span className="av" style={{ '--c': ['var(--magenta)', 'var(--aqua)', 'var(--acid)'][i % 3] }}>{(m.name || '?').trim().charAt(0).toUpperCase()}</span>
+                          <span className="t"><b>{m.name}</b><span>{m.message}</span></span>
+                          <time>{fmtDate(m.received)}</time>
+                        </div>
                       ))
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
+                  </div>
+                  {permissions.content ? (
+                    <div className="panel">
+                      <div className="panel-head">
+                        <h3>Coming up</h3>
+                        <a className="panel-head-link" href="/admin/content" target="_blank" rel="noopener">Open plan ↗</a>
+                      </div>
+                      {upcoming.length === 0 ? (
+                        <div className="empty">No posts planned from today on.</div>
+                      ) : (
+                        upcoming.slice(0, 4).map((p) => {
+                          const d = new Date(`${p.date}T00:00`);
+                          return (
+                            <div className="row" key={p.id}>
+                              <span className="av av-date"><b>{d.getDate()}</b><small>{d.toLocaleDateString('en-US', { weekday: 'short' })}</small></span>
+                              <span className="t"><b>{p.headline || 'Untitled post'}</b><span>{p.clientName || '—'}</span></span>
+                              <span className={`brief-status-pill is-${p.status}`}>{statusOf(p.status).label}</span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            );
+          })()}
 
           {tab === 'projects' && (() => {
             // One folder per client, in the Clients tab's order, then
@@ -1385,16 +1473,18 @@ export default function AdminPage() {
                       <div className="empty">No clients yet — add one in Clients, then open it here to upload its work.</div>
                     ) : (
                       <div className="folder-grid">
-                        {folders.map((f) => {
-                          const cover = f.items.find((p) => p.image)?.image || f.client?.cardImage || '';
+                        {folders.filter((f) => matches(query, f.name, ...f.items.map((p) => p.title))).map((f, fi) => {
+                          // a collage of the folder's first pictures (the client's
+                          // card cover leads when one is set and nothing's uploaded)
+                          const covers = [...new Set([...f.items.filter((p) => p.image).map((p) => p.image), f.client?.cardImage || ''].filter(Boolean))].slice(0, 3);
                           const drafts = f.items.filter((p) => p.status !== 'live').length;
                           return (
                             <button type="button" className="folder-card" key={f.key} onClick={() => openProjectFolder(f.key)}>
-                              <div className="folder-cover">
-                                {cover ? <img src={cover} alt="" /> : <span className="folder-cover-empty">{f.items.length ? '▶' : '+'}</span>}
+                              <div className={`folder-cover n${covers.length}`}>
+                                {covers.length ? covers.map((src) => <img key={src} src={src} alt="" />) : <span className="folder-cover-empty">{f.items.length ? '▶' : '+'}</span>}
                               </div>
                               <div className="folder-meta">
-                                {f.logo ? <img className="folder-logo" src={f.logo} alt="" /> : null}
+                                <img className="folder-face" src={`/blocks/block-${BLOCK_FACES[fi % BLOCK_FACES.length]}.svg`} alt="" />
                                 <div>
                                   <div className="folder-name">{f.name}</div>
                                   <div className="folder-count">
@@ -1402,6 +1492,7 @@ export default function AdminPage() {
                                     {drafts ? ` · ${drafts} draft${drafts === 1 ? '' : 's'}` : ''}
                                   </div>
                                 </div>
+                                <span className="folder-open">Open</span>
                               </div>
                             </button>
                           );
@@ -1462,7 +1553,9 @@ export default function AdminPage() {
                       {open.items.length === 0 ? (
                         <tr><td colSpan={7}><div className="empty">Nothing here yet — upload this client&apos;s photos above.</div></td></tr>
                       ) : (
-                        open.items.map((p, idx) => (
+                        open.items.filter((p) => matches(query, p.title, p.category, p.status)).map((p) => {
+                          const idx = open.items.indexOf(p);
+                          return (
                           <tr key={p.id} className={selectedProjectIds.includes(p.id) ? 'is-selected' : ''}>
                             <td className="check-cell">
                               <input
@@ -1498,7 +1591,8 @@ export default function AdminPage() {
                               </div>
                             </td>
                           </tr>
-                        ))
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1605,7 +1699,7 @@ export default function AdminPage() {
                 <div className="panel">
                   <div className="panel-head">
                     <h3>Clients</h3>
-                    <button type="button" className="add-btn" onClick={() => openClientModal(null)}>+ Add Client</button>
+                    <span className="panel-tag">{clients.length} on the site</span>
                   </div>
                   <table>
                     <thead><tr><th>Logo</th><th>Name</th><th>Projects</th><th>Added</th><th></th></tr></thead>
@@ -1613,7 +1707,7 @@ export default function AdminPage() {
                       {clients.length === 0 ? (
                         <tr><td colSpan={5}><div className="empty">No clients added yet.</div></td></tr>
                       ) : (
-                        clients.map((c) => (
+                        clients.filter((c) => matches(query, c.name)).map((c) => (
                           <tr key={c.id}>
                             <td>{c.logo ? <img src={c.logo} alt={c.name} className="client-logo-thumb" /> : <span className="no-logo">—</span>}</td>
                             <td>{c.name}</td>
@@ -1646,7 +1740,7 @@ export default function AdminPage() {
                     {messages.length === 0 ? (
                       <tr><td colSpan={5}><div className="empty">Messages sent from the site&apos;s contact form will appear here.</div></td></tr>
                     ) : (
-                      messages.map((m) => (
+                      messages.filter((m) => matches(query, m.name, m.email, m.phone, m.message)).map((m) => (
                         <tr key={m.id}>
                           <td>{m.name}<br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{m.email}</span></td>
                           <td className="msg-cell">{m.message}</td>
@@ -1678,8 +1772,22 @@ export default function AdminPage() {
             <section className="tab-panel active">
               <div className="panel">
                 <div className="panel-head">
-                  <h3>Invoices</h3>
-                  <button type="button" className="add-btn" onClick={() => openInvoiceModal(null)}>+ New Invoice</button>
+                  <div className="chips" role="group" aria-label="Show invoices">
+                    {['all', 'draft', 'sent', 'paid', 'overdue'].map((k) => {
+                      const n = k === 'all' ? invoices.length : invoices.filter((i) => invoiceStatus(i) === k).length;
+                      return (
+                        <button type="button" key={k} className={`chip${invoiceFilter === k ? ' on' : ''}`} aria-pressed={invoiceFilter === k} onClick={() => setInvoiceFilter(k)}>
+                          {k === 'all' ? 'All' : INVOICE_STATUS_LABELS[k]} {n}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(() => {
+                    const year = new Date().getFullYear();
+                    const paidYear = invoices.filter((i) => i.status === 'paid' && new Date(i.paidDate).getFullYear() === year);
+                    const cur = paidYear[0]?.currency || invoices[0]?.currency || 'LE';
+                    return <span className="panel-tag-plain">Paid in {year}: <b>{formatAmount(paidYear.reduce((t, i) => t + invoiceTotals(i).total, 0))} {cur}</b></span>;
+                  })()}
                 </div>
                 <table>
                   <thead><tr><th>Project</th><th>Client</th><th>Total</th><th>Status</th><th>Updated</th><th></th></tr></thead>
@@ -1687,7 +1795,7 @@ export default function AdminPage() {
                     {invoices.length === 0 ? (
                       <tr><td colSpan={6}><div className="empty">No invoices yet — create one to send a client a branded PDF breakdown.</div></td></tr>
                     ) : (
-                      invoices.map((inv) => {
+                      invoices.filter((inv) => (invoiceFilter === 'all' || invoiceStatus(inv) === invoiceFilter) && matches(query, inv.projectName, inv.clientName, INVOICE_STATUS_LABELS[invoiceStatus(inv)])).map((inv) => {
                         const { total } = invoiceTotals(inv);
                         const st = invoiceStatus(inv);
                         return (
@@ -1721,7 +1829,7 @@ export default function AdminPage() {
               <div className="panel">
                 <div className="panel-head">
                   <h3>Plans</h3>
-                  <button type="button" className="add-btn" onClick={() => openPlanModal(null)}>+ New Plan</button>
+                  <span className="panel-tag">{plans.length} saved</span>
                 </div>
                 {plans.length === 0 ? (
                   <div className="plans-empty">
@@ -1735,41 +1843,51 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ) : (
-                  <table>
-                    <thead><tr><th>Name</th><th>Price</th><th>Includes</th><th>Updated</th><th></th></tr></thead>
-                    <tbody>
-                      {plans.map((p) => (
-                        <tr key={p.id}>
-                          <td>
-                            {p.name}
-                            {p.description && <><br /><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{p.description}</span></>}
-                          </td>
-                          <td>
-                            {p.price ? `${p.price} ${p.currency}` : '—'}
-                            {p.cycle && <span style={{ color: 'var(--text-dim)', fontSize: 12 }}> / {p.cycle}</span>}
-                          </td>
-                          <td style={{ color: 'var(--text-dim)', fontSize: 12 }}>{p.items?.length || 0} item{(p.items?.length || 0) === 1 ? '' : 's'}</td>
-                          <td>{fmtDate(p.updated)}</td>
-                          <td>
-                            <div className="row-actions">
-                              <button type="button" onClick={() => downloadPlan(p)}>{downloadingPlanId === p.id ? 'Preparing…' : 'Download PDF'}</button>
-                              <button type="button" onClick={() => openProposalModal(p)}>Send as Proposal</button>
-                              <button type="button" onClick={() => openPlanModal(p)}>Edit</button>
-                              <button type="button" onClick={() => duplicatePlan(p)}>Duplicate</button>
-                              <button type="button" className="danger" onClick={() => deletePlan(p.id)}>Delete</button>
+                  <div className="plan-grid">
+                    {plans.filter((p) => matches(query, p.name, p.description, ...(p.items || []))).map((p, i) => {
+                      const look = [
+                        { c: 'var(--acid)', face: '01' },
+                        { c: 'var(--magenta)', face: '04' },
+                        { c: 'var(--cobalt)', pc: 'var(--paper)', face: '05' },
+                        { c: 'var(--aqua)', face: '09' },
+                        { c: 'var(--tangerine)', face: '07' },
+                        { c: 'var(--violet)', pc: 'var(--paper)', face: '03' },
+                      ][i % 6];
+                      return (
+                        <div className="plan" key={p.id} style={{ '--c': look.c, '--pc': look.pc || 'var(--ink)' }}>
+                          <div className="hd">
+                            <img src={`/blocks/block-${look.face}.svg`} alt="" />
+                            <b>{p.name}</b>
+                            {p.description ? <span className="plan-desc">{p.description}</span> : null}
+                            <div className="pr">
+                              {p.price ? p.price : '—'} <small>{p.price ? p.currency : ''}{p.cycle ? ` / ${p.cycle}` : ''}</small>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                          <ul>
+                            {(p.items || []).filter((it) => it && it.trim()).slice(0, 6).map((it, k) => <li key={k}>{it}</li>)}
+                            {(p.items || []).filter((it) => it && it.trim()).length > 6 ? <li className="more">+ {(p.items || []).filter((it) => it && it.trim()).length - 6} more</li> : null}
+                          </ul>
+                          <div className="plan-meta">Updated {fmtDate(p.updated)}</div>
+                          <div className="row-actions plan-actions">
+                            <button type="button" className="ra-primary" onClick={() => downloadPlan(p)}>{downloadingPlanId === p.id ? 'Preparing…' : 'Download PDF'}</button>
+                            <button type="button" onClick={() => openProposalModal(p)}>Send as Proposal</button>
+                            <button type="button" onClick={() => openPlanModal(p)}>Edit</button>
+                            <button type="button" onClick={() => duplicatePlan(p)}>Duplicate</button>
+                            <button type="button" className="danger" onClick={() => deletePlan(p.id)}>Delete</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </section>
           )}
 
           {tab === 'contracts' && (() => {
-            const shown = contracts.filter((c) => (contractView === 'team' ? c.partyType === 'employee' : c.partyType !== 'employee'));
+            const shown = contracts
+              .filter((c) => (contractView === 'team' ? c.partyType === 'employee' : c.partyType !== 'employee'))
+              .filter((c) => matches(query, c.title, c.partyName, c.role));
             const clientCount = contracts.filter((c) => c.partyType !== 'employee').length;
             const teamCount = contracts.filter((c) => c.partyType === 'employee').length;
             const isTeamView = contractView === 'team';
@@ -1784,9 +1902,6 @@ export default function AdminPage() {
                       Team{teamCount > 0 ? ` (${teamCount})` : ''}
                     </button>
                   </div>
-                  <button type="button" className="add-btn" onClick={() => openContractModal(null)}>
-                    + New {isTeamView ? 'Team' : 'Client'} Contract
-                  </button>
                 </div>
 
                 <div className="panel">
@@ -1850,19 +1965,8 @@ export default function AdminPage() {
 
           {tab === 'settings' && (
             <section className="tab-panel active">
-              <form onSubmit={saveSettings}>
+              <form id="settings-form" onSubmit={saveSettings}>
                 <div className="lang-edit-bar">
-                  <div className="lang-edit-info">
-                    <span className="lang-edit-title">Editing content in</span>
-                    <div className="lang-seg">
-                      <button type="button" className={editLang === 'en' ? 'active' : ''} onClick={() => setEditLang('en')}>English</button>
-                      <button type="button" className={editLang === 'ar' ? 'active' : ''} onClick={() => setEditLang('ar')}>العربية</button>
-                    </div>
-                  </div>
-                  <div className="lang-edit-actions">
-                    <span className={`saved-note ${settingsSaved ? 'show' : ''}`}>Saved ✓</span>
-                    <button className="save-btn" type="submit">Save all changes</button>
-                  </div>
                   {/* The form is a dozen panels long; these jump straight to
                       one, from anywhere, since the bar stays pinned. */}
                   <nav className="content-jump" aria-label="Jump to section">
@@ -1870,6 +1974,13 @@ export default function AdminPage() {
                       <button type="button" key={label} onClick={() => jumpToContentSection(heading)}>{label}</button>
                     ))}
                   </nav>
+                  <div className="lang-edit-info">
+                    <span className="lang-edit-title">Editing</span>
+                    <div className="lang-seg">
+                      <button type="button" className={editLang === 'en' ? 'active' : ''} aria-pressed={editLang === 'en'} onClick={() => setEditLang('en')}>English</button>
+                      <button type="button" className={editLang === 'ar' ? 'active' : ''} aria-pressed={editLang === 'ar'} onClick={() => setEditLang('ar')}>العربية</button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className={`content-editor ${isAr ? 'rtl-preview' : ''}`}>
@@ -1928,8 +2039,13 @@ export default function AdminPage() {
                         </div>
                         <textarea value={s.desc?.[editLang] ?? ''} onChange={(e) => updateService(i, 'desc', e.target.value)} placeholder={isAr ? 'وصف قصير' : 'Short description'} />
                         <div className="repeat-subrow">
-                          <input className="neutral-input" value={s.stat ?? ''} onChange={(e) => updateServiceNeutral(i, 'stat', e.target.value)} placeholder="Big number, e.g. 50+" />
+                          <input value={s.tab?.[editLang] ?? ''} onChange={(e) => updateService(i, 'tab', e.target.value)} placeholder={isAr ? 'اسم التاب (قصير)' : 'Short tab label, e.g. Branding'} aria-label="Tab label" />
                         </div>
+                        <div className="repeat-subrow">
+                          <input className="neutral-input" value={s.stat ?? ''} onChange={(e) => updateServiceNeutral(i, 'stat', e.target.value)} placeholder="Big number, e.g. 50+" />
+                          <input value={s.statLabel?.[editLang] ?? ''} onChange={(e) => updateService(i, 'statLabel', e.target.value)} placeholder={isAr ? 'بجانب الرقم، مثلًا هوية' : 'Beside the number, e.g. identities'} aria-label="Number label" />
+                        </div>
+                        <textarea value={s.points?.[editLang] ?? ''} onChange={(e) => updateService(i, 'points', e.target.value)} placeholder={isAr ? 'نقاط الخدمة — سطر لكل نقطة' : 'Bullet points — one per line'} aria-label="Bullet points" style={{ marginTop: 10 }} />
                         {/* shown framed on the service's card (optional) */}
                         <div className="repeat-subrow">
                           <ImageUpload value={s.image ?? ''} onChange={(url) => updateServiceNeutral(i, 'image', url)} label="Upload card photo" />
@@ -1946,8 +2062,8 @@ export default function AdminPage() {
                       <Field label="Clients — heading"><textarea value={locVal('clientsHeading')} onChange={setLoc('clientsHeading')} /></Field>
                     </div>
                     <div className="field-row">
-                      <Field label="Selected work — eyebrow"><input value={locVal('workEyebrow')} onChange={setLoc('workEyebrow')} /></Field>
-                      <Field label="Selected work — heading"><textarea value={locVal('workHeading')} onChange={setLoc('workHeading')} /></Field>
+                      <Field label="Selected work — eyebrow" hint="not shown in the current design"><input value={locVal('workEyebrow')} onChange={setLoc('workEyebrow')} /></Field>
+                      <Field label="Selected work — heading" hint="not shown in the current design"><textarea value={locVal('workHeading')} onChange={setLoc('workHeading')} /></Field>
                     </div>
                   </div>
 
@@ -1999,7 +2115,7 @@ export default function AdminPage() {
                       <input value={locVal('aboutPanelHeading')} onChange={setLoc('aboutPanelHeading')} placeholder="Who are we?" />
                     </Field>
                     <div className="field-row">
-                      <Field label="Panel photo (optional)" hint="without one, the KEDA mark fills the space">
+                      <Field label="Panel photo (optional)" hint="shown behind the “كده” card; optional">
                         <ImageUpload value={settingsForm.aboutImage ?? ''} onChange={(url) => setSettingsForm((f) => ({ ...f, aboutImage: url }))} />
                       </Field>
                       <Field label={`Vertical side label (${isAr ? 'عربي' : 'English'})`}>
@@ -2047,6 +2163,12 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
+                <div className="save-bar">
+                  <span>
+                    {settingsSaved ? <b className="saved-note show">Saved ✓</b> : <>Editing the <b>{isAr ? 'Arabic' : 'English'}</b> site — one save covers both languages</>}
+                  </span>
+                  <button className="save-btn" type="submit">Save all changes</button>
+                </div>
               </form>
             </section>
           )}
@@ -2061,12 +2183,12 @@ export default function AdminPage() {
               <div className="panel">
                 <div className="panel-head">
                   <h3>Users</h3>
-                  <button type="button" className="add-btn" onClick={() => openUserModal(null)}>+ Add User</button>
+                  <span className="panel-tag">{users.length} with access</span>
                 </div>
                 <table>
                   <thead><tr><th>Username</th><th>Role</th><th>Can access</th><th></th></tr></thead>
                   <tbody>
-                    {users.map((u) => (
+                    {users.filter((u) => matches(query, u.username)).map((u) => (
                       <tr key={u.id}>
                         <td>{u.username}{u.id === currentUser.id && <span className="panel-tag" style={{ marginInlineStart: 8 }}>You</span>}</td>
                         <td>{u.role === 'owner' ? 'Owner' : 'Member'}</td>
@@ -2095,7 +2217,7 @@ export default function AdminPage() {
             <section className="tab-panel active">
               <div className="panel">
                 <div className="panel-head"><h3>My Account</h3></div>
-                <form onSubmit={saveAccount}>
+                <form id="account-form" onSubmit={saveAccount}>
                   <Field label="Username">
                     <input className="neutral-input" value={accountUsername} onChange={(e) => setAccountUsername(e.target.value)} autoComplete="username" />
                   </Field>

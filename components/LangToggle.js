@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { LANG_COOKIE } from '@/lib/i18n';
 
+// The language lives in the `lang` cookie so the server renders the right
+// copy and direction; switching flips <html> straight away and re-renders.
 export default function LangToggle({ lang }) {
   const router = useRouter();
   const next = lang === 'ar' ? 'en' : 'ar';
@@ -18,17 +20,16 @@ export default function LangToggle({ lang }) {
   return (
     <button
       type="button"
-      className="lang-toggle"
+      className="lang"
       onClick={switchLang}
       aria-label={next === 'ar' ? 'التبديل إلى العربية' : 'Switch to English'}
       title={next === 'ar' ? 'العربية' : 'English'}
     >
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <circle cx="12" cy="12" r="9" />
-        <path d="M3 12h18" />
-        <path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z" />
+        <path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z" />
       </svg>
-      <span className="lang-toggle-label">{next === 'ar' ? 'ع' : 'EN'}</span>
+      <span lang={next}>{next === 'ar' ? 'ع' : 'EN'}</span>
     </button>
   );
 }

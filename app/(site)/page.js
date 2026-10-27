@@ -23,8 +23,8 @@ export default async function HomePage() {
   const lang = normalizeLang(cookieStore.get(LANG_COOKIE)?.value);
   const [projects, clients, savedSettings] = await Promise.all([getProjects(), getClients(), getSettings()]);
   const settings = mergeSettings(savedSettings);
-  // The hero card fan is assembled here rather than in HomeView (a client
-  // component) because each image's colours are read on the server, so the
+  // The hero card fan is assembled here because each image's colours are
+  // read on the server (lib/imageSwatch.js), so the
   // brand character on the card can match the picture it sits on — see
   // lib/imageSwatch.js for why that can't be done in the browser. Colours are
   // cached per image, so this only costs anything the first time an image
@@ -35,5 +35,5 @@ export default async function HomePage() {
       slides: await Promise.all(card.slides.map(async (src) => ({ src, face: faceFor(await getSwatch(src), i) }))),
     }))
   );
-  return <HomeView projects={projects} clients={clients} settings={settings} lang={lang} fanCards={fanCards} />;
+  return <HomeView clients={clients} settings={settings} lang={lang} fanCards={fanCards} />;
 }

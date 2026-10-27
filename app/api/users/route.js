@@ -4,7 +4,7 @@ import { requireOwner, hashPassword, emptyPermissions, PERMISSIONS } from '@/lib
 import { readBody, badBody } from '@/lib/apiInput';
 
 function stripHash(u) {
-  const { passwordHash, ...safe } = u;
+  const { passwordHash, tokenVersion: _tv, ...safe } = u;
   return safe;
 }
 function normalizePermissions(input) {
